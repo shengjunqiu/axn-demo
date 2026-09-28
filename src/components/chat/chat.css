@@ -1,0 +1,186 @@
+/*
+ * 安小能对话工作流演示样式（ChatPanel + TaskCard 局部类，axn- 前缀避免冲突）。
+ * 仅演示用途，所有数据均为模拟数据。
+ */
+
+/* ===== ChatPanel 页面骨架 ===== */
+.axn-chat-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+}
+
+.axn-chat-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #eef1f6;
+  background: linear-gradient(180deg, #f7faff 0%, #ffffff 100%);
+}
+
+/* ===== 空态欢迎卡 ===== */
+.axn-welcome {
+  padding: 8px 4px;
+}
+
+.axn-welcome-card {
+  border: 1px dashed #c9d7ee;
+  border-radius: 10px;
+  padding: 14px;
+  background: #f9fbff;
+}
+
+.axn-welcome-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: #5b6b84;
+  font-size: 12px;
+  line-height: 1.9;
+}
+
+/* ===== 快捷任务 chips ===== */
+.axn-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 4px;
+  border-top: 1px dashed #e5e9f0;
+}
+
+.axn-chip {
+  border: 1px solid #c9d7ee;
+  background: #f4f8ff;
+  color: #1d5fd2;
+  border-radius: 14px;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.axn-chip:hover:not(:disabled) {
+  background: #e3eeff;
+  border-color: #9cc0ff;
+}
+
+.axn-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== TaskCard 任务执行卡 ===== */
+.axn-task-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #e0e7f2;
+  border-radius: 10px;
+  background: #fbfdff;
+  padding: 10px 12px;
+  max-width: 100%;
+}
+
+.axn-task-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.axn-task-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.axn-task-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  font-size: 12px;
+  color: #5b6b84;
+}
+
+.axn-step-pending .axn-step-name {
+  color: #98a6bd;
+}
+
+.axn-step-running .axn-step-name {
+  color: #1d5fd2;
+  font-weight: 600;
+}
+
+.axn-step-completed .axn-step-name {
+  color: #2e7d32;
+}
+
+.axn-step-failed .axn-step-name {
+  color: #c62828;
+  font-weight: 600;
+}
+
+.axn-step-output {
+  margin-left: 2px;
+  color: #8a97ac;
+}
+
+.axn-step-time {
+  margin-left: auto;
+  color: #98a6bd;
+  font-variant-numeric: tabular-nums;
+}
+
+.axn-task-answer {
+  background: #f2f8f4;
+  border: 1px solid #d5ecd9;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #1f3d2b;
+  white-space: pre-wrap;
+}
+
+/* ===== 产物（结构化 artifact）展示 ===== */
+.axn-artifact {
+  border: 1px solid #e5e9f0;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.axn-artifact-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-bottom: 1px dashed #eef1f6;
+}
+
+.axn-artifact-row:last-child {
+  border-bottom: none;
+}
+
+.axn-artifact-label {
+  flex-shrink: 0;
+  color: #8a97ac;
+}
+
+.axn-artifact-value {
+  color: #333f52;
+  text-align: right;
+  word-break: break-all;
+}
+
+.axn-artifact-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 6px;
+}

@@ -1,0 +1,133 @@
+/* 全局样式：布局骨架、聊天滚动、打印视图。 */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 安小能对话滚动区 */
+.chat-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 16px 8px;
+}
+
+/* antd Sider 内容区撑满高度（对话列固定视口高度的关键） */
+.ant-layout-sider-children {
+  height: 100%;
+}
+
+/* antd <App> 包装层撑满视口，保证根 Layout 高度链成立 */
+.ant-app {
+  height: 100%;
+}
+
+/* 事实绑定芯片（编辑器内） */
+.fact-chip {
+  display: inline-block;
+  padding: 0 6px;
+  margin: 0 2px;
+  border-radius: 4px;
+  background: #e8f0fe;
+  color: #1d5fd2;
+  border: 1px solid #c4d9fb;
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.fact-chip--missing {
+  background: #fff1f0;
+  color: #d4380d;
+  border-color: #ffccc7;
+}
+
+/* 派生值芯片 */
+.derived-chip {
+  display: inline-block;
+  padding: 0 6px;
+  margin: 0 2px;
+  border-radius: 4px;
+  background: #f0f5ff;
+  color: #2a4fb8;
+  border: 1px dashed #adc6ff;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+/* 打印视图：仅打印 .print-root */
+.print-root {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-root,
+  .print-root * {
+    visibility: visible;
+  }
+  .print-root {
+    display: block !important;
+    position: absolute;
+    inset: 0;
+    padding: 32px 44px;
+    background: #fff;
+    color: #000;
+    font-size: 14px;
+    line-height: 1.9;
+  }
+  .print-root .print-doc-title {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .print-root .print-doc-meta {
+    text-align: center;
+    color: #444;
+    font-size: 12px;
+    margin-bottom: 18px;
+  }
+  .print-root h3.print-section-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 16px 0 6px;
+  }
+  .print-root p.print-para {
+    margin: 4px 0;
+    text-indent: 2em;
+  }
+  .print-root .print-footer {
+    margin-top: 28px;
+    color: #666;
+    font-size: 12px;
+    border-top: 1px solid #ddd;
+    padding-top: 8px;
+  }
+}
+
+/* 长文本与滚动约束 */
+.ellipsis-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d3d9e3;
+  border-radius: 4px;
+}

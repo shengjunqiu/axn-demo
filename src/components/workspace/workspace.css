@@ -1,0 +1,128 @@
+/*
+ * 右侧工作区面板演示样式（ResourcePanel / SchematicMap / KnowledgePanel 局部类，axn- 前缀）。
+ * 仅演示用途，所有数据均为模拟数据。
+ */
+
+/* ===== 面板骨架 ===== */
+.axn-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid #eef1f6;
+}
+
+.axn-resource-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.axn-knowledge-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ===== 候选力量区（候选 ≠ 已调派） ===== */
+.axn-candidate-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid #eef1f6;
+  background: #fbfcff;
+}
+
+/* ===== 派生汇总指标 ===== */
+.axn-derived-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.axn-derived-item {
+  flex: 1 1 100px;
+  min-width: 96px;
+  border: 1px solid #e5e9f0;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px 10px;
+}
+
+.axn-derived-label {
+  font-size: 11px;
+  color: #8a97ac;
+}
+
+.axn-derived-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d3a5f;
+  font-variant-numeric: tabular-nums;
+}
+
+.axn-derived-unit {
+  font-size: 11px;
+  font-weight: 400;
+  color: #8a97ac;
+}
+
+/* 资源表格行选中（与 SVG 高亮联动） */
+.axn-row-selected > td {
+  background: #eaf3ff !important;
+}
+
+/* ===== 态势示意图 ===== */
+.axn-schematic {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e5e9f0;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+  margin: 10px 14px 0;
+}
+
+/* 态势图高度约束：不抢占表格区（否则表格被挤压为 0 高、候选区遮挡表格） */
+.axn-schematic svg {
+  width: 100%;
+  height: min(300px, 32vh);
+}
+
+.axn-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #5b6b84;
+}
+
+.axn-legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* ===== 建议与知识 ===== */
+.axn-proposal-empty {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: #fffbe6;
+  border: 1px dashed #ffe58f;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.axn-risk-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
