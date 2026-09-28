@@ -1,7 +1,7 @@
 # 安小能客户演示 Demo · 实施日志（终版）
 
 > 主控 Agent 维护。多 Agent 模式：主控（基础/集成/验收）+ Worker A（安小能工作流 UI）+ Worker B（文书工作流 UI）+ 独立审查 Agent（只读审查 + 缺陷修复复核）。
-> 项目根：`/home/xx/Code/axn-demo`。全程未提交 git（遵守不擅自提交约束），16 个新增/修改文件见 `git status`。
+> 项目根：`/home/xx/Code/axn-demo`。已提交并推送：`e353891` → `origin/main`（60 文件，生成物已由 .gitignore 排除）。
 
 ## 一、启动与构建
 
