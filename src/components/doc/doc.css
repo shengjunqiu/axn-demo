@@ -100,12 +100,24 @@
   border-left: 3px solid #faad14;
 }
 
+/* 文书中心根容器：纵向弹性布局，组件间留白（修复无间距贴边问题） */
+.doc-center {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
 /* 文书中心列表卡片 */
 .doc-center-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
 }
