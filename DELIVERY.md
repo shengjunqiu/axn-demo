@@ -8,7 +8,7 @@
 ```bash
 cd /home/xx/Code/axn-demo
 pnpm install                 # 依赖已安装
-pnpm dev                     # 开发模式 → http://127.0.0.1:5174
+pnpm dev                     # 开发模式 → http://localhost:5173（同时监听全部网卡，局域网如 http://192.168.77.1:5173）
 pnpm build && pnpm preview   # 生产构建 → http://127.0.0.1:4173
 ```
 
@@ -16,7 +16,7 @@ pnpm build && pnpm preview   # 生产构建 → http://127.0.0.1:4173
 
 ## 2. 访问方式
 
-- 本地开发：`http://127.0.0.1:5174`（vite 已配置 5174，5173 被其他项目占用）
+- 本机访问：`http://localhost:5173`；局域网访问：`http://192.168.77.1:5173`（vite host=true 监听全部网卡，strictPort 固定 5173）
 - 生产预览：`http://127.0.0.1:4173`
 - 演示建议使用生产预览（加载快、无 HMR 干扰）
 

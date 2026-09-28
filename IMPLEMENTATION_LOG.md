@@ -8,7 +8,7 @@
 ```bash
 cd /home/xx/Code/axn-demo
 pnpm install          # 依赖已锁定（Node 22 / pnpm 12）
-pnpm dev              # http://127.0.0.1:5174（5173 被其他项目占用，vite 配置固定 5174）
+pnpm dev              # http://localhost:5173（host=true 监听全部网卡，局域网如 http://192.168.77.1:5173 可访问）
 pnpm build && pnpm preview   # 生产构建预览 → http://127.0.0.1:4173
 pnpm test             # 单元/组件测试（44 项）
 pnpm test:e2e         # Playwright E2E（8 项，含主线全链路）
