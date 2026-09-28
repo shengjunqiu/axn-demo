@@ -22,7 +22,8 @@
 
 /* ===== 空态欢迎卡 ===== */
 .axn-welcome {
-  padding: 8px 4px;
+  /* 与会话头/消息区水平对齐（14px），避免欢迎卡贴边 */
+  padding: 8px 14px;
 }
 
 .axn-welcome-card {

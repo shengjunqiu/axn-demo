@@ -111,6 +111,32 @@
   min-height: 0;
 }
 
+/* 编辑抽屉主体：内边距与背景分隔（修复无间距贴边） */
+.doc-editor-surface {
+  padding: 12px 14px 10px;
+  background: #fff;
+}
+
+/* 编辑器底部操作条：与编辑区分隔 */
+.doc-editor-footer {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #eef1f6;
+}
+
+/* 校核结果面板：与底部操作条分隔；问题列表限高内部滚动 */
+.doc-validation-panel {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #e5e9f0;
+}
+
+.doc-validation-scroll {
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 /* 文书中心列表卡片 */
 .doc-center-list {
   display: flex;
