@@ -1,0 +1,2332 @@
+{
+  "meta": {
+    "schemaVersion": 1,
+    "fixtureVersion": "0.1.0",
+    "createdAt": "2026-09-28",
+    "title": "安小能客户演示虚构种子数据",
+    "dataMode": "mock",
+    "dataScope": "drill",
+    "scenarioMode": "emergency",
+    "demoClock": "2026-09-28T21:10:00+08:00",
+    "timeZone": "Asia/Shanghai",
+    "notice": "全部为虚构演示数据；不是客户真实数据、法规、灾情或救援指令。",
+    "globalBanner": "演示环境 · 模拟数据 · 非真实救援指令",
+    "storageNamespace": "anneng-demo:v1",
+    "defaultEventId": "evt-demo-001",
+    "defaultSessionId": "session-demo-001",
+    "defaultActorId": "actor-demo-duty",
+    "runtimeContract": "归一化种子；实体通过 factRefs 引用事实，事实通过 sourceRecordId/sourceFieldKey 核对原值。不要另写一份 UI 数字常量。",
+    "demoClockFactId": "fact-clock-demo-001-currentTime"
+  },
+  "actors": [
+    {
+      "actorId": "actor-demo-duty",
+      "name": "演示值班员",
+      "role": "duty",
+      "orgId": "org-demo-001",
+      "isSimulated": true
+    },
+    {
+      "actorId": "actor-demo-commander",
+      "name": "演示指挥员",
+      "role": "commander",
+      "orgId": "org-demo-001",
+      "isSimulated": true
+    }
+  ],
+  "incidents": [
+    {
+      "eventId": "evt-demo-001",
+      "orgId": "org-demo-001",
+      "scope": "drill",
+      "factRefs": {
+        "title": "fact-incident-001-title",
+        "location": "fact-incident-001-location",
+        "occurredAt": "fact-incident-001-occurredAt",
+        "disasterType": "fact-incident-001-disasterType",
+        "controlStatus": "fact-incident-001-controlStatus",
+        "incidentDescription": "fact-incident-001-incidentDescription",
+        "impactScope": "fact-incident-001-impactScope",
+        "casualty": "fact-incident-001-casualty",
+        "confirmedResponseLevel": "fact-incident-001-confirmedResponseLevel"
+      },
+      "situationFactRefs": {
+        "suggestedResponseLevel": "fact-situation-001-suggestedResponseLevel",
+        "suggestionStatus": "fact-situation-001-suggestionStatus",
+        "riskSummary": "fact-situation-001-riskSummary"
+      },
+      "stationId": "station-demo-001",
+      "schematicPosition": {
+        "x": 610,
+        "y": 330
+      },
+      "confirmedDeployments": [],
+      "reportingUnitFactId": null,
+      "contextVersion": 1,
+      "supportedDepth": "main_flow"
+    },
+    {
+      "eventId": "evt-demo-002",
+      "orgId": "org-demo-001",
+      "scope": "drill",
+      "factRefs": {
+        "title": "fact-incident-002-title",
+        "location": "fact-incident-002-location",
+        "occurredAt": "fact-incident-002-occurredAt",
+        "disasterType": "fact-incident-002-disasterType",
+        "controlStatus": "fact-incident-002-controlStatus",
+        "incidentDescription": "fact-incident-002-incidentDescription",
+        "impactScope": "fact-incident-002-impactScope",
+        "casualty": "fact-incident-002-casualty",
+        "confirmedResponseLevel": "fact-incident-002-confirmedResponseLevel"
+      },
+      "situationFactRefs": {},
+      "stationId": null,
+      "schematicPosition": {
+        "x": 240,
+        "y": 480
+      },
+      "confirmedDeployments": [],
+      "reportingUnitFactId": null,
+      "contextVersion": 1,
+      "supportedDepth": "context_isolation_and_shift_statistics"
+    }
+  ],
+  "sessions": [
+    {
+      "sessionId": "session-demo-001",
+      "eventId": "evt-demo-001",
+      "messages": [],
+      "lastResourceResultIds": [],
+      "candidateResourceIds": [],
+      "selectedProposalId": null,
+      "pendingClarification": null
+    },
+    {
+      "sessionId": "session-demo-002",
+      "eventId": "evt-demo-002",
+      "messages": [],
+      "lastResourceResultIds": [],
+      "candidateResourceIds": [],
+      "selectedProposalId": null,
+      "pendingClarification": null
+    }
+  ],
+  "shift": {
+    "shiftId": "shift-demo-001",
+    "orgId": "org-demo-001",
+    "startsAt": "2026-09-28T16:00:00+08:00",
+    "endsAt": "2026-09-29T00:00:00+08:00",
+    "incidentIds": [
+      "evt-demo-001",
+      "evt-demo-002"
+    ],
+    "handOverNotesFactId": null,
+    "reportingUnitFactId": null,
+    "statisticsCutoffUses": "meta.demoClock",
+    "label": "演示班次；统计截至演示时钟，不是完整日终数据",
+    "scope": {
+      "kind": "shift",
+      "shiftId": "shift-demo-001",
+      "orgId": "org-demo-001",
+      "allowedEventIds": [
+        "evt-demo-001",
+        "evt-demo-002"
+      ]
+    },
+    "factRefs": {
+      "shiftId": "fact-shift-demo-001-shiftId",
+      "startsAt": "fact-shift-demo-001-startsAt",
+      "endsAt": "fact-shift-demo-001-endsAt"
+    }
+  },
+  "teams": [
+    {
+      "resourceId": "team-001",
+      "resourceType": "team",
+      "factRefs": {
+        "name": "fact-team-001-name",
+        "peopleCount": "fact-team-001-peopleCount",
+        "excavatorCount": "fact-team-001-excavatorCount",
+        "distanceKm": "fact-team-001-distanceKm",
+        "etaMinutes": "fact-team-001-etaMinutes",
+        "status": "fact-team-001-status",
+        "capabilityTags": "fact-team-001-capabilityTags"
+      },
+      "distanceAnchorEventId": "evt-demo-001",
+      "distanceAndEtaAreSimulated": true,
+      "schematicPosition": {
+        "x": 430,
+        "y": 210
+      },
+      "unavailableReason": null
+    },
+    {
+      "resourceId": "team-002",
+      "resourceType": "team",
+      "factRefs": {
+        "name": "fact-team-002-name",
+        "peopleCount": "fact-team-002-peopleCount",
+        "excavatorCount": "fact-team-002-excavatorCount",
+        "distanceKm": "fact-team-002-distanceKm",
+        "etaMinutes": "fact-team-002-etaMinutes",
+        "status": "fact-team-002-status",
+        "capabilityTags": "fact-team-002-capabilityTags"
+      },
+      "distanceAnchorEventId": "evt-demo-001",
+      "distanceAndEtaAreSimulated": true,
+      "schematicPosition": {
+        "x": 750,
+        "y": 190
+      },
+      "unavailableReason": null
+    },
+    {
+      "resourceId": "team-003",
+      "resourceType": "team",
+      "factRefs": {
+        "name": "fact-team-003-name",
+        "peopleCount": "fact-team-003-peopleCount",
+        "excavatorCount": "fact-team-003-excavatorCount",
+        "distanceKm": "fact-team-003-distanceKm",
+        "etaMinutes": "fact-team-003-etaMinutes",
+        "status": "fact-team-003-status",
+        "capabilityTags": "fact-team-003-capabilityTags"
+      },
+      "distanceAnchorEventId": "evt-demo-001",
+      "distanceAndEtaAreSimulated": true,
+      "schematicPosition": {
+        "x": 850,
+        "y": 470
+      },
+      "unavailableReason": "正在执行其他模拟任务，不可加入本事件候选。"
+    }
+  ],
+  "warehouses": [
+    {
+      "resourceId": "warehouse-001",
+      "resourceType": "warehouse",
+      "factRefs": {
+        "name": "fact-warehouse-001-name",
+        "materialName": "fact-warehouse-001-materialName",
+        "stockQuantity": "fact-warehouse-001-stockQuantity"
+      },
+      "schematicPosition": {
+        "x": 530,
+        "y": 120
+      }
+    },
+    {
+      "resourceId": "warehouse-002",
+      "resourceType": "warehouse",
+      "factRefs": {
+        "name": "fact-warehouse-002-name",
+        "materialName": "fact-warehouse-002-materialName",
+        "stockQuantity": "fact-warehouse-002-stockQuantity"
+      },
+      "schematicPosition": {
+        "x": 420,
+        "y": 450
+      }
+    }
+  ],
+  "station": {
+    "stationId": "station-demo-001",
+    "eventId": "evt-demo-001",
+    "latestObservationId": "obs-water-005",
+    "schematicPosition": {
+      "x": 645,
+      "y": 280
+    },
+    "feedVersion": 1
+  },
+  "waterObservations": [
+    {
+      "observationId": "obs-water-001",
+      "stationId": "station-demo-001",
+      "factRefs": {
+        "stationName": "fact-obs-water-001-stationName",
+        "observedAt": "fact-obs-water-001-observedAt",
+        "waterLevel": "fact-obs-water-001-waterLevel"
+      }
+    },
+    {
+      "observationId": "obs-water-002",
+      "stationId": "station-demo-001",
+      "factRefs": {
+        "stationName": "fact-obs-water-002-stationName",
+        "observedAt": "fact-obs-water-002-observedAt",
+        "waterLevel": "fact-obs-water-002-waterLevel"
+      }
+    },
+    {
+      "observationId": "obs-water-003",
+      "stationId": "station-demo-001",
+      "factRefs": {
+        "stationName": "fact-obs-water-003-stationName",
+        "observedAt": "fact-obs-water-003-observedAt",
+        "waterLevel": "fact-obs-water-003-waterLevel"
+      }
+    },
+    {
+      "observationId": "obs-water-004",
+      "stationId": "station-demo-001",
+      "factRefs": {
+        "stationName": "fact-obs-water-004-stationName",
+        "observedAt": "fact-obs-water-004-observedAt",
+        "waterLevel": "fact-obs-water-004-waterLevel"
+      }
+    },
+    {
+      "observationId": "obs-water-005",
+      "stationId": "station-demo-001",
+      "factRefs": {
+        "stationName": "fact-obs-water-005-stationName",
+        "observedAt": "fact-obs-water-005-observedAt",
+        "waterLevel": "fact-obs-water-005-waterLevel"
+      }
+    }
+  ],
+  "sources": [
+    {
+      "sourceRecordId": "src-incident-001-v1",
+      "sourceSystem": "接报与事件服务",
+      "sourceTable": "incident",
+      "objectId": "evt-demo-001",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:00:00+08:00",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "接报与事件服务（模拟）",
+      "fields": {
+        "title": "演示区域 A · 清河段堤防险情",
+        "location": "演示区域 A 清河段 K12+300",
+        "occurredAt": "2026-09-28T20:18:00+08:00",
+        "disasterType": "堤防管涌",
+        "controlStatus": "ongoing",
+        "incidentDescription": "接报发现堤防管涌险情，现场正在持续处置。",
+        "impactScope": "待核实",
+        "casualty": "待核实",
+        "confirmedResponseLevel": "IV"
+      }
+    },
+    {
+      "sourceRecordId": "src-situation-001-v1",
+      "sourceSystem": "上游态势建议服务",
+      "sourceTable": "situation",
+      "objectId": "situation-demo-001",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:07:00+08:00",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "上游态势建议服务（模拟）",
+      "fields": {
+        "suggestedResponseLevel": "III",
+        "suggestionStatus": "awaiting_confirmation",
+        "riskSummary": "信息尚待进一步核实，建议开展风险评估与力量预置论证。"
+      }
+    },
+    {
+      "sourceRecordId": "src-incident-002-v1",
+      "sourceSystem": "接报与事件服务",
+      "sourceTable": "incident",
+      "objectId": "evt-demo-002",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:40:00+08:00",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-002",
+        "orgId": "org-demo-001"
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "接报与事件服务（模拟）",
+      "fields": {
+        "title": "演示区域 B 下穿道路积水",
+        "location": "演示区域 B 下穿道路示意点",
+        "occurredAt": "2026-09-28T17:40:00+08:00",
+        "disasterType": "城市积水",
+        "controlStatus": "controlled",
+        "incidentDescription": "模拟记录显示积水事件已控制，用于班次统计及会话隔离测试。",
+        "impactScope": "待核实",
+        "casualty": "待核实",
+        "confirmedResponseLevel": "未提供"
+      }
+    },
+    {
+      "sourceRecordId": "src-team-001-v1",
+      "sourceSystem": "救援资源台账服务",
+      "sourceTable": "resource_team",
+      "objectId": "team-001",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "救援资源台账服务（模拟）",
+      "fields": {
+        "name": "演示一号工程救援队",
+        "peopleCount": 36,
+        "excavatorCount": 4,
+        "distanceKm": 46,
+        "etaMinutes": 65,
+        "status": "available",
+        "capabilityTags": [
+          "工程抢险",
+          "机械化保障"
+        ]
+      }
+    },
+    {
+      "sourceRecordId": "src-team-002-v1",
+      "sourceSystem": "救援资源台账服务",
+      "sourceTable": "resource_team",
+      "objectId": "team-002",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "救援资源台账服务（模拟）",
+      "fields": {
+        "name": "演示二号应急救援队",
+        "peopleCount": 28,
+        "excavatorCount": 3,
+        "distanceKm": 72,
+        "etaMinutes": 95,
+        "status": "available",
+        "capabilityTags": [
+          "应急救援",
+          "工程保障"
+        ]
+      }
+    },
+    {
+      "sourceRecordId": "src-team-003-v1",
+      "sourceSystem": "救援资源台账服务",
+      "sourceTable": "resource_team",
+      "objectId": "team-003",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "救援资源台账服务（模拟）",
+      "fields": {
+        "name": "演示三号抢险支队",
+        "peopleCount": 24,
+        "excavatorCount": 2,
+        "distanceKm": 108,
+        "etaMinutes": 150,
+        "status": "busy",
+        "capabilityTags": [
+          "工程抢险"
+        ]
+      }
+    },
+    {
+      "sourceRecordId": "src-warehouse-001-v1",
+      "sourceSystem": "物资仓储台账服务",
+      "sourceTable": "warehouse",
+      "objectId": "warehouse-001",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:55:00+08:00",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "物资仓储台账服务（模拟）",
+      "fields": {
+        "name": "演示北岸物资库",
+        "materialName": "编织袋",
+        "stockQuantity": 24000
+      }
+    },
+    {
+      "sourceRecordId": "src-warehouse-002-v1",
+      "sourceSystem": "物资仓储台账服务",
+      "sourceTable": "warehouse",
+      "objectId": "warehouse-002",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:55:00+08:00",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "物资仓储台账服务（模拟）",
+      "fields": {
+        "name": "演示南岸物资库",
+        "materialName": "编织袋",
+        "stockQuantity": 16000
+      }
+    },
+    {
+      "sourceRecordId": "src-obs-water-001-v1",
+      "sourceSystem": "水文监测服务",
+      "sourceTable": "water_observation",
+      "objectId": "obs-water-001",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:05:00+08:00",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "水文监测服务（模拟）",
+      "fields": {
+        "stationName": "演示清河水文站",
+        "observedAt": "2026-09-28T19:05:00+08:00",
+        "waterLevel": 41.7
+      }
+    },
+    {
+      "sourceRecordId": "src-obs-water-002-v1",
+      "sourceSystem": "水文监测服务",
+      "sourceTable": "water_observation",
+      "objectId": "obs-water-002",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:35:00+08:00",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "水文监测服务（模拟）",
+      "fields": {
+        "stationName": "演示清河水文站",
+        "observedAt": "2026-09-28T19:35:00+08:00",
+        "waterLevel": 41.9
+      }
+    },
+    {
+      "sourceRecordId": "src-obs-water-003-v1",
+      "sourceSystem": "水文监测服务",
+      "sourceTable": "water_observation",
+      "objectId": "obs-water-003",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:05:00+08:00",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "水文监测服务（模拟）",
+      "fields": {
+        "stationName": "演示清河水文站",
+        "observedAt": "2026-09-28T20:05:00+08:00",
+        "waterLevel": 42.1
+      }
+    },
+    {
+      "sourceRecordId": "src-obs-water-004-v1",
+      "sourceSystem": "水文监测服务",
+      "sourceTable": "water_observation",
+      "objectId": "obs-water-004",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:35:00+08:00",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "水文监测服务（模拟）",
+      "fields": {
+        "stationName": "演示清河水文站",
+        "observedAt": "2026-09-28T20:35:00+08:00",
+        "waterLevel": 42.22
+      }
+    },
+    {
+      "sourceRecordId": "src-obs-water-005-v1",
+      "sourceSystem": "水文监测服务",
+      "sourceTable": "water_observation",
+      "objectId": "obs-water-005",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:05:00+08:00",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "水文监测服务（模拟）",
+      "fields": {
+        "stationName": "演示清河水文站",
+        "observedAt": "2026-09-28T21:05:00+08:00",
+        "waterLevel": 42.3
+      }
+    },
+    {
+      "sourceRecordId": "src-shift-001-v1",
+      "sourceSystem": "演示配置服务",
+      "sourceTable": "duty_shift",
+      "objectId": "shift-demo-001",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T16:00:00+08:00",
+      "scope": {
+        "kind": "shift",
+        "shiftId": "shift-demo-001",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001",
+          "evt-demo-002"
+        ]
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "演示配置服务（模拟）",
+      "fields": {
+        "shiftId": "shift-demo-001",
+        "startsAt": "2026-09-28T16:00:00+08:00",
+        "endsAt": "2026-09-29T00:00:00+08:00"
+      }
+    },
+    {
+      "sourceRecordId": "src-clock-001-v1",
+      "sourceSystem": "演示配置服务",
+      "sourceTable": "demo_clock",
+      "objectId": "clock-demo-001",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:10:00+08:00",
+      "scope": {
+        "kind": "demo_configuration"
+      },
+      "dataMode": "mock",
+      "isSimulated": true,
+      "label": "演示配置服务（模拟）",
+      "fields": {
+        "currentTime": "2026-09-28T21:10:00+08:00"
+      }
+    }
+  ],
+  "facts": [
+    {
+      "factId": "fact-incident-001-title",
+      "value": "演示区域 A · 清河段堤防险情",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.title.evt-demo-001",
+      "sourceRecordId": "src-incident-001-v1",
+      "sourceFieldKey": "title",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:00:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-001-location",
+      "value": "演示区域 A 清河段 K12+300",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.location.evt-demo-001",
+      "sourceRecordId": "src-incident-001-v1",
+      "sourceFieldKey": "location",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:00:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-001-occurredAt",
+      "value": "2026-09-28T20:18:00+08:00",
+      "unit": null,
+      "valueType": "datetime",
+      "sourceFieldId": "mock.incident.occurredAt.evt-demo-001",
+      "sourceRecordId": "src-incident-001-v1",
+      "sourceFieldKey": "occurredAt",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:00:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-001-disasterType",
+      "value": "堤防管涌",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.disasterType.evt-demo-001",
+      "sourceRecordId": "src-incident-001-v1",
+      "sourceFieldKey": "disasterType",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:00:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-001-controlStatus",
+      "value": "ongoing",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.controlStatus.evt-demo-001",
+      "sourceRecordId": "src-incident-001-v1",
+      "sourceFieldKey": "controlStatus",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:00:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-001-incidentDescription",
+      "value": "接报发现堤防管涌险情，现场正在持续处置。",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.incidentDescription.evt-demo-001",
+      "sourceRecordId": "src-incident-001-v1",
+      "sourceFieldKey": "incidentDescription",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:00:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-001-impactScope",
+      "value": "待核实",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.impactScope.evt-demo-001",
+      "sourceRecordId": "src-incident-001-v1",
+      "sourceFieldKey": "impactScope",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:00:00+08:00",
+      "verification": "pending",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-001-casualty",
+      "value": "待核实",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.casualty.evt-demo-001",
+      "sourceRecordId": "src-incident-001-v1",
+      "sourceFieldKey": "casualty",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:00:00+08:00",
+      "verification": "pending",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-001-confirmedResponseLevel",
+      "value": "IV",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.confirmedResponseLevel.evt-demo-001",
+      "sourceRecordId": "src-incident-001-v1",
+      "sourceFieldKey": "confirmedResponseLevel",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:00:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-situation-001-suggestedResponseLevel",
+      "value": "III",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.situation.suggestedResponseLevel.situation-demo-001",
+      "sourceRecordId": "src-situation-001-v1",
+      "sourceFieldKey": "suggestedResponseLevel",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:07:00+08:00",
+      "verification": "suggested",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-situation-001-suggestionStatus",
+      "value": "awaiting_confirmation",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.situation.suggestionStatus.situation-demo-001",
+      "sourceRecordId": "src-situation-001-v1",
+      "sourceFieldKey": "suggestionStatus",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:07:00+08:00",
+      "verification": "suggested",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-situation-001-riskSummary",
+      "value": "信息尚待进一步核实，建议开展风险评估与力量预置论证。",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.situation.riskSummary.situation-demo-001",
+      "sourceRecordId": "src-situation-001-v1",
+      "sourceFieldKey": "riskSummary",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:07:00+08:00",
+      "verification": "suggested",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-002-title",
+      "value": "演示区域 B 下穿道路积水",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.title.evt-demo-002",
+      "sourceRecordId": "src-incident-002-v1",
+      "sourceFieldKey": "title",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:40:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-002",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-002-location",
+      "value": "演示区域 B 下穿道路示意点",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.location.evt-demo-002",
+      "sourceRecordId": "src-incident-002-v1",
+      "sourceFieldKey": "location",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:40:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-002",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-002-occurredAt",
+      "value": "2026-09-28T17:40:00+08:00",
+      "unit": null,
+      "valueType": "datetime",
+      "sourceFieldId": "mock.incident.occurredAt.evt-demo-002",
+      "sourceRecordId": "src-incident-002-v1",
+      "sourceFieldKey": "occurredAt",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:40:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-002",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-002-disasterType",
+      "value": "城市积水",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.disasterType.evt-demo-002",
+      "sourceRecordId": "src-incident-002-v1",
+      "sourceFieldKey": "disasterType",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:40:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-002",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-002-controlStatus",
+      "value": "controlled",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.controlStatus.evt-demo-002",
+      "sourceRecordId": "src-incident-002-v1",
+      "sourceFieldKey": "controlStatus",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:40:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-002",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-002-incidentDescription",
+      "value": "模拟记录显示积水事件已控制，用于班次统计及会话隔离测试。",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.incidentDescription.evt-demo-002",
+      "sourceRecordId": "src-incident-002-v1",
+      "sourceFieldKey": "incidentDescription",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:40:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-002",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-002-impactScope",
+      "value": "待核实",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.impactScope.evt-demo-002",
+      "sourceRecordId": "src-incident-002-v1",
+      "sourceFieldKey": "impactScope",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:40:00+08:00",
+      "verification": "pending",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-002",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-002-casualty",
+      "value": "待核实",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.casualty.evt-demo-002",
+      "sourceRecordId": "src-incident-002-v1",
+      "sourceFieldKey": "casualty",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:40:00+08:00",
+      "verification": "pending",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-002",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-incident-002-confirmedResponseLevel",
+      "value": "未提供",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.incident.confirmedResponseLevel.evt-demo-002",
+      "sourceRecordId": "src-incident-002-v1",
+      "sourceFieldKey": "confirmedResponseLevel",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:40:00+08:00",
+      "verification": "pending",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-002",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-team-001-name",
+      "value": "演示一号工程救援队",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.resource_team.name.team-001",
+      "sourceRecordId": "src-team-001-v1",
+      "sourceFieldKey": "name",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-001-peopleCount",
+      "value": 36,
+      "unit": "人",
+      "valueType": "number",
+      "sourceFieldId": "mock.resource_team.peopleCount.team-001",
+      "sourceRecordId": "src-team-001-v1",
+      "sourceFieldKey": "peopleCount",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-001-excavatorCount",
+      "value": 4,
+      "unit": "台",
+      "valueType": "number",
+      "sourceFieldId": "mock.resource_team.excavatorCount.team-001",
+      "sourceRecordId": "src-team-001-v1",
+      "sourceFieldKey": "excavatorCount",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-001-distanceKm",
+      "value": 46,
+      "unit": "km",
+      "valueType": "number",
+      "sourceFieldId": "mock.resource_team.distanceKm.team-001",
+      "sourceRecordId": "src-team-001-v1",
+      "sourceFieldKey": "distanceKm",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-001-etaMinutes",
+      "value": 65,
+      "unit": "min",
+      "valueType": "number",
+      "sourceFieldId": "mock.resource_team.etaMinutes.team-001",
+      "sourceRecordId": "src-team-001-v1",
+      "sourceFieldKey": "etaMinutes",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-001-status",
+      "value": "available",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.resource_team.status.team-001",
+      "sourceRecordId": "src-team-001-v1",
+      "sourceFieldKey": "status",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-001-capabilityTags",
+      "value": [
+        "工程抢险",
+        "机械化保障"
+      ],
+      "unit": null,
+      "valueType": "string[]",
+      "sourceFieldId": "mock.resource_team.capabilityTags.team-001",
+      "sourceRecordId": "src-team-001-v1",
+      "sourceFieldKey": "capabilityTags",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-002-name",
+      "value": "演示二号应急救援队",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.resource_team.name.team-002",
+      "sourceRecordId": "src-team-002-v1",
+      "sourceFieldKey": "name",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-002-peopleCount",
+      "value": 28,
+      "unit": "人",
+      "valueType": "number",
+      "sourceFieldId": "mock.resource_team.peopleCount.team-002",
+      "sourceRecordId": "src-team-002-v1",
+      "sourceFieldKey": "peopleCount",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-002-excavatorCount",
+      "value": 3,
+      "unit": "台",
+      "valueType": "number",
+      "sourceFieldId": "mock.resource_team.excavatorCount.team-002",
+      "sourceRecordId": "src-team-002-v1",
+      "sourceFieldKey": "excavatorCount",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-002-distanceKm",
+      "value": 72,
+      "unit": "km",
+      "valueType": "number",
+      "sourceFieldId": "mock.resource_team.distanceKm.team-002",
+      "sourceRecordId": "src-team-002-v1",
+      "sourceFieldKey": "distanceKm",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-002-etaMinutes",
+      "value": 95,
+      "unit": "min",
+      "valueType": "number",
+      "sourceFieldId": "mock.resource_team.etaMinutes.team-002",
+      "sourceRecordId": "src-team-002-v1",
+      "sourceFieldKey": "etaMinutes",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-002-status",
+      "value": "available",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.resource_team.status.team-002",
+      "sourceRecordId": "src-team-002-v1",
+      "sourceFieldKey": "status",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-002-capabilityTags",
+      "value": [
+        "应急救援",
+        "工程保障"
+      ],
+      "unit": null,
+      "valueType": "string[]",
+      "sourceFieldId": "mock.resource_team.capabilityTags.team-002",
+      "sourceRecordId": "src-team-002-v1",
+      "sourceFieldKey": "capabilityTags",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-003-name",
+      "value": "演示三号抢险支队",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.resource_team.name.team-003",
+      "sourceRecordId": "src-team-003-v1",
+      "sourceFieldKey": "name",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-003-peopleCount",
+      "value": 24,
+      "unit": "人",
+      "valueType": "number",
+      "sourceFieldId": "mock.resource_team.peopleCount.team-003",
+      "sourceRecordId": "src-team-003-v1",
+      "sourceFieldKey": "peopleCount",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-003-excavatorCount",
+      "value": 2,
+      "unit": "台",
+      "valueType": "number",
+      "sourceFieldId": "mock.resource_team.excavatorCount.team-003",
+      "sourceRecordId": "src-team-003-v1",
+      "sourceFieldKey": "excavatorCount",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-003-distanceKm",
+      "value": 108,
+      "unit": "km",
+      "valueType": "number",
+      "sourceFieldId": "mock.resource_team.distanceKm.team-003",
+      "sourceRecordId": "src-team-003-v1",
+      "sourceFieldKey": "distanceKm",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-003-etaMinutes",
+      "value": 150,
+      "unit": "min",
+      "valueType": "number",
+      "sourceFieldId": "mock.resource_team.etaMinutes.team-003",
+      "sourceRecordId": "src-team-003-v1",
+      "sourceFieldKey": "etaMinutes",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-003-status",
+      "value": "busy",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.resource_team.status.team-003",
+      "sourceRecordId": "src-team-003-v1",
+      "sourceFieldKey": "status",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-team-003-capabilityTags",
+      "value": [
+        "工程抢险"
+      ],
+      "unit": null,
+      "valueType": "string[]",
+      "sourceFieldId": "mock.resource_team.capabilityTags.team-003",
+      "sourceRecordId": "src-team-003-v1",
+      "sourceFieldKey": "capabilityTags",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:58:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-warehouse-001-name",
+      "value": "演示北岸物资库",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.warehouse.name.warehouse-001",
+      "sourceRecordId": "src-warehouse-001-v1",
+      "sourceFieldKey": "name",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:55:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-warehouse-001-materialName",
+      "value": "编织袋",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.warehouse.materialName.warehouse-001",
+      "sourceRecordId": "src-warehouse-001-v1",
+      "sourceFieldKey": "materialName",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:55:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-warehouse-001-stockQuantity",
+      "value": 24000,
+      "unit": "只",
+      "valueType": "number",
+      "sourceFieldId": "mock.warehouse.stockQuantity.warehouse-001",
+      "sourceRecordId": "src-warehouse-001-v1",
+      "sourceFieldKey": "stockQuantity",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:55:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-warehouse-002-name",
+      "value": "演示南岸物资库",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.warehouse.name.warehouse-002",
+      "sourceRecordId": "src-warehouse-002-v1",
+      "sourceFieldKey": "name",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:55:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-warehouse-002-materialName",
+      "value": "编织袋",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.warehouse.materialName.warehouse-002",
+      "sourceRecordId": "src-warehouse-002-v1",
+      "sourceFieldKey": "materialName",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:55:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-warehouse-002-stockQuantity",
+      "value": 16000,
+      "unit": "只",
+      "valueType": "number",
+      "sourceFieldId": "mock.warehouse.stockQuantity.warehouse-002",
+      "sourceRecordId": "src-warehouse-002-v1",
+      "sourceFieldKey": "stockQuantity",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:55:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "organization",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001"
+        ]
+      }
+    },
+    {
+      "factId": "fact-obs-water-001-stationName",
+      "value": "演示清河水文站",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.water_observation.stationName.obs-water-001",
+      "sourceRecordId": "src-obs-water-001-v1",
+      "sourceFieldKey": "stationName",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:05:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-obs-water-001-observedAt",
+      "value": "2026-09-28T19:05:00+08:00",
+      "unit": null,
+      "valueType": "datetime",
+      "sourceFieldId": "mock.water_observation.observedAt.obs-water-001",
+      "sourceRecordId": "src-obs-water-001-v1",
+      "sourceFieldKey": "observedAt",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:05:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-obs-water-001-waterLevel",
+      "value": 41.7,
+      "unit": "米",
+      "valueType": "number",
+      "sourceFieldId": "mock.water_observation.waterLevel.obs-water-001",
+      "sourceRecordId": "src-obs-water-001-v1",
+      "sourceFieldKey": "waterLevel",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:05:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-obs-water-002-stationName",
+      "value": "演示清河水文站",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.water_observation.stationName.obs-water-002",
+      "sourceRecordId": "src-obs-water-002-v1",
+      "sourceFieldKey": "stationName",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:35:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-obs-water-002-observedAt",
+      "value": "2026-09-28T19:35:00+08:00",
+      "unit": null,
+      "valueType": "datetime",
+      "sourceFieldId": "mock.water_observation.observedAt.obs-water-002",
+      "sourceRecordId": "src-obs-water-002-v1",
+      "sourceFieldKey": "observedAt",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:35:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-obs-water-002-waterLevel",
+      "value": 41.9,
+      "unit": "米",
+      "valueType": "number",
+      "sourceFieldId": "mock.water_observation.waterLevel.obs-water-002",
+      "sourceRecordId": "src-obs-water-002-v1",
+      "sourceFieldKey": "waterLevel",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T19:35:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-obs-water-003-stationName",
+      "value": "演示清河水文站",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.water_observation.stationName.obs-water-003",
+      "sourceRecordId": "src-obs-water-003-v1",
+      "sourceFieldKey": "stationName",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:05:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-obs-water-003-observedAt",
+      "value": "2026-09-28T20:05:00+08:00",
+      "unit": null,
+      "valueType": "datetime",
+      "sourceFieldId": "mock.water_observation.observedAt.obs-water-003",
+      "sourceRecordId": "src-obs-water-003-v1",
+      "sourceFieldKey": "observedAt",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:05:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-obs-water-003-waterLevel",
+      "value": 42.1,
+      "unit": "米",
+      "valueType": "number",
+      "sourceFieldId": "mock.water_observation.waterLevel.obs-water-003",
+      "sourceRecordId": "src-obs-water-003-v1",
+      "sourceFieldKey": "waterLevel",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:05:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-obs-water-004-stationName",
+      "value": "演示清河水文站",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.water_observation.stationName.obs-water-004",
+      "sourceRecordId": "src-obs-water-004-v1",
+      "sourceFieldKey": "stationName",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:35:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-obs-water-004-observedAt",
+      "value": "2026-09-28T20:35:00+08:00",
+      "unit": null,
+      "valueType": "datetime",
+      "sourceFieldId": "mock.water_observation.observedAt.obs-water-004",
+      "sourceRecordId": "src-obs-water-004-v1",
+      "sourceFieldKey": "observedAt",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:35:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-obs-water-004-waterLevel",
+      "value": 42.22,
+      "unit": "米",
+      "valueType": "number",
+      "sourceFieldId": "mock.water_observation.waterLevel.obs-water-004",
+      "sourceRecordId": "src-obs-water-004-v1",
+      "sourceFieldKey": "waterLevel",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T20:35:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-obs-water-005-stationName",
+      "value": "演示清河水文站",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.water_observation.stationName.obs-water-005",
+      "sourceRecordId": "src-obs-water-005-v1",
+      "sourceFieldKey": "stationName",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:05:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-obs-water-005-observedAt",
+      "value": "2026-09-28T21:05:00+08:00",
+      "unit": null,
+      "valueType": "datetime",
+      "sourceFieldId": "mock.water_observation.observedAt.obs-water-005",
+      "sourceRecordId": "src-obs-water-005-v1",
+      "sourceFieldKey": "observedAt",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:05:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-obs-water-005-waterLevel",
+      "value": 42.3,
+      "unit": "米",
+      "valueType": "number",
+      "sourceFieldId": "mock.water_observation.waterLevel.obs-water-005",
+      "sourceRecordId": "src-obs-water-005-v1",
+      "sourceFieldKey": "waterLevel",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:05:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "event",
+        "eventId": "evt-demo-001",
+        "orgId": "org-demo-001"
+      }
+    },
+    {
+      "factId": "fact-shift-demo-001-shiftId",
+      "value": "shift-demo-001",
+      "unit": null,
+      "valueType": "string",
+      "sourceFieldId": "mock.duty_shift.shiftId.shift-demo-001",
+      "sourceRecordId": "src-shift-001-v1",
+      "sourceFieldKey": "shiftId",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T16:00:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "shift",
+        "shiftId": "shift-demo-001",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001",
+          "evt-demo-002"
+        ]
+      }
+    },
+    {
+      "factId": "fact-shift-demo-001-startsAt",
+      "value": "2026-09-28T16:00:00+08:00",
+      "unit": null,
+      "valueType": "datetime",
+      "sourceFieldId": "mock.duty_shift.startsAt.shift-demo-001",
+      "sourceRecordId": "src-shift-001-v1",
+      "sourceFieldKey": "startsAt",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T16:00:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "shift",
+        "shiftId": "shift-demo-001",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001",
+          "evt-demo-002"
+        ]
+      }
+    },
+    {
+      "factId": "fact-shift-demo-001-endsAt",
+      "value": "2026-09-29T00:00:00+08:00",
+      "unit": null,
+      "valueType": "datetime",
+      "sourceFieldId": "mock.duty_shift.endsAt.shift-demo-001",
+      "sourceRecordId": "src-shift-001-v1",
+      "sourceFieldKey": "endsAt",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T16:00:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "shift",
+        "shiftId": "shift-demo-001",
+        "orgId": "org-demo-001",
+        "allowedEventIds": [
+          "evt-demo-001",
+          "evt-demo-002"
+        ]
+      }
+    },
+    {
+      "factId": "fact-clock-demo-001-currentTime",
+      "value": "2026-09-28T21:10:00+08:00",
+      "unit": null,
+      "valueType": "datetime",
+      "sourceFieldId": "mock.demo_clock.currentTime.clock-demo-001",
+      "sourceRecordId": "src-clock-001-v1",
+      "sourceFieldKey": "currentTime",
+      "sourceVersion": 1,
+      "capturedAt": "2026-09-28T21:10:00+08:00",
+      "verification": "confirmed",
+      "dataMode": "mock",
+      "scope": {
+        "kind": "demo_configuration"
+      }
+    }
+  ],
+  "knowledgeChunks": [
+    {
+      "chunkId": "kb-demo-report-elements",
+      "title": "演示文书要素清单",
+      "category": "演示模板知识",
+      "version": "1.0.0-demo",
+      "isMock": true,
+      "effectiveStatus": "demo_only",
+      "sourceLabel": "本原型虚构知识包",
+      "content": "文书示例包含事件基本情况、当前影响、响应与处置进展、力量情况、下一步工作和报送信息。未知信息应标注待核实，候选力量不得表述为已调派。",
+      "notice": "仅用于演示知识引用交互，不是真实规范、法规或已审核单位模板。"
+    },
+    {
+      "chunkId": "kb-demo-coordination-case",
+      "title": "演示案例：信息核实与力量预置",
+      "category": "虚构案例",
+      "version": "1.0.0-demo",
+      "isMock": true,
+      "effectiveStatus": "demo_only",
+      "sourceLabel": "本原型虚构知识包",
+      "content": "本虚构案例用于展示信息补齐、候选力量比较、人工审核和文书留痕之间的协作关系，不包含真实救援成效或工程处置参数。",
+      "notice": "本案例不存在对应真实事件，不可作为工程技术依据。"
+    },
+    {
+      "chunkId": "kb-demo-status-terms",
+      "title": "演示术语：建议、确认与签发",
+      "category": "演示流程说明",
+      "version": "1.0.0-demo",
+      "isMock": true,
+      "effectiveStatus": "demo_only",
+      "sourceLabel": "本原型虚构知识包",
+      "content": "建议是待审核意见，候选是拟使用的资源，模拟签发是本机演示状态变化。只有明确的已确认记录才能用于对应事实段落。",
+      "notice": "不代表真实业务系统权限、审批效力或指挥制度。"
+    }
+  ],
+  "templates": [
+    {
+      "templateCode": "EMERGENCY_BRIEF",
+      "name": "应急要情",
+      "templateVersion": "1.0.0-demo",
+      "status": "enabled",
+      "sections": [
+        "标题",
+        "基本情况",
+        "当前影响",
+        "响应及处置进展",
+        "力量情况",
+        "下一步工作",
+        "报送信息",
+        "附件与依据"
+      ],
+      "requiredFields": [
+        {
+          "field": "occurredAt",
+          "binding": "incident.factRefs.occurredAt",
+          "required": true,
+          "allowPending": false
+        },
+        {
+          "field": "location",
+          "binding": "incident.factRefs.location",
+          "required": true,
+          "allowPending": false
+        },
+        {
+          "field": "disasterType",
+          "binding": "incident.factRefs.disasterType",
+          "required": true,
+          "allowPending": false
+        },
+        {
+          "field": "incidentDescription",
+          "binding": "incident.factRefs.incidentDescription",
+          "required": true,
+          "allowPending": false
+        },
+        {
+          "field": "impactScope",
+          "binding": "incident.factRefs.impactScope",
+          "required": true,
+          "allowPending": true
+        },
+        {
+          "field": "casualty",
+          "binding": "incident.factRefs.casualty",
+          "required": true,
+          "allowPending": true
+        },
+        {
+          "field": "confirmedResponseLevel",
+          "binding": "incident.factRefs.confirmedResponseLevel",
+          "required": true,
+          "allowPending": false
+        },
+        {
+          "field": "controlStatus",
+          "binding": "incident.factRefs.controlStatus",
+          "required": true,
+          "allowPending": false
+        },
+        {
+          "field": "reportingUnit",
+          "binding": "incident.reportingUnitFactId",
+          "required": true,
+          "allowPending": false
+        }
+      ],
+      "optionalBindings": [
+        "currentSession.candidateResourceIds",
+        "currentSession.selectedProposalId",
+        "station.latestObservationId"
+      ],
+      "allowedExports": [
+        "docx",
+        "browser_print"
+      ],
+      "signatureMode": "simulated_only",
+      "note": "候选或选定建议不存在时不编造；要情主线需模拟报送单位补录。"
+    },
+    {
+      "templateCode": "DUTY_DAILY",
+      "name": "值班日报",
+      "templateVersion": "1.0.0-demo",
+      "status": "enabled",
+      "sections": [
+        "班次概况",
+        "接报统计",
+        "重点事件",
+        "监测摘要",
+        "处置进展",
+        "交接事项",
+        "填报单位"
+      ],
+      "requiredFields": [
+        {
+          "field": "shiftId",
+          "binding": "shift.factRefs.shiftId",
+          "required": true,
+          "allowPending": false
+        },
+        {
+          "field": "startsAt",
+          "binding": "shift.factRefs.startsAt",
+          "required": true,
+          "allowPending": false
+        },
+        {
+          "field": "endsAt",
+          "binding": "shift.factRefs.endsAt",
+          "required": true,
+          "allowPending": false
+        },
+        {
+          "field": "statisticsCutoff",
+          "binding": "meta.demoClockFactId",
+          "required": true,
+          "allowPending": false
+        },
+        {
+          "field": "handOverNotes",
+          "binding": "shift.handOverNotesFactId",
+          "required": true,
+          "allowPending": false
+        },
+        {
+          "field": "reportingUnit",
+          "binding": "shift.reportingUnitFactId",
+          "required": true,
+          "allowPending": false
+        }
+      ],
+      "aggregateDefinitions": [
+        "daily_incident_count",
+        "daily_ongoing_count",
+        "daily_controlled_count"
+      ],
+      "allowedExports": [
+        "docx",
+        "browser_print"
+      ],
+      "signatureMode": "simulated_only",
+      "note": "班次配置、统计截止时间均绑定模拟配置事实；统计值须生成派生事实。交接事项和填报单位必须补录并确认。"
+    },
+    {
+      "templateCode": "MEETING_MINUTES",
+      "name": "会议纪要",
+      "templateVersion": "1.0.0-demo",
+      "status": "preview_only",
+      "sections": [
+        "会议基本信息",
+        "议题",
+        "讨论要点",
+        "决议事项",
+        "待办清单及责任人与时限"
+      ],
+      "allowedExports": [],
+      "notice": "本轮仅展示模板结构，尚未实现生成。"
+    },
+    {
+      "templateCode": "WORK_SUMMARY",
+      "name": "工作总结",
+      "templateVersion": "1.0.0-demo",
+      "status": "preview_only",
+      "sections": [
+        "任务背景",
+        "阶段任务",
+        "主要成效",
+        "存在问题",
+        "改进建议"
+      ],
+      "allowedExports": [],
+      "notice": "本轮仅展示模板结构，尚未实现生成。"
+    }
+  ],
+  "proposalBlueprint": {
+    "blueprintId": "proposal-blueprint-demo-001",
+    "isMock": true,
+    "notice": "来自上游模拟服务的建议，仅用于产品演示；具体工程措施须专业人员审核。",
+    "knowledgeRefs": [
+      "kb-demo-report-elements",
+      "kb-demo-coordination-case",
+      "kb-demo-status-terms"
+    ],
+    "sections": [
+      {
+        "id": "objective",
+        "title": "工作目标",
+        "text": "及时核实当前险情，形成可核查的工作记录。"
+      },
+      {
+        "id": "information",
+        "title": "信息核实",
+        "text": "继续收集现场信息，明确未核实事项及对应责任。"
+      },
+      {
+        "id": "resources",
+        "title": "拟预置力量",
+        "binding": "currentSession.candidateResourceIds",
+        "emptyText": "尚未指定候选力量。"
+      },
+      {
+        "id": "review",
+        "title": "专业审核",
+        "text": "建议开展风险评估及力量预置论证，具体处置措施由专业人员审核确定。"
+      }
+    ],
+    "riskNotes": [
+      "人员伤亡及影响范围仍待核实。",
+      "建议升级响应等级尚未确认。",
+      "候选力量尚未形成正式调派命令。"
+    ],
+    "creationRule": "运行时生成 proposalId/version；绑定当次事实快照和候选 IDs，不能预设已选定。"
+  },
+  "manualInputExamples": [
+    {
+      "field": "reportingUnit",
+      "exampleUtterance": "报送单位是演示集团应急指挥中心",
+      "exampleValue": "演示集团应急指挥中心",
+      "requiresConfirmation": true,
+      "persistRule": "确认后新建模拟 manual source/fact，记录 actor/performedAt。绑定主事件及当前班次；不得在初始时预填。"
+    },
+    {
+      "field": "handOverNotes",
+      "exampleUtterance": "交接事项是继续跟踪清河段险情和待核实事项",
+      "exampleValue": "继续跟踪清河段险情和待核实事项",
+      "requiresConfirmation": true,
+      "persistRule": "确认后新建模拟 manual source/fact，绑定班次；不把原始聊天本身当确认。"
+    }
+  ],
+  "derivedFactDefinitions": [
+    {
+      "key": "candidate_team_count",
+      "formula": "COUNT(DISTINCT candidateResourceIds)",
+      "inputs": "currentSession.candidateResourceIds"
+    },
+    {
+      "key": "candidate_people_count",
+      "formula": "SUM(selectedTeams.peopleCount)",
+      "inputs": "candidateResourceIds -> teams.factRefs.peopleCount"
+    },
+    {
+      "key": "candidate_excavator_count",
+      "formula": "SUM(selectedTeams.excavatorCount)",
+      "inputs": "candidateResourceIds -> teams.factRefs.excavatorCount"
+    },
+    {
+      "key": "daily_incident_count",
+      "formula": "COUNT(DISTINCT eventId)",
+      "inputs": "shift.incidentIds filtered by startsAt <= occurredAt <= demoClock"
+    },
+    {
+      "key": "daily_ongoing_count",
+      "formula": "COUNT(controlStatus == ongoing)",
+      "inputs": "same shift event set"
+    },
+    {
+      "key": "daily_controlled_count",
+      "formula": "COUNT(controlStatus == controlled)",
+      "inputs": "same shift event set"
+    }
+  ],
+  "schematicMap": {
+    "mode": "local_svg",
+    "label": "空间示意 · 非真实地图",
+    "viewBox": [
+      0,
+      0,
+      1000,
+      650
+    ],
+    "georeferenced": false,
+    "distanceRule": "图上位置不用于算公里数或 ETA；距离字段来自模拟事实。",
+    "riverPath": "M 180 30 C 380 150 740 170 610 330 S 390 500 700 640",
+    "eventMarkerRef": "incidents[].schematicPosition",
+    "teamMarkerRef": "teams[].schematicPosition",
+    "warehouseMarkerRef": "warehouses[].schematicPosition"
+  },
+  "faultScenarios": [
+    {
+      "faultId": "resource_timeout_once",
+      "title": "资源服务超时",
+      "enabledByDefault": false,
+      "target": "resource_query",
+      "behavior": "下一次资源适配器抛可恢复错误；重试新 attempt 成功，保留摘要产物。"
+    },
+    {
+      "faultId": "missing_source_once",
+      "title": "下一次文书缺来源",
+      "enabledByDefault": false,
+      "target": "document_generation",
+      "factId": "fact-obs-water-005-waterLevel",
+      "behavior": "在下一次生成结果的工作副本中返回无法解析的来源，触发 R-002；不要删除既有已签发版本的来源快照。"
+    },
+    {
+      "faultId": "water_feed_update",
+      "title": "监测数据更新",
+      "enabledByDefault": false,
+      "target": "station-demo-001",
+      "requiresEventId": "evt-demo-001",
+      "newDemoClock": "2026-09-28T21:12:00+08:00",
+      "newObservationId": "obs-water-006",
+      "newCapturedAt": "2026-09-28T21:12:00+08:00",
+      "newWaterLevel": 42.35,
+      "unit": "米",
+      "newFeedVersion": 2,
+      "behavior": "创建新 source/fact/observation 并移动 latestObservationId、contextVersion；保留旧样本不篡改。旧草稿标过期，旧签发版保持锁定。 同时创建新的演示时钟来源/事实并更新 meta.demoClockFactId，不修改旧文书时钟快照。"
+    }
+  ],
+  "negativeContentExamples": [
+    {
+      "text": "险情已经得到有效控制",
+      "expectedRule": "R-005",
+      "replacement": "现场正在持续处置，险情变化仍需跟踪核实。"
+    },
+    {
+      "text": "无人员伤亡",
+      "expectedRule": "R-004",
+      "replacement": "人员伤亡情况待核实。"
+    },
+    {
+      "text": "已调派候选救援队伍",
+      "expectedRule": "R-006",
+      "replacement": "相关队伍仅为拟预置候选，尚无已确认的新增调派记录。"
+    },
+    {
+      "text": "现场新增99台设备",
+      "expectedRule": "R-010",
+      "replacement": null
+    }
+  ],
+  "expectedChecks": {
+    "note": "以下只供测试断言，不允许用这些常量驱动 UI；UI 必须从 facts 和用户选择计算。",
+    "initialCandidates": {
+      "teams": 0,
+      "people": 0,
+      "excavators": 0
+    },
+    "afterSelectingTeam001And002": {
+      "teams": 2,
+      "people": 64,
+      "excavators": 7
+    },
+    "afterRemovingTeam002": {
+      "teams": 1,
+      "people": 36,
+      "excavators": 4
+    },
+    "availableTeamsByEta": [
+      "team-001",
+      "team-002"
+    ],
+    "shift": {
+      "incidents": 2,
+      "ongoing": 1,
+      "controlled": 1
+    },
+    "latestWaterLevel": 42.3,
+    "afterFeedUpdateWaterLevel": 42.35,
+    "mandatoryManualFieldsInitiallyMissing": [
+      "reportingUnit",
+      "handOverNotes"
+    ]
+  }
+}
