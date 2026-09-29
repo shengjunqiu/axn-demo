@@ -216,7 +216,7 @@ export default function KnowledgePanel() {
                     type="warning"
                     showIcon
                     style={{ marginBottom: 8 }}
-                    message={`知识条目缺失：${chunkId}（模拟数据）`}
+                    title={`知识条目缺失：${chunkId}（模拟数据）`}
                   />
                 );
               }

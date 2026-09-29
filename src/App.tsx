@@ -134,7 +134,7 @@ export default function AppRoot() {
         </div>
 
         {/* 第二栏：当前会话区 */}
-        <Sider width={350} style={{ background: '#fff', borderRadius: 10, border: '1px solid #e5e9f0', overflow: 'hidden' }}>
+        <Sider width={420} style={{ background: '#fff', borderRadius: 10, border: '1px solid #e5e9f0', overflow: 'hidden' }}>
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <ChatPanel onOpenDrawer={(target: 'resource' | 'knowledge') => { setPanelDrawer(target); }} />
           </div>

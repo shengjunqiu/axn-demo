@@ -157,3 +157,5 @@ pnpm test:e2e         # Playwright E2E（8 项，含主线全链路）
   - src/tests/qaKnowledge.test.ts（12 用例）；conversation.test.ts 类型修复（非空断言）
 - 验证：typecheck ✓；lint 0 错误 ✓；单测 129 ✓；冒烟：QA 卡（建议动作/禁忌/现场数据/置信度/3 来源卡/手册标题/免责声明）✓、流式正文含来源行 ✓、业务主线（资源查询）不被误吞 ✓、无页面错误 ✓
 - 已知限制：匹配为本地规则（精确+双向包含≥6字），非语义检索；未跑全量 E2E
+
+| 2026-09-29 | 标注驱动修复 | 主控 | ①任务气泡占满会话栏宽度（styles root/body/content 三层 flex 修复，QA/摘要卡 242→292+）②Alert message=→title= 清理 antd 弃用警告（9 处）③会话栏 350→420px 加宽（标注 vibe_1790658377137） | typecheck✓ lint 0err✓ 单测129✓ 冒烟: 1680(420+1004)/1440(420+764)✓ 卡片362/422宽✓ 无页面错误✓ | 待用户复看 |

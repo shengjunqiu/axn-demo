@@ -266,7 +266,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
               style={{ marginTop: 10 }}
               type="warning"
               showIcon
-              message={`校核通过，但有 ${warnings.length} 条提示`}
+              title={`校核通过，但有 ${warnings.length} 条提示`}
               description="提示级问题不阻断提交签发，建议人工确认。"
             />
           )}
@@ -275,7 +275,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
               style={{ marginTop: 10 }}
               type="error"
               showIcon
-              message={`存在 ${blocks.length} 条阻断级问题`}
+              title={`存在 ${blocks.length} 条阻断级问题`}
               description="阻断级问题未解决前，无法提交送审与签发。"
             />
           )}

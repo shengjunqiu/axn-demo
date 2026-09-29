@@ -100,12 +100,12 @@ function SummaryBlock({ payload }: { payload: SummaryArtifact }) {
           type="warning"
           showIcon
           style={{ marginTop: 8 }}
-          message={`待确认字段：${payload.pendingKeys.join('、')}`}
+          title={`待确认字段：${payload.pendingKeys.join('、')}`}
           description="以上字段暂无可靠来源，需人工补录后才会进入正式产物（模拟）。"
         />
       )}
       {payload.sourceUnavailable && (
-        <Alert type="info" showIcon style={{ marginTop: 8 }} message={payload.sourceUnavailable} />
+        <Alert type="info" showIcon style={{ marginTop: 8 }} title={payload.sourceUnavailable} />
       )}
       <div className="axn-artifact-foot">数据时间：{payload.dataTime} · 模拟数据</div>
     </div>
@@ -256,7 +256,7 @@ function DocumentBlock({ payload }: { payload: DocumentLinkArtifact }) {
           type="warning"
           showIcon
           style={{ marginTop: 8 }}
-          message={`缺少必填字段：${payload.missingFields.join('、')}`}
+          title={`缺少必填字段：${payload.missingFields.join('、')}`}
           description="请在对话中按提示补录（补录内容确认后生成模拟来源记录）。"
         />
       )}
@@ -289,7 +289,7 @@ function ArtifactBlock({ payload, onOpenDrawer }: { payload: TaskArtifactPayload
           type="error"
           showIcon
           style={{ marginTop: 8 }}
-          message={`${err.message}（${err.errorCode}）`}
+          title={`${err.message}（${err.errorCode}）`}
           description={err.hint}
         />
       );
@@ -366,7 +366,7 @@ export default function TaskCard({ task, onOpenDrawer }: TaskCardProps) {
           type="error"
           showIcon
           style={{ marginTop: 8 }}
-          message={`${task.error.message}（${task.error.errorCode}）`}
+          title={`${task.error.message}（${task.error.errorCode}）`}
           description={
             <Space direction="vertical" size={4}>
               <span>{task.error.hint}</span>

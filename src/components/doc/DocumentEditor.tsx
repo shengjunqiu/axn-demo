@@ -532,7 +532,7 @@ function EditorSurface({ draft, locked, signedVersion, onCloseRequest }: EditorS
           style={{ marginBottom: 12 }}
           type="warning"
           showIcon
-          message={`该文书已签发锁定（${signedVersion ?? '已签发版本'}）`}
+          title={`该文书已签发锁定（${signedVersion ?? '已签发版本'}）`}
           description="已签发版本不可再编辑、不可覆盖。点击「开始修订」后可在新的工作副本上修改，保存版本时将生成新版本号（V*.*），不会覆盖已签发快照。"
           action={
             <Button size="small" onClick={() => { createRevisionDraftFromSigned({ documentId: draft.documentId, content: draft.working.content, actorName: useDemoStore.getState().getActor().name }); setRevisionMode(false); setNonce(n => n + 1); }}>

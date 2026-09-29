@@ -149,6 +149,12 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
           role: 'task',
           content: task?.displayTitle ?? '任务',
           avatar: AVATAR,
+          // 任务卡占满会话栏可用宽度（默认气泡 fit-content 会把长内容挤成窄条）
+          styles: {
+            root: { flex: '1 1 auto', width: 'auto', minWidth: 0, alignSelf: 'stretch', paddingInlineEnd: 0 },
+            body: { flex: '1 1 auto', width: '100%', minWidth: 0, maxWidth: '100%' },
+            content: { width: '100%' },
+          },
           contentRender: () =>
             task ? (
               <TaskCard task={task} onOpenDrawer={onOpenDrawer} />
@@ -230,7 +236,10 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
               placement: 'start',
               variant: 'borderless',
               avatar: AVATAR,
-              styles: { content: { padding: 0, background: 'transparent' } },
+              styles: {
+                body: { flex: '1 1 auto', minWidth: 0 },
+                content: { padding: 0, background: 'transparent', width: '100%', flex: '1 1 auto', minWidth: 0 },
+              },
             },
           }}
         />
@@ -263,7 +272,7 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
           <Alert
             type="warning"
             showIcon
-            message={pending.prompt}
+            title={pending.prompt}
             description={
               <Space.Compact style={{ width: '100%', marginTop: 6 }}>
                 <Input
