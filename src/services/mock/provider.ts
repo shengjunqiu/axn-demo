@@ -568,19 +568,13 @@ async function* runQaKnowledge(req: Ctx, signal: AbortSignal, paceMs: number): A
       },
     },
   };
-  const parts = [
-    a.summary,
-    a.keyActions ? `建议动作：${a.keyActions}` : '',
-    a.doNot ? `禁忌提醒：${a.doNot}` : '',
-    a.supportAndReporting ? `协同上报：${a.supportAndReporting}` : '',
-    a.liveDataNeeded.length > 0 ? `需结合现场实时数据：${a.liveDataNeeded.join('、')}。` : '',
-    `（回答依据模拟应用文档：${item.sources.map((s) => `《${s.title}》${s.section}`).join('；')}；置信度 ${Math.round(item.confidence * 100)}%，${qaStatusLabel(item.answerStatus)}。演示模拟数据，非正式技术规范。）`,
-  ].filter(Boolean);
-  for (const part of parts) {
-    yield { type: 'text_delta', text: part };
-    await sleep(paceMs, signal);
-    assertActive(req);
-  }
+  // 答案全文已在 QA 知识卡中展示，流式文本仅补充来源提示，避免同一回答出现两次
+  yield {
+    type: 'text_delta',
+    text: `以上为结构化回答（模拟数据），来源与依据见上方知识卡；置信度 ${Math.round(item.confidence * 100)}%，${qaStatusLabel(item.answerStatus)}。`,
+  };
+  await sleep(paceMs, signal);
+  assertActive(req);
   yield { type: 'completed', summary: `知识问答完成（模拟文档溯源 · ${item.category}）` };
 }
 
