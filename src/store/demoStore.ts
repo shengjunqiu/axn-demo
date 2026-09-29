@@ -1,4 +1,7 @@
 import { create } from 'zustand';
+import { useDocumentStore } from './documentStore';
+import { shift } from '@/seed/scenario';
+import { invalidateAllRuns } from '@/services/taskRuns';
 import {
   DEFAULT_ACTOR_ID,
   DEFAULT_EVENT_ID,
@@ -12,6 +15,7 @@ import { clearPersist, loadPersist, savePersist } from './persistence';
 
 export interface ManualFactEntry {
   factId: string;
+  eventId: string;
   field: string;
   value: string;
   scopeKind: 'event' | 'shift';
@@ -34,10 +38,9 @@ export interface WaterFeedOverride {
   newDemoClock: string;
 }
 
-let manualCounter = 0;
 function nextManualId(): { factId: string; sourceRecordId: string } {
-  manualCounter += 1;
-  return { factId: `fact-manual-${String(manualCounter).padStart(3, '0')}`, sourceRecordId: `src-manual-${String(manualCounter).padStart(3, '0')}` } as const;
+  const id = crypto.randomUUID();
+  return { factId: `fact-manual-${id}`, sourceRecordId: `src-manual-${id}` };
 }
 
 interface DemoState {
@@ -49,8 +52,12 @@ interface DemoState {
   guideStepIndex: number;
   manualFacts: ManualFactEntry[];
   waterOverride: WaterFeedOverride | null;
+  contextVersions: Record<string, number>;
+  contextSequence: number;
   storageWarning: string | null;
   globalBanner: string;
+  touchContext: (kind: 'event' | 'shift', id: string) => void;
+  getContextVersion: (kind: 'event' | 'shift', id: string) => number;
   getActor: () => Actor;
   setActor: (actorId: string) => void;
   switchEvent: (eventId: string) => void;
@@ -87,9 +94,21 @@ interface DemoPersist {
   guideStepIndex: number;
   manualFacts: ManualFactEntry[];
   waterOverride: WaterFeedOverride | null;
+  contextVersions: Record<string, number>;
+  contextSequence: number;
 }
 
 const demoPersisted = loadPersist<DemoPersist>('demo');
+const persistedManualInput: unknown = demoPersisted?.manualFacts;
+const persistedManualFacts = (Array.isArray(persistedManualInput) ? persistedManualInput : []).filter(
+  (entry): entry is ManualFactEntry => !!entry && typeof entry === 'object'
+    && ['factId', 'field', 'value', 'scopeId', 'sourceRecordId', 'actorId', 'actorName', 'performedAt', 'demoClockAt', 'sourceLabel'].every(
+      key => typeof (entry as Record<string, unknown>)[key] === 'string')
+    && (entry.scopeKind === 'event' || entry.scopeKind === 'shift'),
+);
+const malformedManualFacts = persistedManualInput != null && (!Array.isArray(persistedManualInput) || persistedManualFacts.length !== persistedManualInput.length);
+const duplicateManualIds = new Set(persistedManualFacts.filter((fact, index, all) =>
+  all.findIndex(other => other.factId === fact.factId) !== index).map(fact => fact.factId));
 
 export const useDemoStore = create<DemoState>()((set, get) => ({
   actorId: demoPersisted?.actorId ?? DEFAULT_ACTOR_ID,
@@ -98,10 +117,21 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
   pace: demoPersisted?.pace ?? 'normal',
   faults: demoPersisted?.faults ?? {},
   guideStepIndex: demoPersisted?.guideStepIndex ?? initialGuide,
-  manualFacts: demoPersisted?.manualFacts ?? [],
+  manualFacts: persistedManualFacts,
   waterOverride: demoPersisted?.waterOverride ?? null,
-  storageWarning: null,
+  contextVersions: demoPersisted?.contextVersions ?? {},
+  contextSequence: demoPersisted?.contextSequence ?? (demoPersisted?.waterOverride ? 2 : 1),
+  storageWarning: malformedManualFacts ? '部分补录缓存格式不完整，未载入；请重新补录并校核文书。' : duplicateManualIds.size ? '检测到旧演示数据的补录引用冲突，请重新补录相关字段并刷新文书数据；旧记录未被删除。' : null,
   globalBanner: demoMeta.globalBanner,
+
+  getContextVersion: (kind, id) => get().contextVersions[`${kind}:${id}`] ?? (get().waterOverride && (id === 'evt-demo-001' || kind === 'shift') ? 2 : 1),
+  touchContext: (kind, id) => {
+    const version = get().contextSequence + 1;
+    const keys = [`${kind}:${id}`];
+    if (kind === 'event' && shift.incidentIds.includes(id)) keys.push(`shift:${shift.shiftId}`);
+    set(s => ({ contextSequence: version, contextVersions: { ...s.contextVersions, ...Object.fromEntries(keys.map(key => [key, version])) } }));
+    useDocumentStore.getState().markBusinessDataChanged(kind, id);
+  },
 
   getActor: () => {
     const { actorId } = get();
@@ -109,7 +139,10 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
   },
   setActor: (actorId) => set({ actorId }),
 
-  switchEvent: (eventId) => set({ currentEventId: eventId }),
+  switchEvent: (eventId) => {
+    if (eventId !== get().currentEventId) invalidateAllRuns();
+    set({ currentEventId: eventId });
+  },
   getCurrentEventId: () => get().currentEventId,
 
   setPace: (pace) => set({ pace }),
@@ -132,6 +165,7 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
     const ids = nextManualId();
     const entry: ManualFactEntry = {
       ...ids,
+      eventId: input.scopeKind === 'event' ? input.scopeId : get().currentEventId,
       field: input.field,
       value: input.value,
       scopeKind: input.scopeKind,
@@ -143,13 +177,15 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
       sourceLabel: '人工补录（模拟）',
     };
     set((s) => ({ manualFacts: [...s.manualFacts, entry] }));
+    get().touchContext(input.scopeKind, input.scopeId);
     return entry;
   },
 
   getManualFactByField: (field, scopeKind, scopeId) =>
     [...get().manualFacts]
       .reverse()
-      .find((m) => m.field === field && m.scopeKind === scopeKind && m.scopeId === scopeId),
+      .find((m) => m.field === field && m.scopeKind === scopeKind && m.scopeId === scopeId
+        && get().manualFacts.filter(other => other.factId === m.factId).length === 1),
 
   applyWaterFeedUpdate: () => {
     const fault = get().isWaterFeedUpdated() ? null : {
@@ -161,13 +197,17 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
       feedVersion: 2,
       newDemoClock: '2026-09-28T21:12:00+08:00',
     };
-    if (fault) set({ waterOverride: fault, demoClock: fault.newDemoClock });
+    if (fault) {
+      set({ waterOverride: fault, demoClock: fault.newDemoClock });
+      get().touchContext('event', 'evt-demo-001');
+    }
   },
   isWaterFeedUpdated: () => get().waterOverride !== null,
 
   setStorageWarning: (msg) => set({ storageWarning: msg }),
 
   reset: () => {
+    invalidateAllRuns();
     clearPersist('demo');
     set({
       actorId: DEFAULT_ACTOR_ID,
@@ -178,6 +218,8 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
       guideStepIndex: initialGuide,
       manualFacts: [],
       waterOverride: null,
+      contextVersions: {},
+      contextSequence: 1,
       storageWarning: null,
       globalBanner: demoMeta.globalBanner,
     });
@@ -195,6 +237,8 @@ useDemoStore.subscribe((state) => {
     guideStepIndex: state.guideStepIndex,
     manualFacts: state.manualFacts,
     waterOverride: state.waterOverride,
+    contextVersions: state.contextVersions,
+    contextSequence: state.contextSequence,
   } as DemoPersist);
 });
 

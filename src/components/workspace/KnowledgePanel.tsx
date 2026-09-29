@@ -28,7 +28,7 @@ export default function KnowledgePanel() {
       for (const artifact of task.artifacts) {
         if (artifact.payload.kind === 'proposal') {
           const record = useSessionStore.getState().proposals[artifact.payload.proposalId];
-          if (record && (!latest || record.createdAt > latest.createdAt)) {
+          if (record && (!latest || record.createdAt >= latest.createdAt)) {
             latest = { id: record.proposalId, createdAt: record.createdAt };
           }
         }
@@ -73,7 +73,9 @@ export default function KnowledgePanel() {
     void sendMessage(session.sessionId, { text: '给我处置建议' });
   };
 
-  const candidateIds = session.candidateResourceIds;
+  const proposalStale = !!proposalRecord && (proposalRecord.eventId !== session.eventId
+    || [...proposalRecord.candidateIds].sort().join('|') !== [...session.candidateResourceIds].sort().join('|'));
+  const selected = !!proposalRecord && session.selectedProposalId === proposalRecord.proposalId && !proposalStale;
 
   return (
     <div className="axn-knowledge-panel">
@@ -92,13 +94,14 @@ export default function KnowledgePanel() {
             title={
               <Space size={6} wrap>
                 <span>{proposalRecord.title}</span>
-                <Tag color="blue">v{proposalRecord.version}</Tag>
+                <Tag color="blue">{proposalRecord.version}</Tag>
                 <Tag color="orange">模拟生成</Tag>
-                {proposalRecord.selectedAt && <Tag color="success">已采纳</Tag>}
+                {selected && <Tag color="success">已采纳</Tag>}
+                {proposalStale && <Tag color="warning">候选已变化 · 建议过期</Tag>}
               </Space>
             }
             extra={
-              proposalRecord.selectedAt ? (
+              selected ? (
                 <Button
                   size="small"
                   onClick={() => selectProposalSafe(session.sessionId, null)}
@@ -109,6 +112,7 @@ export default function KnowledgePanel() {
                 <Button
                   size="small"
                   type="primary"
+                  disabled={proposalStale}
                   onClick={() => selectProposalSafe(session.sessionId, proposalRecord.proposalId)}
                 >
                   采纳为当前建议
@@ -123,6 +127,9 @@ export default function KnowledgePanel() {
               style={{ marginBottom: 10 }}
               message="本建议由规则模拟生成，仅供演示，需人工审核确认后方可作为处置依据。"
             />
+            {proposalStale && <Alert type="warning" showIcon style={{ marginBottom: 10 }}
+              message="下列为原候选集合生成的历史建议，不能作为当前建议采纳。"
+              action={<Button size="small" disabled={busy} onClick={askProposal}>重新生成建议</Button>} />}
             {proposalRecord.sections.map((section) => {
               const boundTeamNames = (section.bindingResourceIds ?? [])
                 .map((id) => {
@@ -130,7 +137,7 @@ export default function KnowledgePanel() {
                   return team ? factText(team.factRefs.name) || id : null;
                 })
                 .filter((n): n is string => n != null);
-              const showPlaceholder = boundTeamNames.length > 0 && candidateIds.length === 0;
+              const showPlaceholder = section.id === 'resources' && boundTeamNames.length === 0;
               return (
                 <div key={section.id} style={{ marginBottom: 10 }}>
                   <Text strong style={{ fontSize: 13 }}>

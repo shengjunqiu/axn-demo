@@ -1,341 +1,209 @@
 import { create } from 'zustand';
-import type {
-  AuditEvent,
-  DocumentContent,
-  DocumentDraft,
-  DocumentRevision,
-  SourceSnapshot,
-  ValidationReport,
-} from '@/domain/types';
+import type { AuditEvent, DocumentContent, DocumentDraft, DocumentRevision, SourceSnapshot, ValidationReport } from '@/domain/types';
 import { useDemoStore } from './demoStore';
+import { shift } from '@/seed/scenario';
 import { clearPersist, loadPersist, savePersist } from './persistence';
-import { factDisplay, formatFactValue } from '@/services/factLookup';
+import { formatFactValue } from '@/services/factLookup';
 import { collectRunDerivedKeys, collectRunFactIds } from '@/services/contentRuns';
-import { computeDerived } from '@/seed/derived';
 
-let revisionCounter = 0;
-function nextRevisionId(): string {
-  revisionCounter += 1;
-  return `rev-${Date.now().toString(36)}-${revisionCounter}`;
-}
-let reportCounter = 0;
-function nextReportId(): string {
-  reportCounter += 1;
-  return `report-${Date.now().toString(36)}-${reportCounter}`;
-}
-let auditCounter = 0;
-function nextAuditId(): string {
-  auditCounter += 1;
-  return `audit-${Date.now().toString(36)}-${auditCounter}`;
-}
+const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
+/** Deterministic local comparison token; this is not a cryptographic signature. */
 export function computeContentHash(content: DocumentContent): string {
   const json = JSON.stringify(content);
   let h = 5381;
-  for (let i = 0; i < json.length; i += 1) {
-    h = ((h << 5) + h + json.charCodeAt(i)) >>> 0;
-  }
-  return `sha1-demo-${h.toString(16).padStart(8, '0')}`;
+  for (let i = 0; i < json.length; i++) h = ((h << 5) + h + json.charCodeAt(i)) >>> 0;
+  return `demo-content-${h.toString(16).padStart(8, '0')}`;
 }
 
+type RevisionAction = 'submit' | 'sign' | 'export';
 interface DocumentState {
   drafts: Record<string, DocumentDraft>;
   revisions: Record<string, DocumentRevision>;
   reports: Record<string, ValidationReport>;
-  /** 文书 id → 当前生效校核 reportId（contentHash 一致才有效） */
   activeReportByDocument: Record<string, string | null>;
   audit: AuditEvent[];
   addAudit: (input: Omit<AuditEvent, 'auditId' | 'isSimulated'>) => void;
   addDraft: (draft: DocumentDraft) => void;
-  getDraft: (documentId: string) => DocumentDraft | undefined;
-  updateWorkingContent: (documentId: string, content: DocumentContent) => void;
-  markValidation: (documentId: string, status: DocumentDraft['validation']['status'], reportId: string | null) => void;
-  updateDraftSnapshot: (documentId: string, snapshot: SourceSnapshot) => void;
+  getDraft: (id: string) => DocumentDraft | undefined;
+  updateWorkingContent: (id: string, content: DocumentContent) => void;
+  markValidation: (id: string, status: DocumentDraft['validation']['status'], reportId: string | null) => void;
+  updateDraftSnapshot: (id: string, snapshot: SourceSnapshot) => void;
+  markBusinessDataChanged: (kind: 'event' | 'shift', id: string) => void;
   addReport: (report: Omit<ValidationReport, 'reportId' | 'checkedAt'>) => ValidationReport;
-  getActiveReport: (documentId: string) => ValidationReport | null;
-  invalidateReportForDocument: (documentId: string) => void;
-  saveRevision: (input: {
-    documentId: string;
-    content: DocumentContent;
-    sourceSnapshotId: string;
-    changeNote: string | null;
-    createdBy: string;
-    submitted?: boolean;
-  }) => DocumentRevision;
-  getRevision: (revisionId: string) => DocumentRevision | undefined;
-  listRevisions: (documentId: string) => DocumentRevision[];
-  markSubmitted: (revisionId: string, actorName: string) => void;
-  markSigned: (revisionId: string, signedByActorName: string, actorId: string) => void;
-  setLifecycle: (documentId: string, lifecycle: DocumentDraft['lifecycle']) => void;
-  setFreshness: (documentId: string, freshness: DocumentDraft['freshness']) => void;
+  getActiveReport: (id: string) => ValidationReport | null;
+  invalidateReportForDocument: (id: string) => void;
+  saveRevision: (input: { documentId: string; content: DocumentContent; sourceSnapshotId: string; changeNote: string | null; createdBy: string; submitted?: boolean }) => DocumentRevision;
+  getRevision: (id: string) => DocumentRevision | undefined;
+  listRevisions: (id: string) => DocumentRevision[];
+  getRevisionGuard: (id: string, action: RevisionAction) => string | null;
+  markSubmitted: (id: string, actorName: string) => void;
+  markSigned: (id: string, name: string, actorId: string) => void;
+  beginRevision: (id: string, changeNote: string) => DocumentDraft;
+  setLifecycle: (id: string, lifecycle: DocumentDraft['lifecycle']) => void;
+  setFreshness: (id: string, freshness: DocumentDraft['freshness']) => void;
   listDrafts: () => DocumentDraft[];
   resetAll: () => void;
 }
 
-/** 可持久化切片（AC-025：刷新后恢复草稿、版本、校核与审计）。 */
-interface DocumentPersist {
-  drafts: Record<string, DocumentDraft>;
-  revisions: Record<string, DocumentRevision>;
-  reports: Record<string, ValidationReport>;
-  activeReportByDocument: Record<string, string>;
-  audit: AuditEvent[];
+type DocumentPersist = Pick<DocumentState, 'drafts' | 'revisions' | 'reports' | 'activeReportByDocument' | 'audit'>;
+const persisted = loadPersist<DocumentPersist>('doc');
+const editable = (draft: DocumentDraft) => draft.lifecycle !== 'signed' && draft.lifecycle !== 'archived';
+function stale(draft: DocumentDraft): DocumentDraft {
+  return { ...draft, lifecycle: draft.lifecycle === 'submitted' ? 'draft' : draft.lifecycle,
+    validation: { status: draft.validation.reportId ? 'stale' : 'not_run', reportId: draft.validation.reportId }, updatedAt: new Date().toISOString() };
 }
-
-const docPersisted = loadPersist<DocumentPersist>('doc');
+function versionOf(snapshot: SourceSnapshot): number {
+  return useDemoStore.getState().getContextVersion(snapshot.scopeKind, snapshot.scopeKind === 'event' ? snapshot.eventId ?? '' : snapshot.shiftId ?? '');
+}
+function frozenDisplays(content: DocumentContent, snapshot: SourceSnapshot): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const id of collectRunFactIds(content)) {
+    const fact = snapshot.facts[id];
+    result[id] = fact ? formatFactValue(fact.value, fact.unit, fact.sourceFieldKey) : '（来源缺失）';
+  }
+  for (const key of collectRunDerivedKeys(content)) {
+    const fact = snapshot.derived[key];
+    result[key] = fact ? String(fact.value) : '（来源缺失）';
+    result[`derived:${key}`] = result[key];
+  }
+  return result;
+}
 
 export const useDocumentStore = create<DocumentState>()((set, get) => ({
-  drafts: docPersisted?.drafts ?? {},
-  revisions: docPersisted?.revisions ?? {},
-  reports: docPersisted?.reports ?? {},
-  activeReportByDocument: docPersisted?.activeReportByDocument ?? {},
-  audit: docPersisted?.audit ?? [],
-
-  addAudit: (input) => {
-    const ev: AuditEvent = { ...input, auditId: nextAuditId(), isSimulated: true };
-    set((s) => ({ audit: [ev, ...s.audit].slice(0, 200) }));
-  },
-
-  addDraft: (draft) => {
-    set((s) => ({
-      drafts: { ...s.drafts, [draft.documentId]: draft },
-      activeReportByDocument: { ...s.activeReportByDocument, [draft.documentId]: null },
-    }));
-  },
-
-  getDraft: (documentId) => get().drafts[documentId],
-
-  updateWorkingContent: (documentId, content) => {
-    set((s) => {
-      const draft = s.drafts[documentId];
-      if (!draft) return s;
-      return {
-        drafts: {
-          ...s.drafts,
-          [documentId]: {
-            ...draft,
-            working: {
-              content,
-              contextSnapshotId: draft.working.contextSnapshotId,
-              contentHash: computeContentHash(content),
-              updatedAt: new Date().toISOString(),
-              baseRevisionId: draft.working.baseRevisionId,
-            },
-            updatedAt: new Date().toISOString(),
-          },
-        },
-      };
-    });
-  },
-
-  markValidation: (documentId, status, reportId) => {
-    set((s) => {
-      const draft = s.drafts[documentId];
-      if (!draft) return s;
-      return {
-        drafts: { ...s.drafts, [documentId]: { ...draft, validation: { status, reportId } } },
-        activeReportByDocument: { ...s.activeReportByDocument, [documentId]: reportId },
-      };
-    });
-  },
-
-  updateDraftSnapshot: (documentId, snapshot) => {
-    set((s) => {
-      const draft = s.drafts[documentId];
-      if (!draft) return s;
-      return { drafts: { ...s.drafts, [documentId]: { ...draft, snapshot } } };
-    });
-  },
-
-  addReport: (report) => {
-    const full: ValidationReport = { ...report, reportId: nextReportId(), checkedAt: new Date().toISOString() };
-    set((s) => ({ reports: { ...s.reports, [full.reportId]: full } }));
+  drafts: persisted?.drafts ?? {}, revisions: persisted?.revisions ?? {}, reports: persisted?.reports ?? {},
+  activeReportByDocument: persisted?.activeReportByDocument ?? {}, audit: persisted?.audit ?? [],
+  addAudit: input => set(s => ({ audit: [{ ...input, auditId: `audit-${crypto.randomUUID()}`, isSimulated: true as const }, ...s.audit].slice(0, 200) })),
+  addDraft: draft => set(s => ({ drafts: { ...s.drafts, [draft.documentId]: clone(draft) }, activeReportByDocument: { ...s.activeReportByDocument, [draft.documentId]: null } })),
+  getDraft: id => get().drafts[id],
+  updateWorkingContent: (id, content) => set(s => {
+    const draft = s.drafts[id];
+    if (!draft || !editable(draft) || JSON.stringify(content) === JSON.stringify(draft.working.content)) return s;
+    return { drafts: { ...s.drafts, [id]: { ...stale(draft), working: { ...draft.working, content: clone(content), contentHash: computeContentHash(content), updatedAt: new Date().toISOString() } } } };
+  }),
+  markValidation: (id, status, reportId) => set(s => {
+    const draft = s.drafts[id];
+    if (!draft || !editable(draft)) return s;
+    const report = reportId ? s.reports[reportId] : null;
+    const revision = report?.revisionId ? s.revisions[report.revisionId] : undefined;
+    const validBinding = report && revision && revision.documentId === id && revision.revisionId === draft.activeRevisionId
+      && report.contentHash === draft.working.contentHash && report.contentHash === revision.contentHash
+      && report.contextSnapshotId === draft.snapshot.snapshotId && report.contextSnapshotId === revision.sourceSnapshotId
+      && report.factSnapshotVersion === draft.snapshot.dataVersion;
+    if (status === 'passed' && (!validBinding || report.issues.some(i => i.level === 'block') || draft.freshness === 'stale' || draft.snapshot.contextVersion !== versionOf(draft.snapshot))) {
+      throw new Error('校核报告与当前版本或业务数据不一致，不能标记通过');
+    }
+    return { drafts: { ...s.drafts, [id]: { ...draft, validation: { status, reportId } } },
+      activeReportByDocument: { ...s.activeReportByDocument, [id]: reportId },
+      revisions: validBinding ? { ...s.revisions, [revision.revisionId]: { ...revision, validationReportId: reportId } } : s.revisions };
+  }),
+  updateDraftSnapshot: (id, snapshot) => set(s => {
+    const draft = s.drafts[id];
+    if (!draft || !editable(draft)) throw new Error('已签发文书不可原地刷新数据，请先创建修订');
+    if (snapshot.scopeKind !== draft.scopeKind || snapshot.eventId !== draft.eventId || snapshot.shiftId !== draft.shiftId) throw new Error('快照不属于本文书');
+    return { drafts: { ...s.drafts, [id]: { ...stale(draft), snapshot: clone(snapshot), freshness: snapshot.contextVersion === versionOf(snapshot) ? 'current' : 'stale',
+      working: { ...draft.working, contextSnapshotId: snapshot.snapshotId, updatedAt: new Date().toISOString() } } } };
+  }),
+  markBusinessDataChanged: (kind, id) => set(s => ({ drafts: Object.fromEntries(Object.entries(s.drafts).map(([key, draft]) => {
+    const affected = kind === 'event' ? draft.eventId === id || (draft.scopeKind === 'shift' && draft.shiftId === shift.shiftId && shift.incidentIds.includes(id)) : draft.scopeKind === 'shift' && draft.shiftId === id;
+    return [key, affected && editable(draft) ? { ...stale(draft), freshness: 'stale' as const } : draft];
+  })) })),
+  addReport: report => {
+    const full = { ...clone(report), reportId: `report-${crypto.randomUUID()}`, checkedAt: new Date().toISOString() };
+    set(s => ({ reports: { ...s.reports, [full.reportId]: full } }));
     return full;
   },
-
-  getActiveReport: (documentId) => {
-    const { activeReportByDocument, reports } = get();
-    const reportId = activeReportByDocument[documentId];
-    if (!reportId) return null;
-    return reports[reportId] ?? null;
-  },
-
-  invalidateReportForDocument: (documentId) => {
-    set((s) => {
-      const draft = s.drafts[documentId];
-      if (!draft) return s;
-      const active = s.activeReportByDocument[documentId];
-      return {
-        drafts: {
-          ...s.drafts,
-          [documentId]: {
-            ...draft,
-            validation: { status: active ? 'stale' : draft.validation.status, reportId: active },
-            freshness: draft.freshness === 'stale' ? 'stale' : draft.freshness,
-          },
-        },
-      };
-    });
-  },
-
+  getActiveReport: id => { const rid = get().activeReportByDocument[id]; return rid ? get().reports[rid] ?? null : null; },
+  invalidateReportForDocument: id => set(s => {
+    const draft = s.drafts[id];
+    return draft && editable(draft) ? { drafts: { ...s.drafts, [id]: stale(draft) } } : s;
+  }),
   saveRevision: ({ documentId, content, sourceSnapshotId, changeNote, createdBy, submitted }) => {
     const draft = get().drafts[documentId];
-    if (!draft) throw new Error(`文书不存在：${documentId}`);
-    // FR-013：草稿期首次存版即 V{major}.0；同稿后续存版 minor 递增；签发后修订由修订路径预置 major+1/minor=0。
-    const rev: DocumentRevision = {
-      revisionId: nextRevisionId(),
-      documentId,
-      displayVersion: '',
-      major: draft.revisionCounter.major,
-      minor: draft.revisionCounter.minor,
-      contentSnapshot: JSON.parse(JSON.stringify(content)) as DocumentContent,
-      sourceSnapshotId,
-      factsSnapshot: (() => {
-        const acc: Record<string, string> = {};
-        for (const factId of collectRunFactIds(content)) {
-          // M-8：优先冻结草稿生成时快照值（防水位更新后审阅/导出不一致），并复用枚举标签链路（避免裸值入文）。
-          const snapVal = draft.snapshot?.facts[factId];
-          acc[factId] = snapVal
-            ? formatFactValue(snapVal.value, snapVal.unit, snapVal.sourceFieldKey)
-            : factDisplay(factId);
-        }
-        // 冻结派生值：以草稿快照中的候选集合重算，与生成时一致。
-        // 同时存裸键（flattenRuns 消费）与 derived: 前缀键（VersionDrawer 消费）。修复 B-1。
-        for (const key of collectRunDerivedKeys(content)) {
-          try {
-            const d = computeDerived(key as Parameters<typeof computeDerived>[0], draft.snapshot?.candidateResourceIds ?? []);
-            // 裸键不带单位：正文 run 的 suffix 已含单位，避免导出出现“1 支 支”重复。
-            const display = `${d.value}`;
-            acc[key] = display;
-            acc[`derived:${key}`] = `${d.value}${d.unit ? ` ${d.unit}` : ''}`;
-          } catch {
-            acc[key] = '（重算失败）';
-            acc[`derived:${key}`] = '（重算失败）';
-          }
-        }
-        return acc;
-      })(),
-      contentHash: computeContentHash(content),
-      createdBy,
-      createdAt: new Date().toISOString(),
-      changeNote,
-      submittedBy: submitted ? createdBy : null,
-      submittedAt: submitted ? new Date().toISOString() : null,
-      signedRecord: null,
+    if (!draft || !editable(draft)) throw new Error('已签发或归档文书不能覆盖保存，请创建修订');
+    if (submitted) throw new Error('保存不能代替送审，请先校核再提交');
+    if (sourceSnapshotId !== draft.snapshot.snapshotId || sourceSnapshotId !== draft.working.contextSnapshotId || JSON.stringify(content) !== JSON.stringify(draft.working.content)) throw new Error('保存内容与当前工作副本或快照不一致');
+    const current = draft.activeRevisionId ? get().revisions[draft.activeRevisionId] : undefined;
+    if (current && current.contentHash === draft.working.contentHash && current.sourceSnapshotId === sourceSnapshotId && JSON.stringify(current.contentSnapshot) === JSON.stringify(content)) return current;
+    const revision: DocumentRevision = {
+      revisionId: `rev-${crypto.randomUUID()}`, documentId, displayVersion: `V${draft.revisionCounter.major}.${draft.revisionCounter.minor}`,
+      major: draft.revisionCounter.major, minor: draft.revisionCounter.minor, contentSnapshot: clone(content), sourceSnapshotId,
+      sourceSnapshot: clone(draft.snapshot), factsSnapshot: frozenDisplays(content, draft.snapshot), contentHash: computeContentHash(content),
+      validationReportId: null, locked: false, createdBy, createdAt: new Date().toISOString(), changeNote,
+      submittedBy: null, submittedAt: null, signedRecord: null,
     };
-    rev.displayVersion = `V${rev.major}.${rev.minor}`;
-    set((s) => ({
-      revisions: { ...s.revisions, [rev.revisionId]: rev },
-      drafts: {
-        ...s.drafts,
-        [documentId]: {
-          ...draft,
-          activeRevisionId: rev.revisionId,
-          revisionCounter: { major: rev.major, minor: rev.minor + 1 },
-        },
-      },
-    }));
-    return rev;
+    set(s => ({ revisions: { ...s.revisions, [revision.revisionId]: revision }, drafts: { ...s.drafts, [documentId]: {
+      ...stale(draft), activeRevisionId: revision.revisionId, working: { ...draft.working, baseRevisionId: revision.revisionId },
+      revisionCounter: { major: revision.major, minor: revision.minor + 1 },
+    } } }));
+    return revision;
   },
-
-  getRevision: (revisionId) => get().revisions[revisionId],
-
-  listRevisions: (documentId) =>
-    Object.values(get().revisions)
-      .filter((r) => r.documentId === documentId)
-      .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1)),
-
-  markSubmitted: (revisionId, actorName) => {
-    set((s) => {
-      const rev = s.revisions[revisionId];
-      if (!rev) return s;
-      return {
-        revisions: {
-          ...s.revisions,
-          [revisionId]: { ...rev, submittedBy: actorName, submittedAt: new Date().toISOString() },
-        },
-      };
-    });
-    get().addAudit({
-      action: '提交送审',
-      actor: actorName,
-      objectId: revDocumentId(get(), revisionId),
-      version: get().revisions[revisionId]?.displayVersion ?? null,
-      performedAt: new Date().toISOString(),
-      demoClockAt: useDemoStore.getState().demoClock,
-      detail: '提交为待签发状态（模拟）',
-    });
+  getRevision: id => get().revisions[id],
+  listRevisions: id => Object.values(get().revisions).filter(r => r.documentId === id).sort((a, b) => a.major - b.major || a.minor - b.minor),
+  getRevisionGuard: (id, action) => {
+    const state = get(); const rev = state.revisions[id];
+    if (!rev) return '版本不存在';
+    const snapshot = rev.sourceSnapshot;
+    const report = rev.validationReportId ? state.reports[rev.validationReportId] : null;
+    if (!snapshot?.sources || !report?.revisionId) return '该版本缺少完整来源和校核绑定，请重新校核';
+    if (report.documentId !== rev.documentId || report.revisionId !== id || report.contentHash !== rev.contentHash || computeContentHash(rev.contentSnapshot) !== rev.contentHash
+      || report.contextSnapshotId !== rev.sourceSnapshotId || snapshot.snapshotId !== rev.sourceSnapshotId || report.factSnapshotVersion !== snapshot.dataVersion) return '校核与内容版本或事实快照不一致';
+    if (report.issues.some(i => i.level === 'block')) return '存在阻断级校核问题';
+    if (rev.signedRecord) {
+      if (action !== 'export') return '该版本已签发锁定';
+      return rev.locked && rev.signedRecord.contentHash === rev.contentHash ? null : '签发快照异常';
+    }
+    if (snapshot.contextVersion !== versionOf(snapshot)) return '业务数据已更新，请刷新文书数据并重新校核';
+    const draft = state.drafts[rev.documentId];
+    if (action === 'export') return null; // Explicitly selected, previously validated saved draft.
+    if (!draft || draft.activeRevisionId !== id || draft.working.contentHash !== rev.contentHash || draft.snapshot.snapshotId !== rev.sourceSnapshotId
+      || draft.validation.status !== 'passed' || draft.validation.reportId !== report.reportId || draft.freshness !== 'current') return '当前正文或引用已修改，请重新校核并保存当前版本';
+    if (action === 'submit' && draft.lifecycle !== 'draft') return '仅草稿可送审';
+    if (action === 'sign' && (draft.lifecycle !== 'submitted' || !rev.submittedAt)) return '请先提交当前版本送审';
+    if (action === 'sign' && useDemoStore.getState().getActor().role !== 'commander') return '请切换为指挥员';
+    return null;
   },
-
-  markSigned: (revisionId, signedByActorName, actorId) => {
-    const rev = get().revisions[revisionId];
-    if (!rev) return;
-    // 审查 minor-4：幂等守卫 —— 已签发快照不可重复签发（AC-018）。
-    if (rev.signedRecord) return;
-    const signedRecord = {
-      signedByActorId: actorId,
-      signedByActorName,
-      performedAt: new Date().toISOString(),
-      demoClockAt: useDemoStore.getState().demoClock,
-      contentHash: rev.contentHash,
-      isSimulated: true as const,
-      note: '本机演示状态变化，不代表真实审批效力',
-    };
-    set((s) => ({
-      revisions: { ...s.revisions, [revisionId]: { ...rev, signedRecord } },
-      drafts: s.drafts[rev.documentId]
-        ? { ...s.drafts, [rev.documentId]: { ...s.drafts[rev.documentId], lifecycle: 'signed' } }
-        : s.drafts,
-    }));
-    get().addAudit({
-      action: '模拟签发',
-      actor: signedByActorName,
-      objectId: rev.documentId,
-      version: rev.displayVersion,
-      performedAt: signedRecord.performedAt,
-      demoClockAt: signedRecord.demoClockAt,
-      detail: `锁定内容指纹 ${rev.contentHash}`,
-    });
+  markSubmitted: (id, actorName) => {
+    const reason = get().getRevisionGuard(id, 'submit'); if (reason) throw new Error(reason);
+    const revision = get().revisions[id]; const now = new Date().toISOString();
+    set(s => ({ revisions: { ...s.revisions, [id]: { ...revision, submittedBy: actorName, submittedAt: now } }, drafts: { ...s.drafts, [revision.documentId]: { ...s.drafts[revision.documentId], lifecycle: 'submitted' } } }));
+    get().addAudit({ action: '提交送审', actor: actorName, objectId: revision.documentId, version: revision.displayVersion, performedAt: now, demoClockAt: useDemoStore.getState().demoClock, detail: '送审当前已校核版本（模拟）' });
   },
-
-  setLifecycle: (documentId, lifecycle) => {
-    set((s) => {
-      const draft = s.drafts[documentId];
-      if (!draft) return s;
-      return { drafts: { ...s.drafts, [documentId]: { ...draft, lifecycle } } };
-    });
+  markSigned: (id, name, actorId) => {
+    const revision = get().revisions[id]; if (revision?.signedRecord) return;
+    const reason = get().getRevisionGuard(id, 'sign'); if (reason) throw new Error(reason);
+    const actor = useDemoStore.getState().getActor();
+    if (actor.actorId !== actorId || actor.name !== name) throw new Error('签发身份与当前角色不一致');
+    const signedRecord = { signedByActorId: actorId, signedByActorName: name, performedAt: new Date().toISOString(), demoClockAt: useDemoStore.getState().demoClock,
+      contentHash: revision.contentHash, isSimulated: true as const, note: '本机演示状态变化，不代表真实审批效力' };
+    set(s => ({ revisions: { ...s.revisions, [id]: { ...revision, locked: true, signedRecord } }, drafts: { ...s.drafts, [revision.documentId]: { ...s.drafts[revision.documentId], lifecycle: 'signed' } } }));
+    get().addAudit({ action: '模拟签发', actor: name, objectId: revision.documentId, version: revision.displayVersion, performedAt: signedRecord.performedAt, demoClockAt: signedRecord.demoClockAt, detail: `锁定版本、来源和校核 ${revision.contentHash}` });
   },
-
-  setFreshness: (documentId, freshness) => {
-    set((s) => {
-      const draft = s.drafts[documentId];
-      if (!draft) return s;
-      return { drafts: { ...s.drafts, [documentId]: { ...draft, freshness } } };
-    });
+  beginRevision: (id, changeNote) => {
+    const draft = get().drafts[id]; const revision = draft?.activeRevisionId ? get().revisions[draft.activeRevisionId] : undefined;
+    if (!draft || !revision?.signedRecord || !revision.locked || !changeNote.trim()) throw new Error('请从已签发版本创建修订，并填写修订原因');
+    const next: DocumentDraft = { ...draft, lifecycle: 'draft', validation: { status: 'not_run', reportId: null }, activeRevisionId: null,
+      freshness: revision.sourceSnapshot.contextVersion === versionOf(revision.sourceSnapshot) ? 'current' : 'stale',
+      snapshot: clone(revision.sourceSnapshot), working: { content: clone(revision.contentSnapshot), contentHash: revision.contentHash, contextSnapshotId: revision.sourceSnapshotId, baseRevisionId: revision.revisionId, updatedAt: new Date().toISOString() },
+      revisionCounter: { major: revision.major + 1, minor: 0 }, updatedAt: new Date().toISOString() };
+    set(s => ({ drafts: { ...s.drafts, [id]: next }, activeReportByDocument: { ...s.activeReportByDocument, [id]: null } }));
+    get().addAudit({ action: '创建修订', actor: useDemoStore.getState().getActor().name, objectId: id, version: revision.displayVersion, performedAt: next.updatedAt, demoClockAt: useDemoStore.getState().demoClock, detail: changeNote });
+    return next;
   },
-
-  listDrafts: () => Object.values(get().drafts).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
-
-  resetAll: () => {
-    clearPersist('doc');
-    set({ drafts: {}, revisions: {}, reports: {}, activeReportByDocument: {}, audit: [] });
-  },
+  setLifecycle: (id, lifecycle) => set(s => {
+    const draft = s.drafts[id]; if (!draft || draft.lifecycle === lifecycle) return s;
+    if (lifecycle === 'draft' && draft.lifecycle === 'submitted') return { drafts: { ...s.drafts, [id]: stale(draft) } };
+    if (lifecycle === 'archived' && draft.lifecycle === 'signed') return { drafts: { ...s.drafts, [id]: { ...draft, lifecycle } } };
+    throw new Error('请使用校核、送审、签发或创建修订操作推进生命周期');
+  }),
+  setFreshness: (id, freshness) => set(s => {
+    const draft = s.drafts[id]; if (!draft || !editable(draft)) return s;
+    if (freshness === 'current' && draft.snapshot.contextVersion !== versionOf(draft.snapshot)) throw new Error('请先刷新文书快照');
+    return { drafts: { ...s.drafts, [id]: { ...(freshness === 'stale' ? stale(draft) : draft), freshness } } };
+  }),
+  listDrafts: () => Object.values(get().drafts).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+  resetAll: () => { clearPersist('doc'); set({ drafts: {}, revisions: {}, reports: {}, activeReportByDocument: {}, audit: [] }); },
 }));
 
-// 状态变化即持久化（AC-025）
-useDocumentStore.subscribe((state) => {
-  savePersist('doc', {
-    drafts: state.drafts,
-    revisions: state.revisions,
-    reports: state.reports,
-    activeReportByDocument: state.activeReportByDocument as Record<string, string>,
-    audit: state.audit,
-  } satisfies DocumentPersist);
-});
-
-function revDocumentId(_state: DocumentState, _revisionId: string): string {
-  // 审计 objectId 使用文书 id；从 revision 取
-  const rev = useDocumentStore.getState().revisions[_revisionId];
-  return rev?.documentId ?? _revisionId;
-}
-
+useDocumentStore.subscribe(state => savePersist('doc', { drafts: state.drafts, revisions: state.revisions, reports: state.reports, activeReportByDocument: state.activeReportByDocument, audit: state.audit } satisfies DocumentPersist));
 export type { SourceSnapshot };

@@ -5,13 +5,13 @@
 import { useMemo } from 'react';
 import { Alert, Descriptions, Drawer, Empty, Spin, Table, Tag, Typography } from 'antd';
 import type { TableColumnsType } from 'antd';
-import { useDemoStore } from '@/store/demoStore';
-import { resolveFact } from '@/services/factLookup';
-import { sourceById } from '@/seed/scenario';
+import { useDocumentStore } from '@/store/documentStore';
+import { resolveDocumentFact } from '@/services/documentFactScope';
 import type { FactValue } from '@/domain/types';
 
 export interface SourceDrawerProps {
   factId: string | null;
+  documentId: string | null;
   open: boolean;
   onClose: () => void;
 }
@@ -45,18 +45,11 @@ const FIELD_COLUMNS: TableColumnsType<FieldRow> = [
   { title: '值（模拟）', dataIndex: 'value', key: 'value' },
 ];
 
-export default function SourceDrawer({ factId, open, onClose }: SourceDrawerProps) {
-  const manualFacts = useDemoStore((s) => s.manualFacts);
-  const resolved = useMemo(() => (factId ? resolveFact(factId) : null), [factId]);
-  const manualEntry = useMemo(
-    () => (factId ? manualFacts.find((m) => m.factId === factId) ?? null : null),
-    [factId, manualFacts],
-  );
-  const sourceRecord = useMemo(
-    () => (resolved ? sourceById.get(resolved.sourceRecordId) ?? null : null),
-    [resolved],
-  );
-
+export default function SourceDrawer({ factId, documentId, open, onClose }: SourceDrawerProps) {
+  const draft = useDocumentStore((s) => documentId ? s.drafts[documentId] : undefined);
+  const derived = factId?.startsWith('derived:') ? draft?.snapshot.derived[factId.slice(8)] : undefined;
+  const resolved = factId ? resolveDocumentFact(factId, draft) : null;
+  const sourceRecord = resolved ? draft?.snapshot.sources?.[resolved.sourceRecordId] : null;
   const fieldRows: FieldRow[] = useMemo(
     () =>
       sourceRecord
@@ -74,14 +67,20 @@ export default function SourceDrawer({ factId, open, onClose }: SourceDrawerProp
   return (
     <Drawer title={title} width={520} open={open} onClose={onClose} destroyOnHidden>
       {!factId && <Empty description="未选择正文数据（点击正文中的蓝色数据芯片查看来源）" />}
-      {factId && !resolved && (
+      {factId && !resolved && !derived && (
         <Alert
           type="error"
           showIcon
           message="来源无法解析"
-          description={`绑定标识 ${factId} 在当前演示数据中不存在，可能来源已被移除。校核会以阻断级问题提示（模拟数据）。`}
+          description={`绑定标识 ${factId} 在本文书范围内无法解析，可能来源缺失或不属于本文书授权范围。校核会以阻断级问题提示（模拟数据）。`}
         />
       )}
+      {derived && <Descriptions column={1} bordered items={[
+        { key: 'value', label: '快照派生值', children: `${derived.value}${derived.unit ?? ''}` },
+        { key: 'formula', label: '公式', children: derived.formula },
+        { key: 'inputs', label: '输入事实', children: derived.inputFactIds.join('、') || '无输入事实' },
+        { key: 'summary', label: '计算范围', children: derived.inputSummary },
+      ]} />}
       {factId && resolved && (
         <Spin spinning={false}>
           {resolved.verification === 'pending' && (
@@ -98,7 +97,7 @@ export default function SourceDrawer({ factId, open, onClose }: SourceDrawerProp
             bordered
             column={1}
             items={[
-              { key: 'value', label: '当前值', children: <strong>{displayValue(resolved.value)}{resolved.unit ?? ''}</strong> },
+              { key: 'value', label: '快照值', children: <strong>{displayValue(resolved.value)}{resolved.unit ?? ''}</strong> },
               {
                 key: 'verification',
                 label: '核实状态',
@@ -126,16 +125,6 @@ export default function SourceDrawer({ factId, open, onClose }: SourceDrawerProp
               { key: 'factId', label: '事实标识', children: <Typography.Text code>{resolved.factId}</Typography.Text> },
             ]}
           />
-
-          {manualEntry && (
-            <Alert
-              style={{ marginTop: 12 }}
-              type="info"
-              showIcon
-              message="人工补录（模拟）"
-              description={`补录人：${manualEntry.actorName} · 演示时钟 ${manualEntry.demoClockAt} · 聊天确认后生成本补录事实，聊天原文不直接作为来源。`}
-            />
-          )}
 
           {sourceRecord && (
             <>

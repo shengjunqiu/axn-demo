@@ -195,6 +195,7 @@ export interface Session {
   title: string;
   messages: ChatMessage[];
   lastResourceResultIds: string[];
+  resourceSortBy: 'eta' | 'distance' | null;
   candidateResourceIds: string[];
   selectedProposalId: string | null;
   selectedProposalVersion: string | null;
@@ -381,6 +382,7 @@ export interface DocumentContent {
 // ===== 快照 =====
 
 export interface FactSnapshotValue {
+  scope: FactScope;
   factId: string;
   value: FactValue;
   unit: string | null;
@@ -411,6 +413,7 @@ export interface WaterSeriesPoint {
 }
 
 export interface SourceSnapshot {
+  sources: Record<string, SourceRecord>;
   snapshotId: string;
   scopeKind: 'event' | 'shift';
   eventId: string | null;
@@ -474,6 +477,9 @@ export interface SignedRecord {
 }
 
 export interface DocumentRevision {
+  sourceSnapshot: SourceSnapshot;
+  validationReportId: string | null;
+  locked: boolean;
   revisionId: string;
   documentId: string;
   displayVersion: string;
@@ -507,6 +513,8 @@ export interface ValidationIssue {
 }
 
 export interface ValidationReport {
+  revisionId: string | null;
+  factSnapshotVersion: number;
   reportId: string;
   documentId: string;
   contentHash: string;

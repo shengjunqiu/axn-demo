@@ -6,7 +6,7 @@ import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { mockProvider, recognize, TaskFault } from './mock/provider';
 
-const controllers = new Map<string, AbortController>();
+import { registerRun, isActiveRun, finishRun, invalidateRun } from './taskRuns';
 
 function sleepZero(): Promise<void> {
   return new Promise((r) => setTimeout(r, 0));
@@ -101,12 +101,16 @@ async function executeTask(
   const demo = useDemoStore.getState();
   const session = useSessionStore.getState().sessions[task.sessionId];
   const controller = new AbortController();
-  controllers.set(taskId, controller);
+  const attemptId = task.attemptId;
+  registerRun({ taskId, attemptId, sessionId: task.sessionId, eventId: task.eventId, controller }, () => {
+    const current = useSessionStore.getState().getTask(taskId);
+    if (current?.attemptId === attemptId) useSessionStore.getState().setTaskStatus(taskId, 'cancelled');
+  });
   try {
     const request = {
       requestId: `${taskId}-${attempt}`,
       taskId,
-      attemptId: `${taskId}-a${attempt}`,
+      attemptId,
       sessionId: task.sessionId,
       eventId: task.eventId,
       commandId,
@@ -127,11 +131,13 @@ async function executeTask(
     };
     for await (const ev of mockProvider.run(request, controller.signal)) {
       await sleepZero();
+      if (!isActiveRun(taskId, attemptId)) return;
       applySideEffects(task.taskId, ev);
-      useSessionStore.getState().applyTaskEvent(task.taskId, ev);
+      useSessionStore.getState().applyTaskEvent(task.taskId, ev, attemptId);
     }
     // 正常结束：更新候选/资源结果派生视图由副作用完成
   } catch (err) {
+    if (!isActiveRun(taskId, attemptId)) return;
     if (err instanceof DOMException && err.name === 'AbortError') {
       useSessionStore.getState().setTaskStatus(taskId, 'cancelled');
       return;
@@ -142,7 +148,7 @@ async function executeTask(
         errorCode: err.errorCode,
         message: err.message,
         hint: err.hint,
-      });
+      }, attemptId);
       return;
     }
     useSessionStore.getState().applyTaskEvent(taskId, {
@@ -150,9 +156,9 @@ async function executeTask(
       errorCode: 'INTERNAL',
       message: err instanceof Error ? err.message : '未知错误',
       hint: '请重试；若持续失败请查看控制台日志。',
-    });
+    }, attemptId);
   } finally {
-    controllers.delete(taskId);
+    finishRun(taskId, attemptId);
     await refreshDerivedViews(task.taskId);
   }
 }
@@ -174,14 +180,15 @@ async function refreshDerivedViews(_taskId: string): Promise<void> {
 }
 
 export function cancelTask(taskId: string): void {
-  controllers.get(taskId)?.abort();
+  invalidateRun(taskId);
 }
 
 export async function retryTask(taskId: string): Promise<void> {
   const store = useSessionStore.getState();
   const task = store.getTask(taskId);
   if (!task) return;
-  if (task.status === 'running' || task.status === 'queued') return;
+  if (Object.values(store.tasks).some((other) => other.sessionId === task.sessionId && ['running', 'queued'].includes(other.status))) return;
+  if (useDemoStore.getState().currentEventId !== task.eventId || store.sessions[task.sessionId]?.eventId !== task.eventId) return;
   // 重试 = 新的执行尝试（attempt+1），保留此前步骤与产物
   const userMsg = task.userMessageId;
   const session = store.sessions[task.sessionId];
@@ -191,12 +198,7 @@ export async function retryTask(taskId: string): Promise<void> {
     lastResourceResultIds: session?.lastResourceResultIds ?? [],
     candidateResourceIds: session?.candidateResourceIds ?? [],
   });
-  const nextAttempt = task.attempt + 1;
-  useSessionStore.getState().applyTaskEvent(taskId, {
-    type: 'step_started',
-    stepId: `retry-${nextAttempt}`,
-    name: `重试（第 ${nextAttempt} 次尝试）`,
-    inputSummary: '恢复执行，已完成产物保留',
-  });
-  void executeTask(taskId, userText ?? '', recognized.intent, recognized.params, nextAttempt, null);
+  const next = store.beginAttempt(taskId);
+  if (!next) return;
+  void executeTask(taskId, userText ?? '', recognized.intent, recognized.params, next.attempt, null);
 }

@@ -2,11 +2,13 @@
  * 统一事实查询：种子事实 + 人工补录事实 + 监测数据更新覆盖。
  * 所有展示与文书绑定都通过这里取值，禁止各页面直连种子常量。
  */
-import type { FactValue } from '@/domain/types';
-import { factById, sourceById } from '@/seed/scenario';
+import type { FactValue, FactScope, SourceRecord } from '@/domain/types';
+import rawScenario from '@/fixtures/scenario.json';
+import { factById, sourceById, incidentById, shift, teamById, warehouseById, type FixtureScope } from '@/seed/scenario';
 import { useDemoStore } from '@/store/demoStore';
 
 export interface ResolvedFact {
+  scope: FactScope;
   factId: string;
   value: FactValue;
   unit: string | null;
@@ -22,11 +24,44 @@ export interface ResolvedFact {
   isSimulated: boolean;
 }
 
-export function resolveFact(factId: string): ResolvedFact | null {
+/** Omitted scope is the current event, never an unrestricted lookup. */
+export type FactQueryScope = { kind: 'event'; eventId: string } | { kind: 'shift'; shiftId: string };
+
+export function shiftEventIds(shiftId: string): string[] {
+  if (shiftId !== shift.shiftId) return [];
+  return shift.incidentIds.filter((id) => rawScenario.shift.scope.allowedEventIds.includes(id)
+    && incidentById.get(id)?.orgId === shift.orgId);
+}
+
+export function permits(owner: FixtureScope, query: FactQueryScope): boolean {
+  const events = query.kind === 'event' ? (incidentById.has(query.eventId) ? [query.eventId] : []) : shiftEventIds(query.shiftId);
+  if (!events.length) return false;
+  if (owner.kind === 'demo_configuration') return true;
+  if (owner.kind === 'event') return !!owner.eventId && events.includes(owner.eventId);
+  if (owner.kind === 'shift') return query.kind === 'shift' && owner.shiftId === query.shiftId && (!owner.orgId || owner.orgId === shift.orgId);
+  return events.some((id) => incidentById.get(id)?.orgId === owner.orgId && owner.allowedEventIds?.includes(id));
+}
+
+export function resourceAllowed(resourceId: string, eventId: string): boolean {
+  const resource = teamById.get(resourceId) ?? warehouseById.get(resourceId);
+  if (!resource) return false;
+  if ('distanceAnchorEventId' in resource && resource.distanceAnchorEventId !== eventId) return false;
+  return Object.values(resource.factRefs).every((id) => !!resolveFact(id, { kind: 'event', eventId }));
+}
+
+export function resolveFact(factId: string, scope: FactQueryScope = { kind: 'event', eventId: useDemoStore.getState().currentEventId }): ResolvedFact | null {
   const demo = useDemoStore.getState();
-  const manual = demo.manualFacts.find((m) => m.factId === factId);
+  const matches = demo.manualFacts.filter((m) => m.factId === factId);
+  // Legacy collisions are ambiguous: never silently pick the first record.
+  if (matches.length > 1) return null;
+  const manual = matches[0];
   if (manual) {
+    const allowed = manual.scopeKind === 'event'
+      ? permits({ kind: 'event', eventId: manual.scopeId }, scope)
+      : scope.kind === 'shift' && scope.shiftId === manual.scopeId && shiftEventIds(scope.shiftId).length > 0;
+    if (!allowed || (manual.scopeKind === 'event' && manual.eventId && manual.eventId !== manual.scopeId)) return null;
     return {
+      scope: manual.scopeKind === 'event' ? { kind: 'event', eventId: manual.scopeId, orgId: incidentById.get(manual.scopeId)!.orgId } : { kind: 'shift', shiftId: manual.scopeId, orgId: shift.orgId, allowedEventIds: shiftEventIds(manual.scopeId) },
       factId: manual.factId,
       value: manual.value,
       unit: null,
@@ -42,47 +77,27 @@ export function resolveFact(factId: string): ResolvedFact | null {
       isSimulated: true,
     };
   }
+  const dynamicBindings: Record<string, { sourceRecordId: string; field: string }> = {
+    'fact-obs-water-006-waterLevel': { sourceRecordId: 'src-obs-water-006-v2', field: 'waterLevel' },
+    'fact-obs-water-006-observedAt': { sourceRecordId: 'src-obs-water-006-v2', field: 'observedAt' },
+    'fact-clock-demo-002-currentTime': { sourceRecordId: 'src-clock-002-v2', field: 'currentTime' },
+  };
+  const binding = dynamicBindings[factId];
+  const dynamic = binding && dynamicSources().find(source => source.sourceRecordId === binding.sourceRecordId);
+  if (dynamic && permits(dynamic.scope, scope)) {
+    const field = binding.field;
+    return { factId, scope: dynamic.scope, value: dynamic.fields[field], unit: field === 'waterLevel' ? '米' : null,
+      valueType: field === 'waterLevel' ? 'number' : 'datetime', sourceRecordId: dynamic.sourceRecordId,
+      sourceFieldKey: field, sourceVersion: dynamic.sourceVersion, capturedAt: dynamic.capturedAt,
+      verification: 'confirmed', sourceSystem: dynamic.sourceSystem, sourceLabel: dynamic.label, dataMode: 'mock', isSimulated: true };
+  }
   const seed = factById.get(factId);
-  if (!seed) return null;
-  // 监测数据更新覆盖（故障注入 water_feed_update 后）
-  const wo = demo.waterOverride;
-  if (wo && factId === 'fact-obs-water-005-waterLevel') {
-    return {
-      factId,
-      value: wo.waterLevel,
-      unit: '米',
-      valueType: 'number',
-      sourceRecordId: 'src-obs-water-006-v2',
-      sourceFieldKey: 'waterLevel',
-      sourceVersion: 2,
-      capturedAt: wo.capturedAt,
-      verification: 'confirmed',
-      sourceSystem: '水情监测服务',
-      sourceLabel: '水情监测服务（模拟）',
-      dataMode: 'mock',
-      isSimulated: true,
-    };
-  }
-  // 审查 minor-6：水位更新后观测时间成对覆盖，避免“42.35（21:05 观测）”时间错配。
-  if (wo && factId === 'fact-obs-water-005-observedAt') {
-    return {
-      factId,
-      value: wo.capturedAt,
-      unit: null,
-      valueType: 'datetime',
-      sourceRecordId: 'src-obs-water-006-v2',
-      sourceFieldKey: 'observedAt',
-      sourceVersion: 2,
-      capturedAt: wo.capturedAt,
-      verification: 'confirmed',
-      sourceSystem: '水情监测服务',
-      sourceLabel: '水情监测服务（模拟）',
-      dataMode: 'mock',
-      isSimulated: true,
-    };
-  }
+  if (!seed || !permits(seed.scope, scope)) return null;
+  const source = sourceById.get(seed.sourceRecordId);
+  if (!source || !permits(source.scope, scope)) return null;
   const src = sourceById.get(seed.sourceRecordId);
   return {
+    scope: seed.scope as FactScope,
     factId: seed.factId,
     value: seed.value,
     unit: seed.unit,
@@ -114,17 +129,58 @@ export function formatFactValue(value: FactValue, unit: string | null, sourceFie
   return unit ? `${text}${unit}` : text;
 }
 
-export function factDisplay(factId: string): string {
-  const f = resolveFact(factId);
+export function factDisplay(factId: string, scope?: FactQueryScope): string {
+  const f = resolveFact(factId, scope);
   if (!f) return '（来源缺失）';
   return formatFactValue(f.value, f.unit, f.sourceFieldKey);
 }
 
-export function latestWaterLevelFactId(): string {
-  return 'fact-obs-water-005-waterLevel';
+/** 事件显示名（取 incident 标题事实，供导航/会话列表使用）。无标题时回退事件 ID。 */
+export function eventDisplayName(eventId: string): string {
+  const incident = incidentById.get(eventId);
+  if (!incident) return eventId;
+  const resolved = resolveFact(incident.factRefs.title, { kind: 'event', eventId });
+  return resolved ? String(resolved.value) : eventId;
 }
 
-export function currentContextVersion(): number {
+export function latestWaterLevelFactId(eventId: string = useDemoStore.getState().currentEventId): string | null {
+  const incident = incidentById.get(eventId);
+  if (!incident?.stationId || incident.stationId !== rawScenario.station.stationId) return null;
+  const id = useDemoStore.getState().waterOverride ? 'fact-obs-water-006-waterLevel' : `fact-${rawScenario.station.latestObservationId}-waterLevel`;
+  return resolveFact(id, { kind: 'event', eventId }) ? id : null;
+}
+
+export function currentContextVersion(scope: FactQueryScope = { kind: 'event', eventId: useDemoStore.getState().currentEventId }): number {
+  return useDemoStore.getState().getContextVersion(scope.kind, scope.kind === 'event' ? scope.eventId : scope.shiftId);
+}
+
+function dynamicSources(): SourceRecord[] {
   const demo = useDemoStore.getState();
-  return demo.waterOverride ? 2 : 1;
+  const result: SourceRecord[] = [];
+  if (demo.waterOverride) {
+    const wo = demo.waterOverride;
+    const seed = sourceById.get('src-obs-water-005-v1') ?? sourceById.get(factById.get('fact-obs-water-005-waterLevel')!.sourceRecordId)!;
+    result.push({ ...seed, scope: seed.scope as FactScope, sourceRecordId: 'src-obs-water-006-v2', objectId: 'obs-water-006',
+      sourceVersion: 2, capturedAt: wo.capturedAt, fields: { ...seed.fields, waterLevel: wo.waterLevel, observedAt: wo.observedAt } });
+    const clock = sourceById.get('src-clock-001-v1')!;
+    result.push({ ...clock, scope: clock.scope as FactScope, sourceRecordId: 'src-clock-002-v2', objectId: 'clock-demo-002', sourceVersion: 2,
+      capturedAt: wo.capturedAt, fields: { currentTime: demo.demoClock } });
+  }
+  return result;
+}
+
+export function latestClockFactId(): string {
+  return useDemoStore.getState().waterOverride ? 'fact-clock-demo-002-currentTime' : 'fact-clock-demo-001-currentTime';
+}
+
+export function resolveSourceRecord(sourceRecordId: string, scope: FactQueryScope): SourceRecord | null {
+  const manual = useDemoStore.getState().manualFacts.find(m => m.sourceRecordId === sourceRecordId);
+  if (manual) {
+    const fact = resolveFact(manual.factId, scope);
+    return fact ? { sourceRecordId, scope: fact.scope, sourceSystem: fact.sourceSystem, sourceTable: 'manual_inputs', objectId: manual.factId,
+      sourceVersion: fact.sourceVersion, capturedAt: fact.capturedAt, dataMode: 'mock', isSimulated: true, label: fact.sourceLabel,
+      fields: { [manual.field]: manual.value, actorName: manual.actorName, actorId: manual.actorId, performedAt: manual.performedAt, demoClockAt: manual.demoClockAt } } : null;
+  }
+  const source = dynamicSources().find(s => s.sourceRecordId === sourceRecordId) ?? sourceById.get(sourceRecordId);
+  return source && permits(source.scope, scope) ? JSON.parse(JSON.stringify(source)) as SourceRecord : null;
 }

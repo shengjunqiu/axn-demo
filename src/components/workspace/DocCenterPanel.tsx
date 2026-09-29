@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Empty, Modal, Space, Tag, Tooltip, Typography, message } from 'antd';
-import { useDocumentStore, computeContentHash } from '@/store/documentStore';
+import { useDocumentStore } from '@/store/documentStore';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import {
@@ -16,13 +16,10 @@ import {
   fieldLabel,
   refreshDraftSnapshot,
 } from '@/services/documentFactory';
-import { collectRunDerivedKeys, collectRunFactIds } from '@/services/contentRuns';
-import { buildSnapshot } from '@/services/snapshot';
-import { currentContextVersion } from '@/services/factLookup';
+import { shiftEventIds } from '@/services/factLookup';
+import { DERIVED_META, type DerivedKey } from '@/seed/derived';
 import { templateByCode } from '@/seed/scenario';
 import type { FixtureTemplate } from '@/seed/scenario';
-import { DERIVED_META } from '@/seed/derived';
-import type { DerivedKey } from '@/seed/derived';
 import type { ValidationReport } from '@/domain/types';
 import type { DocumentDraft } from '@/domain/types';
 import DocumentEditor from '@/components/doc/DocumentEditor';
@@ -49,30 +46,13 @@ function fmtTime(iso: string): string {
 
 /** 提交送审前置检查：仅草稿 + 存在校核报告 + 无阻断级问题 + 校核指纹一致 + 数据快照未过期（审查 M-3）。 */
 function checkSubmit(draft: DocumentDraft, report: ValidationReport | null): string | null {
-  if (draft.lifecycle !== 'draft') return '仅草稿状态可提交送审';
-  if (!report) return '尚未校核：请先执行校核';
-  const blockCount = report.issues.filter((issue) => issue.level === 'block').length;
-  if (blockCount > 0) return `存在 ${blockCount} 条阻断级问题，处理后重新校核`;
-  if (report.contentHash !== draft.working.contentHash) return '校核后内容已被修改，请重新校核';
-  if (draft.snapshot.contextVersion !== currentContextVersion()) {
-    return '生成后监测数据已更新，本稿快照过期；请先“按最新数据重建快照”并重新校核';
-  }
-  return null;
+  void report;
+  return draft.activeRevisionId ? useDocumentStore.getState().getRevisionGuard(draft.activeRevisionId, 'submit') : '请先保存并校核当前稿';
 }
 
-/** 签发前置检查：仅送审后 + 校核通过 + 快照未过期 + 指挥员角色（审查 M-3）。 */
 function checkSign(draft: DocumentDraft, report: ValidationReport | null, role: string): string | null {
-  if (draft.lifecycle !== 'submitted') return '仅待签发状态可签发';
-  if (!draft.activeRevisionId) return '缺少送审版本，请重新提交送审';
-  if (!report) return '缺少有效校核报告，请重新校核';
-  const blockCount = report.issues.filter((issue) => issue.level === 'block').length;
-  if (blockCount > 0) return `存在 ${blockCount} 条阻断级问题，不能签发`;
-  if (report.contentHash !== draft.working.contentHash) return '校核已过期，请重新校核';
-  if (draft.snapshot.contextVersion !== currentContextVersion()) {
-    return '数据快照过期（监测数据已更新），请重建快照并重新校核后再签发';
-  }
-  if (role !== 'commander') return '请切换为指挥员（右上角角色切换）';
-  return null;
+  void report; void role;
+  return draft.activeRevisionId ? useDocumentStore.getState().getRevisionGuard(draft.activeRevisionId, 'sign') : '缺少送审版本';
 }
 
 /** 带原因提示的按钮：禁用时用 Tooltip 说明原因（包一层 span 以支持禁用态悬浮）。 */
@@ -157,13 +137,18 @@ export default function DocCenterPanel() {
   const [editorDocId, setEditorDocId] = useState<string | null>(null);
   const [versionDocId, setVersionDocId] = useState<string | null>(null);
   const [sourceFactId, setSourceFactId] = useState<string | null>(null);
+  const [sourceDocumentId, setSourceDocumentId] = useState<string | null>(null);
   const [sourceOpen, setSourceOpen] = useState(false);
   const [previewCode, setPreviewCode] = useState<string | null>(null);
 
   const drafts = useMemo(
-    () => Object.values(draftsMap).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
-    [draftsMap],
+    () => Object.values(draftsMap).filter(draft => draft.scopeKind === 'event' ? draft.eventId === currentEventId : !!draft.shiftId && shiftEventIds(draft.shiftId).includes(currentEventId)).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
+    [draftsMap, currentEventId],
   );
+
+  useEffect(() => {
+    setEditorDocId(null); setVersionDocId(null); setSourceOpen(false); setSourceDocumentId(null); setSourceFactId(null);
+  }, [currentEventId]);
 
   // 编辑器内点击事实芯片 → 打开来源抽屉（事件由 DocumentEditor 派发）。
   useEffect(() => {
@@ -174,9 +159,13 @@ export default function DocCenterPanel() {
         detail &&
         typeof detail === 'object' &&
         'factId' in detail &&
-        typeof (detail as { factId: unknown }).factId === 'string'
+        typeof (detail as { factId: unknown }).factId === 'string' &&
+        'documentId' in detail &&
+        typeof detail.documentId === 'string'
       ) {
+        if (!drafts.some(d => d.documentId === detail.documentId)) return;
         setSourceFactId((detail as { factId: string }).factId);
+        setSourceDocumentId(detail.documentId);
         setSourceOpen(true);
       }
     };
@@ -185,7 +174,7 @@ export default function DocCenterPanel() {
     const docOpenHandler = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
       const detail = event.detail as { documentId?: unknown } | null;
-      if (detail && typeof detail.documentId === 'string') {
+      if (detail && typeof detail.documentId === 'string' && drafts.some(d => d.documentId === detail.documentId)) {
         setEditorDocId(detail.documentId);
       }
     };
@@ -194,7 +183,7 @@ export default function DocCenterPanel() {
       window.removeEventListener(SOURCE_EVENT, handler);
       window.removeEventListener('axn:doc-open', docOpenHandler);
     };
-  }, []);
+  }, [drafts]);
 
   const getReport = useCallback(
     (documentId: string): ValidationReport | null => {
@@ -266,7 +255,6 @@ export default function DocCenterPanel() {
         submitted: false,
       });
       store.markSubmitted(rev.revisionId, actor.name);
-      store.setLifecycle(draft.documentId, 'submitted');
       message.success(`已提交送审：${draft.title} ${rev.displayVersion}（模拟）`);
     },
     [actor.name, getReport],
@@ -297,59 +285,10 @@ export default function DocCenterPanel() {
         message.warning('仅已签发版本支持修订（模拟）');
         return;
       }
-      const content = JSON.parse(JSON.stringify(rev.contentSnapshot)) as typeof rev.contentSnapshot;
-      const derivedKeys = collectRunDerivedKeys(content).filter(
-        (key): key is DerivedKey => key in DERIVED_META,
-      );
-      const snapshot = buildSnapshot({
-        scopeKind: draft.scopeKind,
-        eventId: draft.eventId,
-        shiftId: draft.shiftId,
-        sessionId: draft.originSessionId,
-        extraFactIds: collectRunFactIds(content),
-        derivedKeys,
-        label: `修订快照 · ${draft.title}`,
-      });
-      const newId = `doc-revise-${Date.now().toString(36)}`;
-      const now = new Date().toISOString();
-      const newDraft: DocumentDraft = {
-        documentId: newId,
-        title: `${draft.title}（修订）`,
-        templateCode: draft.templateCode,
-        templateVersion: draft.templateVersion,
-        scopeKind: draft.scopeKind,
-        eventId: draft.eventId,
-        shiftId: draft.shiftId,
-        originSessionId: draft.originSessionId,
-        working: {
-          content,
-          contextSnapshotId: snapshot.snapshotId,
-          contentHash: computeContentHash(content),
-          updatedAt: now,
-          baseRevisionId: rev.revisionId,
-        },
-        lifecycle: 'draft',
-        validation: { status: 'not_run', reportId: null },
-        freshness: 'current',
-        activeRevisionId: null,
-        revisionCounter: { major: draft.revisionCounter.major + 1, minor: 0 },
-        snapshot,
-        createdAt: now,
-        updatedAt: now,
-      };
-      store.addDraft(newDraft);
-      store.setLifecycle(draft.documentId, 'archived');
-      store.addAudit({
-        action: '修订新建草稿',
-        actor: actor.name,
-        objectId: draft.documentId,
-        version: rev.displayVersion,
-        performedAt: now,
-        demoClockAt: demo.demoClock,
-        detail: `基于已签发版本 ${rev.displayVersion} 生成新草稿（原版本保持锁定）`,
-      });
-      message.success('已基于已签发版本创建修订草稿（模拟），原版本保持锁定');
-      setEditorDocId(newId);
+      void demo;
+      store.beginRevision(draft.documentId, '基于已签发版本开始修订');
+      message.success('已创建同文书修订工作副本，历史签发版本保持锁定');
+      setEditorDocId(draft.documentId);
     },
     [actor.name],
   );
@@ -435,7 +374,7 @@ export default function DocCenterPanel() {
                     </Space>
                     <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
                       {templateByCode.get(draft.templateCode)?.name ?? draft.templateCode} ·{' '}
-                      {draft.scopeKind === 'event' ? '事件' : '班次'} · 当前版本：
+                      {draft.scopeKind === 'event' ? '事件' : `班次范围：${shiftEventIds(draft.shiftId ?? '').join('、')}`} · 当前版本：
                       {activeRev ? activeRev.displayVersion : '未保存版本'} · 更新于 {fmtTime(draft.updatedAt)} · ID{' '}
                       {draft.documentId}
                     </div>
@@ -452,13 +391,13 @@ export default function DocCenterPanel() {
                     </HintButton>
                     <HintButton
                       size="small"
-                      disabled={draft.lifecycle === 'archived'}
+                      disabled={draft.lifecycle === 'archived' || draft.lifecycle === 'signed'}
                       hint={draft.lifecycle === 'archived' ? '已归档文书不再参与校核' : null}
                       onClick={() => handleValidate(draft.documentId)}
                     >
                       校核
                     </HintButton>
-                    {draft.snapshot.contextVersion !== currentContextVersion() && draft.lifecycle !== 'archived' && (
+                    {draft.freshness === 'stale' && draft.lifecycle !== 'archived' && draft.lifecycle !== 'signed' && (
                       <HintButton
                         size="small"
                         onClick={() => {
@@ -536,7 +475,7 @@ export default function DocCenterPanel() {
 
       <DocumentEditor documentId={editorDocId ?? ''} open={editorDocId !== null} onClose={() => setEditorDocId(null)} />
       <VersionDrawer documentId={versionDocId ?? ''} open={versionDocId !== null} onClose={() => setVersionDocId(null)} />
-      <SourceDrawer factId={sourceFactId} open={sourceOpen} onClose={() => setSourceOpen(false)} />
+      <SourceDrawer documentId={sourceDocumentId} factId={sourceFactId} open={sourceOpen} onClose={() => setSourceOpen(false)} />
       <TemplatePreviewModal template={previewTemplate} onClose={() => setPreviewCode(null)} />
     </div>
   );

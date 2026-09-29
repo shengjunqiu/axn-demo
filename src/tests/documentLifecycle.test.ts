@@ -1,189 +1,158 @@
-/**
- * 文书状态机测试（AC-014/015/016/017/022）：
- * 提交/签发前置条件、改文后旧校核失效、已签发版本锁定、修订形成新版本。
- */
 import { beforeEach, describe, expect, it } from 'vitest';
-import { useDocumentStore, computeContentHash } from '@/store/documentStore';
-import { createEventDocument, createRevisionDraftFromSigned } from '@/services/documentFactory';
-import { validateContent, saveReport, applySuggestion } from '@/services/validation';
-import { DEFAULT_SESSION_ID, DEFAULT_ACTOR_ID } from '@/seed/scenario';
+import { useDocumentStore } from '@/store/documentStore';
 import { useDemoStore } from '@/store/demoStore';
+import { useSessionStore } from '@/store/sessionStore';
+import { createEventDocument, createRevisionDraftFromSigned, refreshDraftSnapshot } from '@/services/documentFactory';
+import { runDocumentValidation, saveCurrentRevision } from '@/services/documentLifecycle';
+import { validateContent, applySuggestion } from '@/services/validation';
+import { resolveFact, latestWaterLevelFactId } from '@/services/factLookup';
+import { renderRevision } from '@/services/docRender';
+import { DEFAULT_SESSION_ID } from '@/seed/scenario';
 
-/** 补齐报送单位与交接事项，让文书可生成 */
-function fillManualFields() {
-  const add = useDemoStore.getState().addManualFact;
-  add({ field: 'reportingUnit', value: '清河段防汛值班室（演示补录）', scopeKind: 'event', scopeId: 'evt-demo-001', actorId: DEFAULT_ACTOR_ID });
-  add({ field: 'handOverNotes', value: '持续跟踪堤防出险段（演示补录）', scopeKind: 'shift', scopeId: 'shift-demo-001', actorId: DEFAULT_ACTOR_ID });
+const store = () => useDocumentStore.getState();
+function create() {
+  useDemoStore.getState().addManualFact({ field: 'reportingUnit', value: '清河段防汛值班室', scopeKind: 'event', scopeId: 'evt-demo-001', actorId: useDemoStore.getState().actorId });
+  const result = createEventDocument(DEFAULT_SESSION_ID);
+  expect(result.ok).toBe(true);
+  return result.documentId!;
 }
+function pass(id: string) {
+  const report = runDocumentValidation(id)!;
+  expect(report.issues.filter(i => i.level === 'block')).toEqual([]);
+  expect(store().getDraft(id)!.validation.status).toBe('passed');
+  expect(report.revisionId).toBe(store().getDraft(id)!.activeRevisionId);
+  return store().getRevision(report.revisionId!)!;
+}
+function sign(id: string) {
+  const rev = pass(id);
+  store().markSubmitted(rev.revisionId, useDemoStore.getState().getActor().name);
+  useDemoStore.getState().setActor('actor-demo-commander');
+  const actor = useDemoStore.getState().getActor();
+  store().markSigned(rev.revisionId, actor.name, actor.actorId);
+  return store().getRevision(rev.revisionId)!;
+}
+beforeEach(() => useSessionStore.getState().resetAll());
 
-describe('文书状态机', () => {
-  beforeEach(() => {
-    useDocumentStore.getState().resetAll();
-    useDemoStore.getState().reset();
+describe('document revision trust chain', () => {
+  it('missing reporting unit blocks generation', () => {
+    expect(createEventDocument(DEFAULT_SESSION_ID).missingFields).toContain('reportingUnit');
   });
-
-  it('缺报送单位时生成被拒并返回缺失字段', () => {
-    const r = createEventDocument(DEFAULT_SESSION_ID);
-    expect(r.ok).toBe(false);
-    expect(r.missingFields).toContain('reportingUnit');
+  it('unvalidated revision and null-revision report cannot submit/sign/export', () => {
+    const id = create();
+    const draft = store().getDraft(id)!;
+    expect(() => store().saveRevision({ documentId: id, content: draft.working.content, sourceSnapshotId: draft.snapshot.snapshotId, createdBy: '值班员', changeNote: '', submitted: true })).toThrow();
+    const rev = saveCurrentRevision(id);
+    for (const action of ['submit', 'sign', 'export'] as const) expect(store().getRevisionGuard(rev.revisionId, action)).toBeTruthy();
+    const report = store().addReport(validateContent({ documentId: id, content: draft.working.content, snapshot: draft.snapshot }));
+    expect(report.revisionId).toBeNull();
+    expect(() => store().markValidation(id, 'passed', report.reportId)).toThrow();
+    expect(() => store().markSubmitted(rev.revisionId, '值班员')).toThrow();
+    expect(() => store().markSigned(rev.revisionId, '指挥员', 'actor-demo-commander')).toThrow();
   });
-
-  it('补录后可生成草稿，初始校核包含 block（伤亡待核实表述之外的问题应为 0 依赖内容）', () => {
-    fillManualFields();
-    const r = createEventDocument(DEFAULT_SESSION_ID);
-    expect(r.ok).toBe(true);
-    const draft = useDocumentStore.getState().drafts[r.documentId!];
-    expect(draft.lifecycle).toBe('draft');
-    expect(draft.working.content.sections.length).toBeGreaterThan(3);
+  it('current validation ensures an idempotent saved revision; edits immediately revoke submitted authority', () => {
+    const id = create();
+    const rev = pass(id);
+    expect(saveCurrentRevision(id).revisionId).toBe(rev.revisionId);
+    store().markSubmitted(rev.revisionId, '值班员');
+    const content = structuredClone(store().getDraft(id)!.working.content);
+    content.sections.at(-1)!.paragraphs.push({ id: 'user', role: 'narrative', runs: [{ type: 'text', text: '持续保持联络。' }] });
+    store().updateWorkingContent(id, content);
+    expect(store().getDraft(id)!.validation.status).toBe('stale');
+    expect(store().getDraft(id)!.lifecycle).toBe('draft');
+    expect(store().getRevisionGuard(rev.revisionId, 'sign')).toBeTruthy();
+    expect(validateContent({ documentId: id, content, snapshot: store().getDraft(id)!.snapshot }).issues.some(i => i.ruleId === 'R-008')).toBe(true);
+    const next = pass(id);
+    expect(next.revisionId).not.toBe(rev.revisionId);
+    expect(next.validationReportId).toBe(store().getDraft(id)!.validation.reportId);
   });
-
-  it('未校核或校核含 block 时不能提交（checkSubmit 语义在 UI 层，这里验证报告链路）', () => {
-    fillManualFields();
-    const r = createEventDocument(DEFAULT_SESSION_ID);
-    const store = useDocumentStore.getState();
-    const draft = store.drafts[r.documentId!];
-    const base = validateContent({ documentId: r.documentId!, content: draft.working.content, snapshot: draft.snapshot });
-    const report = saveReport(base);
-    useDocumentStore.getState().markValidation(r.documentId!, report.issues.some((i) => i.level === 'block') ? 'failed' : 'passed', report.reportId);
-    const after = useDocumentStore.getState();
-    expect(after.activeReportByDocument[r.documentId!]).toBeTruthy();
+  it('adopting a correction only makes the report stale until explicit validation', () => {
+    const id = create();
+    const draft = store().getDraft(id)!;
+    const bad = structuredClone(draft.working.content);
+    bad.sections.at(-1)!.paragraphs.push({ id: 'bad', role: 'narrative', runs: [{ type: 'text', text: '险情已经全面控制。' }] });
+    store().updateWorkingContent(id, bad);
+    const report = runDocumentValidation(id)!;
+    const issue = report.issues.find(i => i.ruleId === 'R-005')!;
+    expect(issue.level).toBe('block');
+    store().updateWorkingContent(id, applySuggestion(bad, 'bad', issue.suggestionText!));
+    expect(store().getDraft(id)!.validation.status).toBe('stale');
+    expect(store().getRevisionGuard(report.revisionId!, 'submit')).toBeTruthy();
+    pass(id);
   });
-
-  it('修改内容后指纹变化，旧校核报告过期（invalidateReportForDocument）', () => {
-    fillManualFields();
-    const r = createEventDocument(DEFAULT_SESSION_ID);
-    const store = useDocumentStore.getState();
-    const draft = store.drafts[r.documentId!];
-    const report = saveReport(validateContent({ documentId: r.documentId!, content: draft.working.content, snapshot: draft.snapshot }));
-    useDocumentStore.getState().markValidation(r.documentId!, 'passed', report.reportId);
-
-    const modified = applySuggestion(draft.working.content, draft.working.content.sections[0].paragraphs[0].id, '现场正在持续处置，险情变化仍需跟踪核实。');
-    expect(computeContentHash(modified)).not.toBe(computeContentHash(draft.working.content));
-
-    useDocumentStore.getState().updateWorkingContent(r.documentId!, modified);
-    useDocumentStore.getState().invalidateReportForDocument(r.documentId!);
-    const after = useDocumentStore.getState();
-    expect(after.drafts[r.documentId!].validation.status).toBe('stale');
-    // 旧报告仍可追溯，但其指纹与当前内容不一致（不能再用它授权签发）
-    const staleReport = after.reports[after.drafts[r.documentId!].validation.reportId!];
-    expect(staleReport).toBeTruthy();
-    expect(staleReport.contentHash).not.toBe(computeContentHash(modified));
+  it('signed version is immutable through lifecycle APIs; same document revision becomes V2.0', () => {
+    const id = create(); const signed = sign(id); const frozen = JSON.stringify(signed);
+    expect(signed.displayVersion).toBe('V1.0');
+    expect(signed.locked).toBe(true);
+    const modified = structuredClone(signed.contentSnapshot); modified.title = '禁止覆盖';
+    store().updateWorkingContent(id, modified);
+    expect(store().getDraft(id)!.working.content.title).not.toBe('禁止覆盖');
+    expect(() => saveCurrentRevision(id)).toThrow();
+    expect(() => refreshDraftSnapshot({ documentId: id, actorName: '值班员' })).toThrow();
+    store().markSigned(signed.revisionId, '另一位指挥员', 'actor-demo-commander');
+    expect(JSON.stringify(store().getRevision(signed.revisionId))).toBe(frozen);
+    useDemoStore.getState().applyWaterFeedUpdate();
+    expect(store().getRevisionGuard(signed.revisionId, 'export')).toBeNull();
+    expect(JSON.stringify(store().getRevision(signed.revisionId))).toBe(frozen);
+    const revisionDraft = createRevisionDraftFromSigned({ documentId: id, content: signed.contentSnapshot, actorName: '值班员' });
+    expect(revisionDraft.documentId).toBe(id);
+    refreshDraftSnapshot({ documentId: id, actorName: '值班员' });
+    expect(pass(id).displayVersion).toBe('V2.0');
+    expect(JSON.stringify(store().getRevision(signed.revisionId))).toBe(frozen);
+    expect(store().audit.some(a => a.action === '模拟签发')).toBe(true);
   });
-
-  it('保存版本形成递增 displayVersion 且签发记录绑定版本；修订不覆盖已签发快照', () => {
-    fillManualFields();
-    const r = createEventDocument(DEFAULT_SESSION_ID);
-    const store = useDocumentStore.getState();
-    const draft = store.drafts[r.documentId!];
-    const rev1 = useDocumentStore.getState().saveRevision({
-      documentId: r.documentId!,
-      content: draft.working.content,
-      sourceSnapshotId: draft.snapshot.snapshotId,
-      changeNote: '初稿',
-      createdBy: '值班员',
-      submitted: true,
-    });
-    // FR-013：首版为 V1.0（草稿期不占版本号）
-    expect(rev1.displayVersion).toBe('V1.0');
-    useDocumentStore.getState().markSubmitted(rev1.revisionId, '值班员');
-    useDocumentStore.getState().markSigned(rev1.revisionId, '指挥员', 'actor-demo-commander');
-
-    const signed = useDocumentStore.getState().revisions[rev1.revisionId];
-    expect(signed.signedRecord?.isSimulated).toBe(true);
-    const signedContent = JSON.stringify(signed.contentSnapshot);
-
-    // 审查 M-2 修复后语义：已签发版本的正式修订走 createRevisionDraftFromSigned
-    // （新草稿 major+1，首版 V2.0），不得覆盖已签发快照；同稿继续存版仅 minor 递增。
-    const revisionDraft = createRevisionDraftFromSigned({ documentId: r.documentId!, content: signed.contentSnapshot, actorName: '值班员' });
-    const rev2 = useDocumentStore.getState().saveRevision({
-      documentId: revisionDraft.documentId,
-      content: revisionDraft.working.content,
-      sourceSnapshotId: revisionDraft.snapshot.snapshotId,
-      changeNote: '签发后修订',
-      createdBy: '值班员',
-    });
-    expect(rev2.displayVersion).toBe('V2.0');
-    expect(useDocumentStore.getState().revisions[rev1.revisionId].signedRecord).toBeTruthy();
-    expect(JSON.stringify(useDocumentStore.getState().revisions[rev1.revisionId].contentSnapshot)).toBe(signedContent);
-
-    const revise = useDocumentStore.getState().saveRevision({
-      documentId: r.documentId!,
-      content: draft.working.content,
-      sourceSnapshotId: draft.snapshot.snapshotId,
-      changeNote: '修订',
-      createdBy: '值班员',
-    });
-    expect(revise.displayVersion).toBe('V1.1');
-    expect(JSON.stringify(useDocumentStore.getState().revisions[rev1.revisionId].contentSnapshot)).toBe(signedContent);
+  it('source update appends obs006, keeps 005, and explicit refresh preserves user narration', () => {
+    useSessionStore.getState().addCandidates(DEFAULT_SESSION_ID, ['team-001', 'team-002']);
+    const id = create(); const rev = pass(id); const original = JSON.stringify(rev.sourceSnapshot);
+    const content = structuredClone(store().getDraft(id)!.working.content);
+    content.sections.at(-1)!.paragraphs.push({ id: 'user-note', role: 'narrative', runs: [{ type: 'text', text: '用户核实记录，继续跟进。' }] });
+    store().updateWorkingContent(id, content);
+    useDemoStore.getState().applyWaterFeedUpdate();
+    expect(resolveFact('fact-obs-water-005-waterLevel')?.value).toBe(42.3);
+    expect(resolveFact('fact-obs-water-005-observedAt')?.value).toContain('21:05');
+    expect(resolveFact('fact-obs-water-006-waterLevel')?.value).toBe(42.35);
+    expect(resolveFact('fact-obs-water-006-stationName')).toBeNull();
+    expect(resolveFact('fact-clock-demo-002-missing')).toBeNull();
+    expect(latestWaterLevelFactId()).toBe('fact-obs-water-006-waterLevel');
+    expect(store().getRevisionGuard(rev.revisionId, 'export')).toBeTruthy();
+    expect(runDocumentValidation(id)!.issues.some(i => i.ruleId === 'R-007' && i.level === 'block')).toBe(true);
+    useSessionStore.getState().removeCandidate(DEFAULT_SESSION_ID, 'team-002');
+    refreshDraftSnapshot({ documentId: id, actorName: '值班员' });
+    const refreshed = store().getDraft(id)!;
+    expect(refreshed.snapshot.waterSeries).toHaveLength(6);
+    expect(refreshed.working.contextSnapshotId).toBe(refreshed.snapshot.snapshotId);
+    expect(refreshed.snapshot.derived.candidate_people_count.value).toBe(36);
+    expect(JSON.stringify(refreshed.working.content)).toContain('用户核实记录');
+    expect(JSON.stringify(refreshed.working.content)).toContain('fact-obs-water-006-observedAt');
+    const text = JSON.stringify(renderRevision(pass(id)));
+    expect(text).toContain('42.35'); expect(text).toContain('36'); expect(text).not.toContain('64');
+    expect(JSON.stringify(store().getRevision(rev.revisionId)!.sourceSnapshot)).toBe(original);
   });
-
-  it('markSigned 幂等：重复签发不覆盖首次签发记录（审查 minor-4/AC-018）', () => {
-    fillManualFields();
-    const r = createEventDocument(DEFAULT_SESSION_ID);
-    const draft = useDocumentStore.getState().drafts[r.documentId!];
-    const rev = useDocumentStore.getState().saveRevision({
-      documentId: r.documentId!,
-      content: draft.working.content,
-      sourceSnapshotId: draft.snapshot.snapshotId,
-      changeNote: null,
-      createdBy: '值班员',
-      submitted: true,
-    });
-    useDocumentStore.getState().markSubmitted(rev.revisionId, '值班员');
-    useDocumentStore.getState().markSigned(rev.revisionId, '指挥员', 'actor-demo-commander');
-    const first = useDocumentStore.getState().revisions[rev.revisionId].signedRecord;
-    // 第二次签发（不同人）应被幂等守卫拒绝
-    useDocumentStore.getState().markSigned(rev.revisionId, '另一位指挥员', 'actor-demo-commander');
-    const after = useDocumentStore.getState().revisions[rev.revisionId].signedRecord;
-    expect(after).toEqual(first);
+  it('fact presence alone cannot heal a missing source record; real supplement and refresh can', () => {
+    const id = create(); const draft = store().getDraft(id)!;
+    const content = structuredClone(draft.working.content);
+    const manual = useDemoStore.getState().addManualFact({ field: 'verifiedNote', value: '已补充现场核实记录', scopeKind: 'event', scopeId: 'evt-demo-001', actorId: useDemoStore.getState().actorId });
+    content.sections.at(-1)!.paragraphs.push({ id: 'manual', role: 'fact-line', runs: [{ type: 'fact', factId: manual.factId }] });
+    store().updateWorkingContent(id, content);
+    expect(validateContent({ documentId: id, content, snapshot: draft.snapshot }).issues.some(i => i.ruleId === 'R-002')).toBe(true);
+    refreshDraftSnapshot({ documentId: id, actorName: '值班员' });
+    const snapshot = structuredClone(store().getDraft(id)!.snapshot);
+    delete snapshot.sources[manual.sourceRecordId];
+    expect(validateContent({ documentId: id, content, snapshot }).issues.some(i => i.ruleId === 'R-002')).toBe(true);
+    pass(id);
   });
-
-  it('R-002 自愈：补录来源并重建快照后，原缺失来源问题清除（审查 M-3 配套）', () => {
-    const missingFactId = 'fact-missing-waterLevel-demo';
-    fillManualFields();
-    const r = createEventDocument(DEFAULT_SESSION_ID);
-    const draft = useDocumentStore.getState().drafts[r.documentId!];
-    // 向工作副本注入缺失来源的事实 run
-    const injected = JSON.parse(JSON.stringify(draft.working.content)) as typeof draft.working.content;
-    injected.sections[0].paragraphs[0].runs.push({ type: 'fact', factId: missingFactId });
-    const before = validateContent({ documentId: r.documentId!, content: injected, snapshot: draft.snapshot });
-    expect(before.issues.find((i) => i.ruleId === 'R-002')).toBeTruthy();
-    // 模拟补录来源：向快照注入缺失事实后重新校核
-    const healedSnapshot = {
-      ...draft.snapshot,
-      facts: {
-        ...draft.snapshot.facts,
-        [missingFactId]: {
-          factId: missingFactId,
-          value: '42.35',
-          unit: '米',
-          valueType: 'number' as const,
-          sourceRecordId: 'src-manual-001',
-          sourceFieldKey: 'waterLevel',
-          sourceVersion: 1,
-          capturedAt: draft.snapshot.takenAt,
-          verification: 'confirmed' as const,
-          sourceSystem: '人工补录（模拟）',
-          sourceLabel: '人工补录（模拟）',
-        },
-      },
-    };
-    const after = validateContent({ documentId: r.documentId!, content: injected, snapshot: healedSnapshot });
-    expect(after.issues.find((i) => i.ruleId === 'R-002')).toBeUndefined();
+  it('duplicate signed document ID cannot replace signed working content (public Store gate)', () => {
+    const id = create(); sign(id); const draft = structuredClone(store().getDraft(id)!);
+    const before = JSON.stringify(store().getDraft(id));
+    draft.lifecycle = 'draft'; draft.working.content.title = '覆盖攻击';
+    try { store().addDraft(draft); } catch { /* rejection is also valid */ }
+    expect(JSON.stringify(store().getDraft(id)) === before).toBe(true);
   });
-
-  it('审计流水记录签发与导出动作', () => {
-    fillManualFields();
-    const r = createEventDocument(DEFAULT_SESSION_ID);
-    useDocumentStore.getState().addAudit({
-      action: '导出 Word',
-      actor: '值班员',
-      objectId: r.documentId!,
-      version: 'V1.1',
-      performedAt: new Date().toISOString(),
-      demoClockAt: '2026-09-28 21:10',
-      detail: '测试',
-    });
-    expect(useDocumentStore.getState().audit.length).toBeGreaterThan(0);
+  it('returned locked source and report nested objects cannot mutate history (public Store gate)', () => {
+    const id = create(); const signed = sign(id); const before = JSON.stringify(signed);
+    try { signed.sourceSnapshot.facts['fact-obs-water-005-waterLevel'].value = 99; } catch { /* frozen */ }
+    expect(JSON.stringify(store().getRevision(signed.revisionId)) === before).toBe(true);
+    const report = store().reports[signed.validationReportId!]; const reportBefore = JSON.stringify(report);
+    try { report.issues.push({ ruleId: 'fake', level: 'block', message: '', sectionId: null, paragraphId: null, currentValue: null, suggestion: null, suggestionText: null, fieldKey: null }); } catch { /* frozen */ }
+    expect(JSON.stringify(store().reports[report.reportId])).toBe(reportBefore);
   });
 });

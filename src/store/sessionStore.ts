@@ -1,4 +1,7 @@
 import { create } from 'zustand';
+import { resourceAllowed, resolveFact } from '@/services/factLookup';
+import { teamById } from '@/seed/scenario';
+import { invalidateAllRuns, isActiveRun } from '@/services/taskRuns';
 import type {
   AgentTask,
   ChatMessage,
@@ -81,6 +84,7 @@ function rehydrate(): SessionPersist {
       n > 0
         ? {
             ...session,
+            resourceSortBy: session.resourceSortBy ?? null,
             messages: [
               ...session.messages,
               {
@@ -95,7 +99,7 @@ function rehydrate(): SessionPersist {
               },
             ],
           }
-        : session;
+        : { ...session, resourceSortBy: session.resourceSortBy ?? null };
   }
   return {
     sessions,
@@ -115,6 +119,7 @@ function emptySession(sessionId: string, eventId: string): Session {
     title: incidentById.get(eventId)?.factRefs.title ? '事件会话' : '会话',
     messages: [],
     lastResourceResultIds: [],
+    resourceSortBy: null,
     candidateResourceIds: [],
     selectedProposalId: null,
     selectedProposalVersion: null,
@@ -141,7 +146,8 @@ interface SessionState {
   switchSession: (sessionId: string) => void;
   appendMessage: (sessionId: string, msg: Omit<ChatMessage, 'messageId' | 'createdAt' | 'performedAt'>) => ChatMessage;
   createTask: (input: { sessionId: string; eventId: string; userMessageId: string; intent: string; displayTitle: string; attempt: number }) => AgentTask;
-  applyTaskEvent: (taskId: string, ev: TaskEvent) => void;
+  applyTaskEvent: (taskId: string, ev: TaskEvent, attemptId: string) => void;
+  beginAttempt: (taskId: string) => AgentTask | undefined;
   setTaskStatus: (taskId: string, status: TaskStatus) => void;
   getTask: (taskId: string) => AgentTask | undefined;
   setLastResourceResult: (sessionId: string, resourceIds: string[], sortedBy: 'eta' | 'distance' | null) => void;
@@ -171,6 +177,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
 
   ensureSessionForEvent: (eventId) => {
     const state = get();
+    if (state.sessions[state.currentSessionId]?.eventId !== eventId) invalidateAllRuns();
     const existing = state.sessionByEvent[eventId];
     if (existing && state.sessions[existing]) {
       if (state.currentSessionId !== existing) set({ currentSessionId: existing });
@@ -186,7 +193,10 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
     return sessionId;
   },
 
-  switchSession: (sessionId) => set({ currentSessionId: sessionId }),
+  switchSession: (sessionId) => {
+    if (sessionId !== get().currentSessionId) invalidateAllRuns();
+    set({ currentSessionId: sessionId });
+  },
 
   appendMessage: (sessionId, partial) => {
     const msg: ChatMessage = {
@@ -214,7 +224,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
       sessionId,
       eventId,
       userMessageId,
-      attemptId: `${Date.now().toString(36)}-a${attempt}`,
+      attemptId: crypto.randomUUID(),
       attempt,
       status: 'queued',
       intent,
@@ -232,10 +242,21 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
     return task;
   },
 
-  applyTaskEvent: (taskId, ev) => {
+  beginAttempt: (taskId) => {
+    const task = get().tasks[taskId];
+    if (!task || ['running', 'queued', 'succeeded'].includes(task.status)) return undefined;
+    const next: AgentTask = { ...task, attempt: task.attempt + 1, attemptId: crypto.randomUUID(),
+      status: 'queued', error: null, textAnswer: null, steps: [], artifacts: [],
+      finishedAt: null, startedAt: new Date().toISOString() };
+    set((s) => ({ tasks: { ...s.tasks, [taskId]: next } }));
+    return next;
+  },
+
+  applyTaskEvent: (taskId, ev, attemptId) => {
     set((s) => {
       const task = s.tasks[taskId];
-      if (!task) return s;
+      if (!task || ['cancelled', 'failed', 'succeeded'].includes(task.status)) return s;
+      if (!attemptId || task.attemptId !== attemptId || !isActiveRun(taskId, attemptId)) return s;
       const next: AgentTask = { ...task };
       switch (ev.type) {
         case 'step_started':
@@ -304,6 +325,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
           break;
         case 'failed':
           next.status = 'failed';
+          next.steps = task.steps.map(st => st.status === 'running' ? { ...st, status: 'failed' } : st);
           next.error = { errorCode: ev.errorCode, message: ev.message, hint: ev.hint };
           next.finishedAt = new Date().toISOString();
           break;
@@ -311,6 +333,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
           if (task.status !== 'waiting_input' && task.status !== 'cancelled') {
             next.status = ev.summary ? 'succeeded' : 'succeeded';
           }
+          next.error = null;
           next.finishedAt = new Date().toISOString();
           break;
       }
@@ -325,7 +348,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
       return {
         tasks: {
           ...s.tasks,
-          [taskId]: { ...task, status, finishedAt: status === 'cancelled' ? new Date().toISOString() : task.finishedAt },
+          [taskId]: { ...task, status, steps: status === 'cancelled' ? task.steps.map(st => st.status === 'running' ? { ...st, status: 'cancelled' as const } : st) : task.steps, finishedAt: status === 'cancelled' ? new Date().toISOString() : task.finishedAt },
         },
       };
     });
@@ -340,49 +363,54 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
       return {
         sessions: {
           ...s.sessions,
-          [sessionId]: { ...session, lastResourceResultIds: resourceIds },
+          [sessionId]: { ...session, lastResourceResultIds: [...resourceIds], resourceSortBy: sortedBy },
         },
       };
     });
-    void sortedBy;
   },
 
   toggleCandidate: (sessionId, resourceId) => {
-    set((s) => {
-      const session = s.sessions[sessionId];
-      if (!session) return s;
-      const has = session.candidateResourceIds.includes(resourceId);
-      const candidateResourceIds = has
-        ? session.candidateResourceIds.filter((id) => id !== resourceId)
-        : [...session.candidateResourceIds, resourceId];
-      return { sessions: { ...s.sessions, [sessionId]: { ...session, candidateResourceIds } } };
-    });
+    if (get().sessions[sessionId]?.candidateResourceIds.includes(resourceId)) get().removeCandidate(sessionId, resourceId);
+    else get().addCandidates(sessionId, [resourceId]);
   },
 
   addCandidates: (sessionId, resourceIds) => {
+    const before = get().sessions[sessionId]?.candidateResourceIds;
     set((s) => {
       const session = s.sessions[sessionId];
       if (!session) return s;
       const merged = [...session.candidateResourceIds];
-      for (const id of resourceIds) if (!merged.includes(id)) merged.push(id);
-      return { sessions: { ...s.sessions, [sessionId]: { ...session, candidateResourceIds: merged } } };
+      for (const id of resourceIds) {
+        const team = teamById.get(id);
+        if (team && resourceAllowed(id, session.eventId)
+          && resolveFact(team.factRefs.status, { kind: 'event', eventId: session.eventId })?.value === 'available'
+          && !merged.includes(id)) merged.push(id);
+      }
+      if (merged.length === session.candidateResourceIds.length) return s;
+      return { sessions: { ...s.sessions, [sessionId]: { ...session, candidateResourceIds: merged, selectedProposalId: null, selectedProposalVersion: null } } };
     });
+    const after = get().sessions[sessionId];
+    if (after && before !== after.candidateResourceIds) useDemoStore.getState().touchContext('event', after.eventId);
   },
 
   removeCandidate: (sessionId, resourceId) => {
+    const before = get().sessions[sessionId]?.candidateResourceIds;
     set((s) => {
       const session = s.sessions[sessionId];
-      if (!session) return s;
+      if (!session || !session.candidateResourceIds.includes(resourceId)) return s;
       return {
         sessions: {
           ...s.sessions,
           [sessionId]: {
             ...session,
             candidateResourceIds: session.candidateResourceIds.filter((id) => id !== resourceId),
+            selectedProposalId: null, selectedProposalVersion: null,
           },
         },
       };
     });
+    const after = get().sessions[sessionId];
+    if (after && before !== after.candidateResourceIds) useDemoStore.getState().touchContext('event', after.eventId);
   },
 
   setPendingClarification: (sessionId, c) => {
@@ -398,9 +426,15 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
   },
 
   selectProposal: (sessionId, proposalId) => {
+    const before = get().sessions[sessionId]?.selectedProposalId;
     set((s) => {
       const session = s.sessions[sessionId];
-      if (!session) return s;
+      if (!session || session.selectedProposalId === proposalId) return s;
+      if (proposalId) {
+        const proposal = s.proposals[proposalId];
+        if (!proposal || proposal.eventId !== session.eventId ||
+          [...proposal.candidateIds].sort().join('|') !== [...session.candidateResourceIds].sort().join('|')) return s;
+      }
       const prev = session.selectedProposalId;
       if (prev && s.proposals[prev]) {
         s.proposals = {
@@ -426,6 +460,8 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
         },
       };
     });
+    const after = get().sessions[sessionId];
+    if (after && before !== after.selectedProposalId) useDemoStore.getState().touchContext('event', after.eventId);
   },
 
   getProposal: (proposalId) => get().proposals[proposalId],
@@ -449,6 +485,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
             ...session,
             messages: [],
             lastResourceResultIds: [],
+            resourceSortBy: null,
             candidateResourceIds: [],
             selectedProposalId: null,
             selectedProposalVersion: null,
@@ -461,6 +498,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
   },
 
   resetAll: () => {
+    invalidateAllRuns();
     clearPersist('session');
     set({
       sessions: { [DEFAULT_SESSION_ID]: emptySession(DEFAULT_SESSION_ID, DEFAULT_EVENT_ID) },

@@ -13,6 +13,7 @@ import { useSessionStore } from '@/store/sessionStore';
 import { computeDerived, DERIVED_META } from '@/seed/derived';
 import type { DerivedKey } from '@/seed/derived';
 import { factNumber, factText, teamById, warehouseById } from '@/seed/scenario';
+import { resourceAllowed } from '@/services/factLookup';
 import SchematicMap from './SchematicMap';
 import './workspace.css';
 
@@ -52,13 +53,11 @@ export default function ResourcePanel() {
   const toggleCandidate = useSessionStore((s) => s.toggleCandidate);
   const removeCandidate = useSessionStore((s) => s.removeCandidate);
 
-  const [sortBy, setSortBy] = useState<SortKey>('default');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // 会话切换（事件切换/重置）后清空本地选择，避免跨事件残留
   useEffect(() => {
     setSelectedId(null);
-    setSortBy('default');
   }, [session?.sessionId]);
 
   const resultIds = useMemo(() => session?.lastResourceResultIds ?? [], [session?.lastResourceResultIds]);
@@ -100,19 +99,8 @@ export default function ResourcePanel() {
       }
       return null;
     };
-    const built = resultIds.map(build).filter((r): r is ResourceRow => r != null);
-    if (sortBy === 'default') return built;
-    const value = (r: ResourceRow): number | null =>
-      sortBy === 'eta' ? r.etaMinutes : r.distanceKm;
-    return [...built].sort((a, b) => {
-      const va = value(a);
-      const vb = value(b);
-      if (va == null && vb == null) return 0;
-      if (va == null) return 1; // 无该维度（仓库）排最后
-      if (vb == null) return -1;
-      return va - vb;
-    });
-  }, [resultIds, sortBy]);
+    return resultIds.map(build).filter((r): r is ResourceRow => r != null);
+  }, [resultIds]);
 
   const derivedStats = useMemo(
     () => CANDIDATE_KEYS.map((key) => computeDerived(key, candidateIds)),
@@ -123,21 +111,44 @@ export default function ResourcePanel() {
     return <Alert type="error" showIcon message="会话未初始化" description="请稍候或重置演示后重试（模拟数据）。" />;
   }
 
+  const sortResults = (by: SortKey) => {
+    const orderedIds = by === 'default'
+      ? [...teamById.keys(), ...warehouseById.keys()].filter((id) => resultIds.includes(id))
+      : [...rows].sort((a, b) => {
+        const av = by === 'eta' ? a.etaMinutes : a.distanceKm;
+        const bv = by === 'eta' ? b.etaMinutes : b.distanceKm;
+        if (av == null) return bv == null ? 0 : 1;
+        return bv == null ? -1 : av - bv;
+      }).map((row) => row.id);
+    useSessionStore.getState().setLastResourceResult(session.sessionId, orderedIds, by === 'default' ? null : by);
+  };
+
   const columns: TableColumnsType<ResourceRow> = [
     {
       title: '候选',
       width: 56,
-      render: (_, row) => (
-        <Checkbox
-          checked={candidateIds.includes(row.id)}
-          onChange={(e) => {
-            e.stopPropagation();
-            toggleCandidate(session.sessionId, row.id);
-          }}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`选择 ${row.name} 加入候选`}
-        />
-      ),
+      render: (_, row) => {
+        const reason = row.kind === 'warehouse' ? '仓库为物资储备，不能加入候选救援队伍'
+          : !resourceAllowed(row.id, session.eventId) ? '未获当前事件授权'
+          : row.statusKey !== 'available' ? '队伍当前不可调派' : '';
+        return (
+          <Tooltip title={reason || undefined}>
+            <span title={reason || undefined}>
+              <Checkbox
+                disabled={!!reason}
+                checked={candidateIds.includes(row.id)}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  toggleCandidate(session.sessionId, row.id);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                aria-label={`选择 ${row.name} 加入候选`}
+                aria-description={reason || undefined}
+              />
+            </span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: '名称',
@@ -201,8 +212,8 @@ export default function ResourcePanel() {
             <Button
               key={opt.value}
               size="small"
-              type={sortBy === opt.value ? 'primary' : 'default'}
-              onClick={() => setSortBy(opt.value)}
+              type={(session.resourceSortBy ?? 'default') === opt.value ? 'primary' : 'default'}
+              onClick={() => sortResults(opt.value)}
             >
               {opt.label}
             </Button>

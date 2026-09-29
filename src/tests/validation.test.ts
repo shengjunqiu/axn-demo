@@ -1,5 +1,5 @@
 /**
- * 校核引擎测试：R-002/R-004/R-005/R-006/R-007 阻断级 + R-009/R-010 warning。
+ * 校核引擎测试：R-002/R-004/R-005/R-006/R-003 阻断级 + R-009/R-010 warning。
  * 对应产品红线：待核实≠0、处置中≠已控制、候选≠已调派、建议≠已确认。
  */
 import { describe, expect, it } from 'vitest';
@@ -49,7 +49,7 @@ describe('校核引擎', () => {
       para('p-1', [{ type: 'text', text: '现场正在持续处置。人员伤亡情况待核实。相关队伍为拟预置候选。建议响应等级为 III 级（尚未确认）。' }]),
     ]);
     const report = validateContent({ documentId: 'doc-test', content, snapshot: snapshotFor() });
-    expect(ruleIds(report.issues).filter((r) => ['R-004', 'R-005', 'R-006', 'R-007'].includes(r))).toEqual([]);
+    expect(ruleIds(report.issues).filter((r) => ['R-004', 'R-005', 'R-006', 'R-003'].includes(r))).toEqual([]);
   });
 
   it('R-004：伤亡待核实时写“无人员伤亡”为 block，并给出修改建议', () => {
@@ -72,10 +72,10 @@ describe('校核引擎', () => {
     expect(report.issues.find((i) => i.ruleId === 'R-006')?.level).toBe('block');
   });
 
-  it('R-007：建议等级写“已确认 III 级”为 block', () => {
+  it('R-003：建议等级写“已确认 III 级”为 block', () => {
     const content = makeContent([para('p-1', [{ type: 'text', text: '已确认 III 级响应。' }])]);
     const report = validateContent({ documentId: 'doc-test', content, snapshot: snapshotFor() });
-    expect(report.issues.find((i) => i.ruleId === 'R-007')?.level).toBe('block');
+    expect(report.issues.find((i) => i.ruleId === 'R-003')?.level).toBe('block');
   });
 
   it('R-002：快照中不存在的来源绑定为 block', () => {
@@ -131,15 +131,15 @@ describe('校核引擎', () => {
     expect(report.issues.find((i) => i.ruleId === 'R-006')).toBeUndefined();
   });
 
-  it('R-007 断言性表述命中：按 III 级响应启动 / 已确定为 III 级 / 响应等级提升至 III 级', () => {
+  it('R-003 断言性表述命中：按 III 级响应启动 / 已确定为 III 级 / 响应等级提升至 III 级', () => {
     for (const text of ['按 III 级响应启动。', '已确定为 III 级。', '响应等级提升至 III 级。', '启动 Ⅲ 级响应。']) {
       const content = makeContent([para('p-1', [{ type: 'text', text }])]);
       const report = validateContent({ documentId: 'doc-test', content, snapshot: snapshotFor() });
-      expect(report.issues.find((i) => i.ruleId === 'R-007')?.level, `未命中：${text}`).toBe('block');
+      expect(report.issues.find((i) => i.ruleId === 'R-003')?.level, `未命中：${text}`).toBe('block');
     }
   });
 
-  it('R-004/R-005/R-007 按事件动态解析事实（M-12）：B 事件伤亡待核实仍拦截，已控制/无建议等级的合规表述不误报', () => {
+  it('R-004/R-005/R-003 按事件动态解析事实（M-12）：B 事件伤亡待核实仍拦截，已控制/无建议等级的合规表述不误报', () => {
     useDemoStore.getState().switchEvent('evt-demo-002');
     try {
       const snapshotB = buildSnapshot({
@@ -157,8 +157,8 @@ describe('校核引擎', () => {
       expect(report.issues.find((i) => i.ruleId === 'R-004')?.level).toBe('block');
       // B 处置状态本就是已控制 → “已得到控制”为合规表述，不误报
       expect(report.issues.find((i) => i.ruleId === 'R-005')).toBeUndefined();
-      // B 无建议响应等级 → R-007 不适用
-      expect(report.issues.find((i) => i.ruleId === 'R-007')).toBeUndefined();
+      // B 无建议响应等级 → R-003 不适用
+      expect(report.issues.find((i) => i.ruleId === 'R-003')).toBeUndefined();
     } finally {
       useDemoStore.getState().switchEvent('evt-demo-001');
     }

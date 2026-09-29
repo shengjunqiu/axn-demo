@@ -3,7 +3,7 @@
  * 打印内容来自用户选定的版本快照，与 Word 导出同源。
  */
 import { useEffect, useState } from 'react';
-import { Button, Drawer, Space, Typography } from 'antd';
+import { Button, Drawer, Space, Typography, message } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import { useDocumentStore } from '@/store/documentStore';
 import { renderRevision } from '@/services/docRender';
@@ -12,6 +12,8 @@ let openPrint: ((revisionId: string | null) => void) | null = null;
 
 /** 供文书中心调用：打开打印预览（revisionId 为空则打工作副本）。 */
 export function openPrintPreview(revisionId: string | null) {
+  const reason = revisionId ? useDocumentStore.getState().getRevisionGuard(revisionId, 'export') : '请选择已保存并校核的版本';
+  if (reason) { message.warning(reason); return; }
   openPrint?.(revisionId);
 }
 
@@ -33,7 +35,8 @@ export default function PrintView() {
 
   const rev = revisionId ? revisions[revisionId] : null;
   const draft = rev ? Object.values(drafts).find((d) => d.documentId === rev.documentId) ?? null : null;
-  const rendered = rev ? renderRevision(rev) : null;
+  const guard = revisionId ? useDocumentStore.getState().getRevisionGuard(revisionId, 'export') : '请选择版本';
+  const rendered = rev && !guard ? renderRevision(rev) : null;
 
   return (
     <Drawer
@@ -46,7 +49,7 @@ export default function PrintView() {
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             在打印对话框中选择“另存为 PDF”
           </Typography.Text>
-          <Button type="primary" icon={<PrinterOutlined />} onClick={() => window.print()}>
+          <Button type="primary" icon={<PrinterOutlined />} disabled={!!guard} onClick={() => { const reason = revisionId ? useDocumentStore.getState().getRevisionGuard(revisionId, 'export') : '请选择版本'; if (reason) message.warning(reason); else window.print(); }}>
             打印 / 另存为 PDF
           </Button>
         </Space>

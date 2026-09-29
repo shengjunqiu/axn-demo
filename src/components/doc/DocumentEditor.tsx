@@ -14,11 +14,12 @@ import StarterKit from '@tiptap/starter-kit';
 import { useDocumentStore } from '@/store/documentStore';
 import { useDemoStore } from '@/store/demoStore';
 import { createRevisionDraftFromSigned } from '@/services/documentFactory';
-import { factDisplay, resolveFact } from '@/services/factLookup';
+import { formatFactValue } from '@/services/factLookup';
 import { derivedMetaLabel } from '@/services/documentFactory';
 import ValidationPanel, { ValidationStatusTag } from './ValidationPanel';
-import { computeDerived, DERIVED_META, type DerivedKey } from '@/seed/derived';
+import { type DerivedKey } from '@/seed/derived';
 import type {
+  SourceSnapshot,
   DocumentContent,
   DocumentDraft,
   DocumentParagraph,
@@ -108,7 +109,10 @@ const SectionTitle = Node.create({
 });
 
 /** 事实芯片：atomInline，attr factId；点击事件由容器代理转发给 SourceDrawer。 */
-const FactChip = Node.create({
+const FactChip = Node.create<{ snapshot: SourceSnapshot | null }>({
+  addOptions() {
+    return { snapshot: null };
+  },
   name: 'factChip',
   inline: true,
   group: 'inline',
@@ -125,25 +129,28 @@ const FactChip = Node.create({
   },
   renderHTML({ node }) {
     const factId = typeof node.attrs.factId === 'string' ? node.attrs.factId : '';
-    const missing = factId.length === 0 || resolveFact(factId) === null;
+    const fact = this.options.snapshot?.facts[factId];
+    const missing = !fact;
     const suffix = typeof node.attrs.suffix === 'string' ? node.attrs.suffix : '';
     return [
       'span',
       {
         'data-fact-chip': factId,
+        tabindex: '0', role: 'button',
         class: missing ? 'fact-chip fact-chip--missing' : 'fact-chip',
         title: '点击查看数据来源（模拟）',
       },
-      `${factDisplay(factId)}${suffix}`,
+      `${fact ? formatFactValue(fact.value, fact.unit, fact.sourceFieldKey) : '（来源缺失）'}${suffix}`,
     ];
   },
 });
 
 /** 派生值芯片：atomInline，只读展示（不可改写派生公式）。 */
 /** 派生值展示缓存：DocumentEditor 挂载时按草稿快照候选集填充（M-1：芯片显示真实数值而非指标名）。 */
-export const derivedDisplayOverrides: Record<string, string> = {};
 
-const DerivedChip = Node.create({
+
+const DerivedChip = Node.create<{ snapshot: SourceSnapshot | null }>({
+  addOptions() { return { snapshot: null }; },
   name: 'derivedChip',
   inline: true,
   group: 'inline',
@@ -162,11 +169,12 @@ const DerivedChip = Node.create({
     const key = typeof node.attrs.derivedKey === 'string' ? node.attrs.derivedKey : '';
     const label = key.length > 0 ? derivedMetaLabel(key as DerivedKey) : '（派生指标）';
     const suffix = typeof node.attrs.suffix === 'string' ? node.attrs.suffix : '';
-    const value = key.length > 0 ? derivedDisplayOverrides[key] : undefined;
+    const value = key.length > 0 ? this.options.snapshot?.derived[key]?.value : undefined;
     return [
       'span',
       {
         'data-derived-chip': key,
+        tabindex: '0', role: 'button',
         class: 'derived-chip',
         title: `${label}（派生指标，由候选力量自动计算）`,
       },
@@ -369,28 +377,22 @@ interface EditorInstanceProps {
 }
 
 function EditorInstance({ draft, editable, onDirty, onEditorReady }: EditorInstanceProps) {
-  // M-1：按草稿快照候选集预计算派生值展示，供 DerivedChip renderHTML 读取。
-  for (const key of Object.keys(DERIVED_META)) {
-    try {
-      const d = computeDerived(key as DerivedKey, draft.snapshot?.candidateResourceIds ?? []);
-      derivedDisplayOverrides[key] = `${d.value}${d.unit ? ` ${d.unit}` : ''}`;
-    } catch {
-      delete derivedDisplayOverrides[key];
-    }
-  }
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: false, paragraph: false }),
       DocParagraph,
       SectionTitle,
-      FactChip,
-      DerivedChip,
+      FactChip.configure({ snapshot: draft.snapshot }),
+      DerivedChip.configure({ snapshot: draft.snapshot }),
       KnowledgeRef,
     ],
     content: contentToEditorJson(draft.working.content),
     editable,
     immediatelyRender: false,
-    onUpdate: onDirty,
+    onUpdate: ({ editor }) => {
+      useDocumentStore.getState().updateWorkingContent(draft.documentId, editorJsonToContent(editor.getJSON(), useDocumentStore.getState().getDraft(draft.documentId)!.working.content));
+      onDirty();
+    },
   });
 
   useEffect(() => {
@@ -419,7 +421,7 @@ function EditorSurface({ draft, locked, signedVersion, onCloseRequest }: EditorS
   const [nonce, setNonce] = useState(0);
   const [revisionMode, setRevisionMode] = useState(false);
   const editorRef = useRef<Editor | null>(null);
-  const editable = !locked || revisionMode;
+  const editable = !locked;
 
   const handleDirty = useCallback(() => setDirty(true), []);
   const handleEditorReady = useCallback((editor: Editor | null) => {
@@ -440,7 +442,7 @@ function EditorSurface({ draft, locked, signedVersion, onCloseRequest }: EditorS
     () =>
       Object.values(draft.snapshot.facts).map((fact) => ({
         key: fact.factId,
-        label: `${factDisplay(fact.factId)}（${fact.sourceFieldKey}）`,
+        label: `${formatFactValue(fact.value, fact.unit, fact.sourceFieldKey)}（${fact.sourceFieldKey}）`,
       })),
     [draft],
   );
@@ -480,10 +482,10 @@ function EditorSurface({ draft, locked, signedVersion, onCloseRequest }: EditorS
   const handleBodyClick = (event: ReactMouseEvent<HTMLDivElement>) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
-    const chip = target.closest('[data-fact-chip]');
+    const chip = target.closest('[data-fact-chip], [data-derived-chip]');
     if (chip instanceof HTMLElement) {
-      const factId = chip.getAttribute('data-fact-chip');
-      if (factId) window.dispatchEvent(new CustomEvent(SOURCE_EVENT, { detail: { factId } }));
+      const factId = chip.getAttribute('data-fact-chip') ?? `derived:${chip.getAttribute('data-derived-chip')}`;
+      if (factId) window.dispatchEvent(new CustomEvent(SOURCE_EVENT, { detail: { factId, documentId: draft.documentId } }));
     }
   };
 
@@ -533,7 +535,7 @@ function EditorSurface({ draft, locked, signedVersion, onCloseRequest }: EditorS
           message={`该文书已签发锁定（${signedVersion ?? '已签发版本'}）`}
           description="已签发版本不可再编辑、不可覆盖。点击「开始修订」后可在新的工作副本上修改，保存版本时将生成新版本号（V*.*），不会覆盖已签发快照。"
           action={
-            <Button size="small" onClick={() => setRevisionMode(true)}>
+            <Button size="small" onClick={() => { createRevisionDraftFromSigned({ documentId: draft.documentId, content: draft.working.content, actorName: useDemoStore.getState().getActor().name }); setRevisionMode(false); setNonce(n => n + 1); }}>
               开始修订
             </Button>
           }
@@ -583,9 +585,13 @@ function EditorSurface({ draft, locked, signedVersion, onCloseRequest }: EditorS
       </div>
 
       <div className={locked && !revisionMode ? 'doc-editor-shell doc-editor-readonly' : 'doc-editor-shell'}>
-        <div className="doc-editor-scroll" onClick={handleBodyClick}>
+        <div className="doc-editor-scroll" onClick={handleBodyClick} onKeyDown={event => {
+          if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLElement && event.target.matches('[data-fact-chip], [data-derived-chip]')) {
+            event.preventDefault(); event.target.click();
+          }
+        }}>
           <EditorInstance
-            key={`${draft.documentId}:${nonce}`}
+            key={`${draft.documentId}:${draft.snapshot.snapshotId}:${nonce}`}
             draft={draft}
             editable={editable}
             onDirty={handleDirty}
@@ -603,7 +609,7 @@ function EditorSurface({ draft, locked, signedVersion, onCloseRequest }: EditorS
           <ValidationStatusTag status={draft.validation.status} />
           {!editable && <Tag color="red">已锁定</Tag>}
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            模拟数据 · 保存后旧校核失效，需重新校核才能提交
+            模拟数据 · 编辑后旧校核立即失效，需重新校核才能提交
           </Typography.Text>
         </Space>
       </div>
@@ -630,7 +636,7 @@ export default function DocumentEditor({ documentId, open, onClose }: DocumentEd
   const locked =
     !draft ||
     draft.lifecycle === 'archived' ||
-    (draft.lifecycle === 'signed' && signedRevision !== null && signedRevision.contentHash === draft.working.contentHash);
+    draft.lifecycle === 'signed';
 
   return (
     <Drawer

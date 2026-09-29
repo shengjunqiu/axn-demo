@@ -51,6 +51,8 @@ function triggerDownload(blob: Blob, fileName: string): void {
 /** 导出指定版本为 .docx 并触发浏览器下载。 */
 export async function exportRevision(revisionId: string): Promise<void> {
   const store = useDocumentStore.getState();
+  const reason = store.getRevisionGuard(revisionId, 'export');
+  if (reason) throw new Error(reason);
   const rev = store.getRevision(revisionId);
   if (!rev) {
     throw new Error('版本不存在，无法导出');

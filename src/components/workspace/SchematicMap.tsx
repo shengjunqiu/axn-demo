@@ -7,6 +7,9 @@ import { Alert, Space, Tag, Typography } from 'antd';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { factText, incidentById, schematicMap, station, teamById, warehouseById } from '@/seed/scenario';
 
+import { useDemoStore } from '@/store/demoStore';
+import { resourceAllowed } from '@/services/factLookup';
+
 const { Text } = Typography;
 
 export interface SchematicMapProps {
@@ -30,6 +33,7 @@ export default function SchematicMap({
   selectedResourceId = null,
   onSelectResourceId,
 }: SchematicMapProps) {
+  const eventId = useDemoStore(s => s.currentEventId);
   const vb = schematicMap?.viewBox;
   const riverPath = schematicMap?.riverPath ?? '';
   if (!vb || vb.length < 4 || !riverPath) {
@@ -37,19 +41,19 @@ export default function SchematicMap({
   }
   const viewBoxStr = `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`;
 
-  const teamMarkers: MarkerEntity[] = [...teamById.values()].map((t) => ({
+  const teamMarkers: MarkerEntity[] = [...teamById.values()].filter(t => resourceAllowed(t.resourceId, eventId)).map((t) => ({
     id: t.resourceId,
     x: t.schematicPosition.x,
     y: t.schematicPosition.y,
     name: factText(t.factRefs.name) || t.resourceId,
   }));
-  const warehouseMarkers: MarkerEntity[] = [...warehouseById.values()].map((w) => ({
+  const warehouseMarkers: MarkerEntity[] = [...warehouseById.values()].filter(w => resourceAllowed(w.resourceId, eventId)).map((w) => ({
     id: w.resourceId,
     x: w.schematicPosition.x,
     y: w.schematicPosition.y,
     name: factText(w.factRefs.name) || w.resourceId,
   }));
-  const incidentMarkers: MarkerEntity[] = [...incidentById.values()].map((i) => ({
+  const incidentMarkers: MarkerEntity[] = [...incidentById.values()].filter(i => i.eventId === eventId).map((i) => ({
     id: i.eventId,
     x: i.schematicPosition.x,
     y: i.schematicPosition.y,
@@ -75,7 +79,7 @@ export default function SchematicMap({
         <path d={riverPath} fill="none" stroke="#69a5ef" strokeWidth={8} strokeLinecap="round" opacity={0.8} />
 
         {/* 水位站（菱形） */}
-        <g>
+        {station.eventId === eventId && <g>
           <title>{`水位站（模拟）· 观测 ${factText(station?.latestObservationId ?? '') || '—'}`}</title>
           <polygon
             points={`${station.schematicPosition.x},${station.schematicPosition.y - 9} ${station.schematicPosition.x + 9},${station.schematicPosition.y} ${station.schematicPosition.x},${station.schematicPosition.y + 9} ${station.schematicPosition.x - 9},${station.schematicPosition.y}`}
@@ -83,7 +87,7 @@ export default function SchematicMap({
             stroke="#fff"
             strokeWidth={1.5}
           />
-        </g>
+        </g>}
 
         {/* 事件点（橙色圆） */}
         {incidentMarkers.map((m) => (

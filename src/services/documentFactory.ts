@@ -24,8 +24,8 @@ import { DERIVED_META, type DerivedKey } from '@/seed/derived';
 import { useDemoStore } from '@/store/demoStore';
 import { collectRunFactIds as collectFactIdsPure, collectRunDerivedKeys } from './contentRuns';
 import { useSessionStore } from '@/store/sessionStore';
-import { resolveFact, latestWaterLevelFactId } from './factLookup';
-import { buildSnapshot } from './snapshot';
+import { resolveFact, latestWaterLevelFactId, resourceAllowed, shiftEventIds, latestClockFactId } from './factLookup';
+import { buildSnapshot, selectedProposalForSession } from './snapshot';
 import { computeContentHash, useDocumentStore } from '@/store/documentStore';
 
 let docCounter = 0;
@@ -69,7 +69,8 @@ export interface CreateDocumentResult {
 
 function manualFactIdOrNull(field: string, scopeKind: 'event' | 'shift', scopeId: string): string | null {
   const entry = useDemoStore.getState().getManualFactByField(field, scopeKind, scopeId);
-  return entry?.factId ?? null;
+  if (!entry) return null;
+  return resolveFact(entry.factId, scopeKind === 'event' ? { kind: 'event', eventId: scopeId } : { kind: 'shift', shiftId: scopeId }) ? entry.factId : null;
 }
 
 export function missingBriefFields(eventId: string): string[] {
@@ -111,8 +112,9 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
   const refs = incident.factRefs;
   // 审查 M-9：按任务/来源会话取候选，不读当前 UI 会话（防事件切换后跨会话污染）。
   const session = useSessionStore.getState().sessions[sessionId];
-  const candidates = (session?.candidateResourceIds ?? []).filter((id) => teamById.has(id));
+  const candidates = (session?.candidateResourceIds ?? []).filter((id) => teamById.has(id) && resourceAllowed(id, eventId));
   const demo = useDemoStore.getState();
+  const proposal = selectedProposalForSession(sessionId, eventId);
   const reportingUnitFactId = manualFactIdOrNull('reportingUnit', 'event', eventId);
   const title = String(factById.get(refs.title)?.value ?? eventId);
 
@@ -134,15 +136,15 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
           textRun('；'),
           factRun(refs.incidentDescription),
         ]),
-        para('basic-3', 'fact-line', [
+        para('basic-3', 'fact-line', latestWaterLevelFactId(eventId) ? [
           textRun('水情监测：'),
           factRun('fact-obs-water-001-stationName', '（模拟测站）'),
           textRun('最新水位 '),
-          factRun(latestWaterLevelFactId()),
+          factRun(latestWaterLevelFactId(eventId)!),
           textRun('（'),
-          factRun('fact-obs-water-005-observedAt'),
+          factRun(latestWaterLevelFactId(eventId)!.replace('waterLevel', 'observedAt')),
           textRun(' 观测）。'),
-        ]),
+        ] : [textRun('当前事件无水情监测依据。')]),
       ],
     },
     {
@@ -170,7 +172,7 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
           factRun(refs.controlStatus),
           textRun('。'),
         ]),
-        para('response-2', 'fact-line', [
+        para('response-2', 'fact-line', incident.situationFactRefs.suggestedResponseLevel ? [
           textRun('已确认响应等级：'),
           factRun(refs.confirmedResponseLevel, ' 级'),
           textRun('；上游态势建议：'),
@@ -178,7 +180,7 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
           textRun('（'),
           factRun(incident.situationFactRefs.suggestionStatus, ''),
           textRun('，尚未确认）。'),
-        ]),
+        ] : [textRun('响应等级待核实，当前事件无上游态势建议依据。')]),
       ],
     },
     {
@@ -190,7 +192,11 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
           candidates.length ? 'fact-line' : 'narrative',
           candidates.length
             ? [
-                textRun('拟预置候选力量 '),
+                textRun('拟预置候选队伍：'),
+                ...candidates.flatMap((id, index) => [
+                  ...(index ? [textRun('、')] : []), factRun(teamById.get(id)!.factRefs.name),
+                ]),
+                textRun('；合计 '),
                 derivedRun('candidate_team_count', ' 支'),
                 textRun('，合计人员 '),
                 derivedRun('candidate_people_count', ' 人'),
@@ -232,6 +238,23 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
       ],
     },
   ];
+  if (proposal) {
+    const next = sections.find((section) => section.id === 'next')!;
+    next.paragraphs.push(
+      para('proposal-version', 'reference', [textRun(`已采纳建议：${proposal.title}（版本 ${proposal.version}，模拟、待专业审核）。`)]),
+      ...proposal.sections.map((section) => para(`proposal-${section.id}`, 'narrative', [textRun(`${section.title}：${section.text}`)])),
+      ...proposal.riskNotes.map((note, index) => para(`proposal-risk-${index}`, 'narrative', [textRun(`建议风险提示：${note}`)])),
+    );
+    sections.find((section) => section.id === 'appendix')!.paragraphs.push(
+      ...proposal.knowledgeRefs.flatMap((chunkId) => {
+        const chunk = knowledgeById.get(chunkId);
+        return chunk ? [para(`knowledge-${chunkId}`, 'reference', [{
+          type: 'knowledge', chunkId,
+          label: `${chunk.title}（${chunk.version}；${chunk.sourceLabel}）：${chunk.content} ${chunk.notice}`,
+        }])] : [];
+      }),
+    );
+  }
   void demo;
 
   return {
@@ -249,7 +272,7 @@ function composeDailyContent(sessionId: string): DocumentContent {
   void session;
   const handOverFactId = manualFactIdOrNull('handOverNotes', 'shift', shift.shiftId);
   const reportingUnitFactId = manualFactIdOrNull('reportingUnit', 'shift', shift.shiftId);
-  const eventIds = shift.incidentIds;
+  const eventIds = shiftEventIds(shift.shiftId);
 
   const keyEvents: DocumentParagraph[] = eventIds.map((eid, i) => {
     const inc = incidentById.get(eid)!;
@@ -273,7 +296,7 @@ function composeDailyContent(sessionId: string): DocumentContent {
           textRun(' 至 '),
           factRun(shift.factRefs.endsAt),
           textRun('；统计截止：'),
-          factRun('fact-clock-demo-001-currentTime'),
+          factRun(latestClockFactId()),
           textRun('（演示时钟，非完整日终数据）。'),
         ]),
       ],
@@ -304,9 +327,9 @@ function composeDailyContent(sessionId: string): DocumentContent {
       paragraphs: [
         para('monitor-1', 'fact-line', [
           textRun('清河段模拟测站最新水位 '),
-          factRun(latestWaterLevelFactId()),
+          factRun(latestWaterLevelFactId(shiftEventIds(shift.shiftId).find((id) => latestWaterLevelFactId(id)) ?? '')!),
           textRun('（'),
-          factRun('fact-obs-water-005-observedAt'),
+          factRun(latestWaterLevelFactId(shiftEventIds(shift.shiftId).find((id) => latestWaterLevelFactId(id)) ?? '')!.replace('waterLevel', 'observedAt')),
           textRun(' 观测）；水情趋势详见工作台监测摘要。'),
         ]),
       ],
@@ -500,7 +523,7 @@ export function derivedMetaLabel(key: DerivedKey): string {
 }
 
 export function knowledgeNotice(): string {
-  return Object.values(knowledgeById)[0]?.notice ?? '';
+  return knowledgeById.values().next().value?.notice ?? '';
 }
 
 export function factPendingLabel(factId: string): string | null {
@@ -518,7 +541,34 @@ export function refreshDraftSnapshot(input: { documentId: string; actorName: str
   const store = useDocumentStore.getState();
   const draft = store.drafts[documentId];
   if (!draft) throw new Error(`文书不存在：${documentId}`);
-  const derivedKeys = collectRunDerivedKeys(draft.working.content).filter(
+  if (draft.lifecycle === 'signed' || draft.lifecycle === 'archived') throw new Error('已签发文书不可原地刷新，请先创建修订');
+  const content = JSON.parse(JSON.stringify(draft.working.content)) as DocumentContent;
+  const fresh = draft.scopeKind === 'event' ? composeBriefContent(draft.eventId!, draft.originSessionId) : composeDailyContent(draft.originSessionId);
+  const waterId = latestWaterLevelFactId(draft.eventId ?? shiftEventIds(draft.shiftId ?? '').find(id => latestWaterLevelFactId(id)) ?? '');
+  for (const section of content.sections) {
+    section.paragraphs = section.paragraphs.filter(p => !p.id.startsWith('proposal-') && !p.id.startsWith('knowledge-'));
+    for (const p of section.paragraphs) {
+      if (p.id === 'forces-1') {
+        const replacement = fresh.sections.flatMap(s => s.paragraphs).find(x => x.id === p.id);
+        if (replacement) p.runs = replacement.runs;
+      }
+      for (const run of p.runs) if (run.type === 'fact') {
+        const old = draft.snapshot.facts[run.factId];
+        const oldSource = old && draft.snapshot.sources?.[old.sourceRecordId];
+        if (old && oldSource?.sourceTable === 'manual_inputs' && (old.scope.kind === 'event' || old.scope.kind === 'shift')) {
+          const scopeId = old.scope.kind === 'event' ? old.scope.eventId : old.scope.shiftId;
+          const current = useDemoStore.getState().getManualFactByField(old.sourceFieldKey, old.scope.kind, scopeId);
+          if (current) run.factId = current.factId;
+        }
+        if (/^fact-obs-water-\d+-(waterLevel|observedAt)$/.test(run.factId) && waterId) run.factId = run.factId.endsWith('waterLevel') ? waterId : waterId.replace('waterLevel', 'observedAt');
+        if (/^fact-clock-demo-\d+-currentTime$/.test(run.factId)) run.factId = latestClockFactId();
+      }
+      // 模板生成的监测段落同步引用，其余用户叙述保留。
+    }
+    const generated = fresh.sections.find(s => s.id === section.id);
+    section.paragraphs.push(...(generated?.paragraphs.filter(p => p.id.startsWith('proposal-') || p.id.startsWith('knowledge-')) ?? []));
+  }
+  const derivedKeys = collectRunDerivedKeys(content).filter(
     (key): key is DerivedKey => key in DERIVED_META,
   );
   const snapshot = buildSnapshot({
@@ -526,10 +576,11 @@ export function refreshDraftSnapshot(input: { documentId: string; actorName: str
     eventId: draft.eventId,
     shiftId: draft.shiftId,
     sessionId: draft.originSessionId,
-    extraFactIds: collectFactIdsPure(draft.working.content),
+    extraFactIds: collectFactIdsPure(content),
     derivedKeys,
     label: `重建快照 · ${draft.title}`,
   });
+  store.updateWorkingContent(documentId, content);
   store.updateDraftSnapshot(documentId, snapshot);
   store.addAudit({
     action: '重建快照',
@@ -551,60 +602,8 @@ export function createRevisionDraftFromSigned(input: {
   content: DocumentContent;
   actorName: string;
 }): DocumentDraft {
-  const { documentId, content, actorName } = input;
   const store = useDocumentStore.getState();
-  const demo = useDemoStore.getState();
-  const draft = store.drafts[documentId];
-  if (!draft) throw new Error(`文书不存在：${documentId}`);
-  const rev = draft.activeRevisionId ? store.getRevision(draft.activeRevisionId) : undefined;
-  if (!rev || !rev.signedRecord) throw new Error('仅已签发版本支持修订（模拟）');
-  const derivedKeys = collectRunDerivedKeys(content).filter((key): key is DerivedKey => key in DERIVED_META);
-  const snapshot = buildSnapshot({
-    scopeKind: draft.scopeKind,
-    eventId: draft.eventId,
-    shiftId: draft.shiftId,
-    sessionId: draft.originSessionId,
-    extraFactIds: collectFactIdsPure(content),
-    derivedKeys,
-    label: `修订快照 · ${draft.title}`,
-  });
-  const newId = `doc-revise-${Date.now().toString(36)}`;
-  const now = new Date().toISOString();
-  const newDraft: DocumentDraft = {
-    documentId: newId,
-    title: `${draft.title}（修订）`,
-    templateCode: draft.templateCode,
-    templateVersion: draft.templateVersion,
-    scopeKind: draft.scopeKind,
-    eventId: draft.eventId,
-    shiftId: draft.shiftId,
-    originSessionId: draft.originSessionId,
-    working: {
-      content,
-      contextSnapshotId: snapshot.snapshotId,
-      contentHash: computeContentHash(content),
-      updatedAt: now,
-      baseRevisionId: rev.revisionId,
-    },
-    lifecycle: 'draft',
-    validation: { status: 'not_run', reportId: null },
-    freshness: 'current',
-    activeRevisionId: null,
-    revisionCounter: { major: draft.revisionCounter.major + 1, minor: 0 },
-    snapshot,
-    createdAt: now,
-    updatedAt: now,
-  };
-  store.addDraft(newDraft);
-  store.setLifecycle(documentId, 'archived');
-  store.addAudit({
-    action: '修订新建草稿',
-    actor: actorName,
-    objectId: documentId,
-    version: rev.displayVersion,
-    performedAt: now,
-    demoClockAt: demo.demoClock,
-    detail: `基于已签发版本 ${rev.displayVersion} 生成新草稿（原版本保持锁定）`,
-  });
-  return newDraft;
+  store.beginRevision(input.documentId, `签发后修订（${input.actorName}）`);
+  store.updateWorkingContent(input.documentId, input.content);
+  return store.getDraft(input.documentId)!;
 }

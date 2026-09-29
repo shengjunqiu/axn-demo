@@ -6,9 +6,10 @@ import { useCallback, useMemo, useState } from 'react';
 import { Alert, Button, Empty, Space, Tag, Tooltip, Typography, message } from 'antd';
 import { useDocumentStore } from '@/store/documentStore';
 import { useDemoStore } from '@/store/demoStore';
-import { validateContent, applySuggestion, RULE_TITLES } from '@/services/validation';
-import { factDisplay } from '@/services/factLookup';
-import type { InlineRun, ValidationIssue, ValidationReport, ValidationStatus } from '@/domain/types';
+import { applySuggestion, RULE_TITLES } from '@/services/validation';
+import { formatFactValue } from '@/services/factLookup';
+import { runDocumentValidation } from '@/services/documentLifecycle';
+import type { SourceSnapshot, InlineRun, ValidationIssue, ValidationReport, ValidationStatus } from '@/domain/types';
 
 export interface ValidationPanelProps {
   documentId: string;
@@ -39,26 +40,15 @@ function fmtTime(iso: string): string {
  * 供校核面板与文书中心共用；返回新增报告（文书不存在时返回 null）。
  */
 export function runValidationForDocument(documentId: string): ValidationReport | null {
-  const store = useDocumentStore.getState();
-  const draft = store.drafts[documentId];
-  if (!draft) return null;
-  const result = validateContent({
-    documentId,
-    content: draft.working.content,
-    snapshot: draft.snapshot,
-  });
-  const report = store.addReport(result);
-  const hasBlock = result.issues.some((issue) => issue.level === 'block');
-  store.markValidation(documentId, hasBlock ? 'failed' : 'passed', report.reportId);
-  return report;
+  return runDocumentValidation(documentId);
 }
 
 /** 段落 runs 摘要文本（用于问题定位展示）。 */
-function runsExcerpt(runs: InlineRun[]): string {
+function runsExcerpt(runs: InlineRun[], snapshot: SourceSnapshot): string {
   const text = runs
     .map((run) => {
       if (run.type === 'text') return run.text;
-      if (run.type === 'fact') return `${factDisplay(run.factId)}${run.suffix ?? ''}`;
+      if (run.type === 'fact') { const f = snapshot.facts[run.factId]; return `${f ? formatFactValue(f.value, f.unit, f.sourceFieldKey) : '（来源缺失）'}${run.suffix ?? ''}`; }
       if (run.type === 'derived') return `〔派生：${run.derivedKey}〕${run.suffix ?? ''}`;
       return `『${run.label}』`;
     })
@@ -101,7 +91,7 @@ function IssueItem({ issue, locate, onAdopt }: IssueItemProps) {
       })()}
       {issue.suggestionText && (
         <div style={{ marginTop: 6 }}>
-          <Tooltip title={issue.paragraphId ? '按建议改写该段落后自动重新校核' : '该问题未定位到具体段落，无法自动采用'}>
+          <Tooltip title={issue.paragraphId ? '按建议改写该段落，随后需显式重新校核' : '该问题未定位到具体段落，无法自动采用'}>
             <Button size="small" disabled={!issue.paragraphId} onClick={() => onAdopt(issue)}>
               采用建议
             </Button>
@@ -155,7 +145,8 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
   const blocks = useMemo(() => (report ? report.issues.filter((i) => i.level === 'block') : []), [report]);
   const warnings = useMemo(() => (report ? report.issues.filter((i) => i.level === 'warning') : []), [report]);
   const infos = useMemo(() => (report ? report.issues.filter((i) => i.level === 'info') : []), [report]);
-  const hashMismatch = !!draft && !!report && report.contentHash !== draft.working.contentHash;
+  const hashMismatch = !!draft && !!report && (draft.validation.status === 'stale' || report.contentHash !== draft.working.contentHash || report.contextSnapshotId !== draft.snapshot.snapshotId);
+  const locked = draft?.lifecycle === 'signed' || draft?.lifecycle === 'archived';
 
   const handleRevalidate = useCallback(() => {
     setBusy(true);
@@ -171,6 +162,8 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
       } else {
         message.success('校核通过（模拟）');
       }
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '校核失败');
     } finally {
       setBusy(false);
     }
@@ -184,7 +177,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
       const paragraph = issue.paragraphId
         ? section.paragraphs.find((p) => p.id === issue.paragraphId)
         : null;
-      const excerpt = paragraph ? `，段落摘录：${runsExcerpt(paragraph.runs)}` : '';
+      const excerpt = paragraph ? `，段落摘录：${runsExcerpt(paragraph.runs, draft.snapshot)}` : '';
       return `小节「${section.heading}」${excerpt}`;
     },
     [draft],
@@ -193,7 +186,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
   const handleAdopt = useCallback(
     (issue: ValidationIssue) => {
       const currentDraft = useDocumentStore.getState().drafts[documentId];
-      if (!currentDraft || !issue.suggestionText || !issue.paragraphId) return;
+      if (!currentDraft || currentDraft.lifecycle === 'signed' || currentDraft.lifecycle === 'archived' || !issue.suggestionText || !issue.paragraphId) return;
       const store = useDocumentStore.getState();
       const next = applySuggestion(currentDraft.working.content, issue.paragraphId, issue.suggestionText);
       store.updateWorkingContent(documentId, next);
@@ -209,10 +202,10 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
         demoClockAt: useDemoStore.getState().demoClock,
         detail: `${issue.ruleId}：${issue.suggestionText}`,
       });
-      runValidationForDocument(documentId);
+
       // 通知编辑器同步最新工作副本（放弃未保存的本地修改）。
       window.dispatchEvent(new CustomEvent('axn:doc-content-replaced'));
-      message.success('已采用建议并自动重新校核（模拟）');
+      message.success('已采用建议，旧报告已失效；请显式重新校核（模拟）');
     },
     [documentId],
   );
@@ -229,7 +222,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
               {fmtTime(report.checkedAt)} · 规则集 v{report.rulesetVersion}
             </Typography.Text>
           )}
-          <Button size="small" loading={busy} disabled={!draft} onClick={handleRevalidate}>
+          <Button size="small" loading={busy} disabled={!draft || locked} onClick={handleRevalidate}>
             重新校核
           </Button>
         </Space>
@@ -259,7 +252,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
               description="工作副本在校核后又被修改，请重新校核后再提交送审。"
             />
           )}
-          {blocks.length === 0 && warnings.length === 0 && (
+          {!hashMismatch && blocks.length === 0 && warnings.length === 0 && (
             <Alert
               style={{ marginTop: 10 }}
               type="success"
@@ -268,7 +261,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
               description={`未发现问题（规则集 v${report.rulesetVersion}，模拟校核）。`}
             />
           )}
-          {blocks.length === 0 && warnings.length > 0 && (
+          {!hashMismatch && blocks.length === 0 && warnings.length > 0 && (
             <Alert
               style={{ marginTop: 10 }}
               type="warning"

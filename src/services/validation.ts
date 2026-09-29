@@ -10,28 +10,19 @@ import type {
   ValidationReport,
 } from '@/domain/types';
 import { CONTROL_STATUS_LABEL } from './documentFactory';
-import { incidentById } from '@/seed/scenario';
-import { factDisplay } from './factLookup';
+import { incidentById, templateByCode, shift } from '@/seed/scenario';
+import { formatFactValue, permits } from './factLookup';
 import { computeContentHash, useDocumentStore } from '@/store/documentStore';
-import { useDemoStore } from '@/store/demoStore';
+import { computeDerived, type DerivedKey } from '@/seed/derived';
 import { currentContextVersion } from './factLookup';
 
 export const RULESET_VERSION = '1.0.0-demo';
 
 export const RULE_TITLES: Record<string, string> = {
-  'R-001': '必填字段缺失',
-  'R-002': '来源无法解析',
-  'R-003': '时间表述与来源不一致',
-  'R-004': '伤亡表述与来源矛盾',
-  'R-005': '处置状态表述与来源矛盾',
-  'R-006': '调派表述与候选状态矛盾',
-  'R-007': '响应等级表述与确认状态矛盾',
-  'R-008': '派生数值与重算不一致',
-  'R-009': '数据快照可能过期',
-  'R-010': '数值缺少来源',
-  'R-011': '知识引用失效',
-  'R-012': '报送要素缺失',
-  'R-013': '模拟标识缺失',
+  'R-001': '必填缺失', 'R-002': '引用缺失', 'R-003': '值与来源不一致',
+  'R-004': '未核实伤亡', 'R-005': '无依据控制结论', 'R-006': '候选冒充已调派',
+  'R-007': '草稿来源过期', 'R-008': '校核报告过期', 'R-009': '引用跨事件',
+  'R-010': '新增无来源数字', 'R-011': '演示标识缺失', 'R-012': '普通表述建议',
 };
 
 export interface FlattenedParagraph {
@@ -44,7 +35,7 @@ export interface FlattenedParagraph {
   knowledgeBindings: { chunkId: string }[];
 }
 
-export function flattenContent(content: DocumentContent): FlattenedParagraph[] {
+export function flattenContent(content: DocumentContent, snapshot?: SourceSnapshot): FlattenedParagraph[] {
   const out: FlattenedParagraph[] = [];
   for (const section of content.sections) {
     // 小节标题也纳入校核（标题同样可能藏违规表述，如“险情已控制”写入标题）
@@ -69,7 +60,8 @@ export function flattenContent(content: DocumentContent): FlattenedParagraph[] {
             text += run.text;
             break;
           case 'fact': {
-            const v = factDisplay(run.factId);
+            const f = snapshot?.facts[run.factId];
+            const v = f ? formatFactValue(f.value, f.unit, f.sourceFieldKey) : '（来源缺失）';
             text += `${v}${run.suffix ?? ''}`;
             factBindings.push({ factId: run.factId, suffix: run.suffix });
             break;
@@ -109,34 +101,55 @@ export interface ValidateInput {
   documentId: string;
   content: DocumentContent;
   snapshot: SourceSnapshot;
+  checkPreviousReport?: boolean;
 }
 
 export function validateContent(input: ValidateInput): Omit<ValidationReport, 'reportId' | 'checkedAt'> {
   const { content, snapshot, documentId } = input;
   const issues: ValidationIssue[] = [];
-  const flat = flattenContent(content);
+  const flat = flattenContent(content, snapshot);
 
-  // R-002 来源无法解析（含故障注入的缺失来源）
+  const scope = snapshot.scopeKind === 'event' ? { kind: 'event' as const, eventId: snapshot.eventId ?? '' } : { kind: 'shift' as const, shiftId: snapshot.shiftId ?? '' };
+  const bound = new Set(flat.flatMap(p => p.factBindings.map(b => b.factId)));
   for (const p of flat) {
-    for (const b of p.factBindings) {
-      if (!snapshot.facts[b.factId]) {
-        issues.push(
-          issue(
-            'R-002',
-            'block',
-            `正文数据（${b.factId}）在来源快照中无法解析，可能是来源缺失或数据被移除。`,
-            p.sectionId,
-            p.paragraphId,
-            null,
-            '请检查来源或在演示控制中关闭“缺来源”故障后重新生成/编辑。',
-            null,
-            b.factId,
-          ),
-        );
+    const inputs = p.derivedBindings.flatMap(b => snapshot.derived[b.key]?.inputFactIds ?? []);
+    for (const b of [...p.factBindings, ...inputs.map(factId => ({ factId }))]) {
+      const f = snapshot.facts[b.factId];
+      const source = f && snapshot.sources?.[f.sourceRecordId];
+      if (!f || !source || !Object.hasOwn(source.fields, f.sourceFieldKey)) {
+        issues.push(issue('R-002', 'block', '正文事实或其完整来源字段缺失。', p.sectionId, p.paragraphId, b.factId, '补齐来源后显式刷新引用', null, b.factId));
+      } else if (!f.scope || !source.scope || !permits(f.scope, scope) || !permits(source.scope, scope) || JSON.stringify(f.scope) !== JSON.stringify(source.scope)) {
+        issues.push(issue('R-009', 'block', '引用不属于本文书授权范围。', p.sectionId, p.paragraphId, null, '删除跨域引用', null, b.factId));
+      } else if (JSON.stringify(f.value) !== JSON.stringify(source.fields[f.sourceFieldKey]) || f.sourceVersion !== source.sourceVersion || f.capturedAt !== source.capturedAt) {
+        issues.push(issue('R-003', 'block', '事实值、版本或采集时间与冻结来源记录不一致。', p.sectionId, p.paragraphId, String(f.value), '核实来源并刷新', null, b.factId));
+      }
+    }
+    for (const b of p.derivedBindings) {
+      const d = snapshot.derived[b.key];
+      if (!d || d.inputFactIds.some(id => !snapshot.facts[id] || !snapshot.sources?.[snapshot.facts[id].sourceRecordId])) {
+        issues.push(issue('R-002', 'block', '派生指标或输入来源缺失。', p.sectionId, p.paragraphId, b.key, '刷新来源', null));
+        continue;
+      }
+      try {
+        const clock = Object.values(snapshot.facts).filter(f => f.sourceFieldKey === 'currentTime').sort((a, b) => b.sourceVersion - a.sourceVersion)[0];
+        const expected = computeDerived(b.key as DerivedKey, snapshot.candidateResourceIds, { facts: snapshot.facts, clock: String(clock?.value ?? '') });
+        if (expected.value !== d.value || expected.formula !== d.formula || JSON.stringify(expected.inputFactIds) !== JSON.stringify(d.inputFactIds)) {
+          issues.push(issue('R-003', 'block', '派生值或计算依据与冻结输入重算结果不一致。', p.sectionId, p.paragraphId, String(d.value), `原计算结果 ${expected.value}`, null));
+        }
+      } catch {
+        issues.push(issue('R-002', 'block', '派生公式不存在。', p.sectionId, p.paragraphId, b.key, null, null));
       }
     }
   }
-
+  for (const field of templateByCode.get(content.templateCode)?.requiredFields ?? []) {
+    if (!field.required) continue;
+    const key = field.field === 'statisticsCutoff' ? 'currentTime' : field.field;
+    const expectedId = field.binding.startsWith('incident.factRefs.') ? incidentById.get(snapshot.eventId ?? '')?.factRefs[key]
+      : field.binding.startsWith('shift.factRefs.') ? shift.factRefs[key] : undefined;
+    const f = Object.values(snapshot.facts).find(f => (expectedId ? f.factId === expectedId : f.sourceFieldKey === key)
+      && bound.has(f.factId) && f.scope && permits(f.scope, scope) && (f.value != null && String(f.value).trim() !== '' || field.allowPending && f.verification === 'pending'));
+    if (!f) issues.push(issue('R-001', 'block', `必填字段 ${field.field} 缺少有效正文绑定。`, null, null, null, '补录并在正文绑定该字段', null, field.field));
+  }
   // R-004/R-005/R-007 按单事件语境校验：仅事件域文书适用。
   // 班次域日报合法汇总多个事件的处置状态（如 B 事件已控制），不能拿单一事件事实套全文。
   const isEventScope = snapshot.scopeKind === 'event';
@@ -148,7 +161,7 @@ export function validateContent(input: ValidateInput): Omit<ValidationReport, 'r
   const casualtyPending = snapshot.facts[casualtyFactId]?.verification === 'pending';
   if (isEventScope && casualtyPending) {
     const CASUALTY_ZERO =
-      /无人员伤亡|无伤亡|没有伤亡|未.{0,2}(发现|接到|收到).{0,6}伤亡|伤亡[^。；]{0,8}(0|零)\s*人?|(^|[^0-9])0\s*人伤亡|零伤亡|暂无伤亡/;
+      /(?:死亡|受伤|伤亡)[^。；]{0,6}[一二两三四五六七八九十百千\d]+\s*人|无人员伤亡|无伤亡|没有伤亡|未.{0,2}(发现|接到|收到).{0,6}伤亡|伤亡[^。；]{0,8}(0|零)\s*人?|(^|[^0-9])0\s*人伤亡|零伤亡|暂无伤亡/;
     for (const p of flat) {
       if (CASUALTY_ZERO.test(p.text)) {
         issues.push(
@@ -174,7 +187,7 @@ export function validateContent(input: ValidateInput): Omit<ValidationReport, 'r
     'fact-incident-001-controlStatus';
   const controlFact = snapshot.facts[controlFactId];
   if (isEventScope && controlFact && String(controlFact.value) === 'ongoing') {
-    const CONTROLLED_CLAIM = /((已经?|已)得?到?(有效)?控制|险情已控制|已完全控制|基本控制|趋于平稳|险情已平息|已排除)/;
+    const CONTROLLED_CLAIM = /((已经?|已)得?到?(有效)?控制|险情已控制|已完全控制|全面控制|完全控制|基本控制|趋于平稳|险情已平息|已排除)/;
     for (const p of flat) {
       if (CONTROLLED_CLAIM.test(p.text)) {
         issues.push(
@@ -236,7 +249,7 @@ export function validateContent(input: ValidateInput): Omit<ValidationReport, 'r
       if (LEVEL_CLAIM.test(p.text) && !isProposalWording) {
         issues.push(
           issue(
-            'R-007',
+            'R-003',
             'block',
             '正文将建议响应等级表述为“已确认/已批准”，与确认状态（待确认）矛盾。',
             p.sectionId,
@@ -251,98 +264,28 @@ export function validateContent(input: ValidateInput): Omit<ValidationReport, 'r
     }
   }
 
-  // R-010 无来源数值（审查 M-11：升为 block；数字级豁免——绑定数不足覆盖阿拉伯数字时才报；剔除日期/时间/版本号样式）
-  for (const p of flat) {
-    const normalized = p.text
-      .replace(/\d{4}-\d{2}-\d{2}/g, '')
-      .replace(/\d{2}:\d{2}/g, '')
-      .replace(/\d+(\.\d+){2,}/g, '')
-      .replace(/[Kk]\d+\+\d+/g, '');
-    const numbers = normalized.match(/\d+(\.\d+)?/g) ?? [];
-    if (!numbers.length) continue;
-    const bindingCount = p.factBindings.length + p.derivedBindings.length;
-    if (bindingCount === 0) {
-      issues.push(
-        issue(
-          'R-010',
-          'block',
-          '段落包含数值但未绑定任何结构化来源，禁止无来源数字进入报送文书。',
-          p.sectionId,
-          p.paragraphId,
-          p.text.slice(0, 40),
-          '为数值补录来源绑定或删除该数值',
-          null,
-        ),
-      );
-    } else if (numbers.length > bindingCount) {
-      issues.push(
-        issue(
-          'R-010',
-          'block',
-          `段落内来源绑定（${bindingCount} 处）不足以覆盖全部数值（${numbers.length} 处），存在无来源数字。`,
-          p.sectionId,
-          p.paragraphId,
-          p.text.slice(0, 40),
-          '为多余数值补充来源或删除',
-          null,
-        ),
-      );
+  // 仅扫描叙述段中的自由文本；其他 fact/derived 引用不能给自由文本数字背书。
+  for (const section of content.sections) for (const p of section.paragraphs) {
+    if (p.role === 'reference') continue;
+    const text = p.runs.filter(r => r.type === 'text').map(r => r.text).join('');
+    if (/\d+(?:\.\d+)?|[零〇一二两三四五六七八九十百千万亿]+(?:点[零一二三四五六七八九]+)?\s*(?:人|台|辆|支|米|公里|户|处|起|名|个|套|小时|分钟|%|％)/.test(text)) {
+      issues.push(issue('R-010', 'block', '叙述包含未结构化绑定的数值；同段其他引用不构成该数值的来源。', section.id, p.id, text.slice(0, 60), '改用事实或派生值芯片', null));
     }
+    if (/为了能够进一步更好地|在此基础之上进一步/.test(text)) issues.push(issue('R-012', 'warning', '表述冗长，可精简。', section.id, p.id, text, '精简非事实性表述', null));
   }
-
-  // R-009 快照过期（监测数据更新后）
-  if (snapshot.contextVersion < currentContextVersion()) {
-    issues.push(
-      issue(
-        'R-009',
-        'warning',
-        '生成后监测数据已更新（演示时钟推进），本稿基于较早快照；请刷新水位等数据后重新校核。',
-        null,
-        null,
-        `快照版本 ${snapshot.contextVersion}`,
-        '可使用“按最新数据重校核”更新工作副本数据',
-        null,
-      ),
-    );
-  }
-
-  // R-012 报送要素缺失：报送单位绑定应为当前文书 scope 的人工补录事实（field=reportingUnit），
-  // 或正文明确写出报送单位（含事件/班次名等具体内容，非仅提及字段名）。
-  const manualReportingFactIds = new Set(
-    useDemoStore
-      .getState()
-      .manualFacts.filter((m) => m.field === 'reportingUnit')
-      .filter((m) =>
-        snapshot.scopeKind === 'event'
-          ? m.scopeKind === 'event' && m.scopeId === snapshot.eventId
-          : m.scopeKind === 'shift' && m.scopeId === snapshot.shiftId,
-      )
-      .map((m) => m.factId),
-  );
-  const reportingOk = flat.some((p) => p.factBindings.some((b) => manualReportingFactIds.has(b.factId)));
-  const reportingTextOk = flat.some(
-    (p) =>
-      (p.text.includes('报送单位：') || p.text.includes('填报单位：')) &&
-      p.text.replace(/报送单位：|填报单位：/g, '').trim().length >= 4,
-  );
-  if (!reportingOk && !reportingTextOk) {
-    issues.push(
-      issue('R-012', 'block', '缺少报送单位等报送要素。', null, null, null, '请在聊天中补录报送单位。', null, 'reportingUnit'),
-    );
-  }
-
-  // R-013 模拟标识
-  const hasMockMark = content.footerNote.includes('模拟') || flat.some((p) => p.text.includes('模拟'));
-  if (!hasMockMark) {
-    issues.push(issue('R-013', 'warning', '文书缺少“模拟数据”标识，请保留页脚演示声明。', null, null, null, null, null));
-  }
-
-  // 审查 minor-8：原 R-008 死代码已移除（派生一致性由快照冻结 + contentHash 门槛覆盖）。
+  if (snapshot.contextVersion !== currentContextVersion(scope)) issues.push(issue('R-007', 'block', '当前业务来源已更新，必须先显式刷新引用再校核。', null, null, String(snapshot.contextVersion), '刷新文书数据', null));
+  const previous = useDocumentStore.getState().getActiveReport(documentId);
+  if (previous && previous.contentHash !== computeContentHash(content) && input.checkPreviousReport !== false) issues.push(issue('R-008', 'block', '旧校核报告与当前内容指纹不一致。', null, null, previous.contentHash, '重新校核当前保存版本', null));
+  if (!/模拟|演训/.test(content.footerNote) || !/非正式|非真实|不构成|不代表|仅用于|仅供/.test(content.footerNote)) issues.push(issue('R-011', 'block', '缺少演示及非正式报送声明。', null, null, null, '恢复页脚声明并重新校核', null));
+  const handover = Object.values(snapshot.facts).find(f => f.sourceFieldKey === 'handOverNotes');
+  if (handover && String(handover.value ?? '').trim().length < 8) issues.push(issue('R-012', 'warning', '交接事项过短，请补充便于接班人员理解的说明。', null, null, String(handover.value), '补充交接事项', null));
 
   const contentHash = computeContentHash(content);
 
   return {
     documentId,
+    revisionId: null,
+    factSnapshotVersion: snapshot.dataVersion,
     contentHash,
     contextSnapshotId: snapshot.snapshotId,
     rulesetVersion: RULESET_VERSION,
