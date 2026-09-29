@@ -176,3 +176,86 @@
   margin: 0;
   word-break: break-all;
 }
+
+/* ===== 值班日报红头样稿（空态展示，模拟排版） ===== */
+.axn-redhead-wrap {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.axn-redhead-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.axn-redhead-paper {
+  background: #fff;
+  border: 1px solid #e5e0d5;
+  box-shadow: 0 2px 10px rgba(60, 50, 30, 0.08);
+  padding: 36px 44px 24px;
+  font-family: SimSun, 'Songti SC', serif;
+  color: #26221c;
+}
+
+.axn-redhead-org {
+  text-align: center;
+  color: #d0021b;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  line-height: 1.35;
+}
+
+.axn-redhead-title {
+  text-align: center;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: 10px;
+  margin-top: 10px;
+}
+
+.axn-redhead-no {
+  text-align: center;
+  font-size: 12px;
+  color: #6b6455;
+  margin-top: 8px;
+}
+
+.axn-redhead-rule {
+  height: 3px;
+  background: #d0021b;
+  margin: 14px 0 12px;
+}
+
+.axn-redhead-meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: #45403a;
+  margin-bottom: 10px;
+}
+
+.axn-redhead-body p {
+  font-size: 14px;
+  line-height: 1.9;
+  margin: 0 0 10px;
+  text-align: justify;
+}
+
+.axn-redhead-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-top: 1px solid #e5e0d5;
+  padding-top: 10px;
+  font-size: 12px;
+  color: #6b6455;
+}

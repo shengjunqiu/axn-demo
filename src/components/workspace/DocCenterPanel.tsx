@@ -5,7 +5,7 @@
  * 全部数据为模拟数据。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Empty, Modal, Space, Tag, Tooltip, Typography, message } from 'antd';
+import { Alert, Button, Modal, Space, Tag, Tooltip, Typography, message } from 'antd';
 import { useDocumentStore } from '@/store/documentStore';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
@@ -23,6 +23,7 @@ import type { FixtureTemplate } from '@/seed/scenario';
 import type { ValidationReport } from '@/domain/types';
 import type { DocumentDraft } from '@/domain/types';
 import DocumentEditor from '@/components/doc/DocumentEditor';
+import RedheadDailyMock from '@/components/doc/RedheadDailyMock';
 import VersionDrawer from '@/components/doc/VersionDrawer';
 import SourceDrawer from '@/components/doc/SourceDrawer';
 import { ValidationStatusTag, runValidationForDocument } from '@/components/doc/ValidationPanel';
@@ -339,14 +340,8 @@ export default function DocCenterPanel() {
       </div>
 
       {drafts.length === 0 ? (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Empty
-            description={
-              <span style={{ fontSize: 13 }}>
-                暂无文书：点击上方「生成事件要情 / 生成值班日报」，或在对话中对生成结果确认后自动创建（模拟）。
-              </span>
-            }
-          />
+        <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflow: 'auto', padding: '4px 12px 16px' }}>
+          <RedheadDailyMock />
         </div>
       ) : (
         <div className="doc-center-list">

@@ -166,3 +166,4 @@ pnpm test:e2e         # Playwright E2E（8 项，含主线全链路）
 
 | 2026-09-29 | 撤回 | 主控 | 用户要求撤回 94e3f53（chips 上下文区分），已 revert（fbb6510）并推送：chips 恢复全局 6 个常驻、欢迎卡引导恢复 4 题含日报 | typecheck✓ 单测129✓ 冒烟✓ | — |
 | 2026-09-29 | 主控 | 智能体召唤效果（用户需求 m03213）| types.ts（TaskEvent+agent_summon、ChatMessage+agent kind/agent 字段、AgentSummonMessage）、sessionStore.ts（applyTaskEvent agent_summon 分支→插入 kind='agent' 消息）、mock/provider.ts（summonFor 意图映射：摘要→态势感知、资源类→资源管理、建议→救援方案、文书类→文书生成；知识问答/停止/未知不召唤）、AgentSummonCard.tsx（新组件，脉冲光圈+协同中 badge+"模拟协同"脚注）、ChatPanel.tsx（agent 分支渲染）、chat.css（召唤卡动画） | typecheck ✓ lint ✓ 单测 129 ✓ 冒烟：摘要/资源/文书三类任务均出现对应召唤卡、QA 不召唤、刷新持久化 ✓ |
+| 2026-09-29 | 主控 | 文书中心空态改为值班日报红头样稿（标注 vibe_1790660356403/1790660369177）| RedheadDailyMock.tsx（新：Word 公文红头排版 mock，安能市应急管理局红头+文号+红线+三段正文）、doc.css（axn-redhead-* 样式）、DocCenterPanel.tsx（空态 Empty→红头样稿）| typecheck ✓ lint ✓ 单测 129 ✓ 冒烟：空态样稿可见/无 Empty、"待核实"口径✓无"无伤亡"✓模拟标识✓、补录后生成成功样稿消失列表出现 ✓；注意"生成值班日报"按钮在页面有 2 个（聊天 chip+文书中心），冒烟用 last() |
