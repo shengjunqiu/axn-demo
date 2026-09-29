@@ -16,7 +16,7 @@ import {
   SearchOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { App as AntdApp, Button, Empty, Input, Modal, Popconfirm, Radio } from 'antd';
+import { App as AntdApp, Button, Empty, Input, Modal, Popconfirm, Radio, theme } from 'antd';
 import type { Conversation, ConversationSettings, NavPage } from '@/domain/types';
 import {
   GROUP_LABEL,
@@ -83,6 +83,7 @@ export function ConversationSettingsPanel() {
 }
 
 export default function GlobalSidebar() {
+  const { token } = theme.useToken();
   const conversations = useConversationStore((s) => s.conversations);
   const activeConversationId = useConversationStore((s) => s.activeConversationId);
   const activeNav = useConversationStore((s) => s.activeNav);
@@ -125,13 +126,14 @@ export default function GlobalSidebar() {
   }, [filtered]);
 
   return (
-    <div className={"axn-global-sidebar"} data-testid="global-sidebar">
+    <div className="axn-global-sidebar" data-testid="global-sidebar" style={{ '--nav-primary': token.colorPrimary, '--nav-tint': token.colorPrimaryBg, '--nav-text': token.colorText, '--nav-muted': token.colorTextSecondary, '--nav-border': token.colorBorderSecondary, '--nav-surface': token.colorBgContainer, '--nav-soft': token.colorBgLayout, '--nav-error': token.colorError } as React.CSSProperties}>
       {/* 2. 一级功能导航 */}
       <nav className="axn-gs-nav" aria-label="全局功能导航">
         {NAV.map((item) => (
           <button
             key={item.key}
             className={`axn-gs-nav-item${activeNav === item.key ? ' is-active' : ''}`}
+            aria-current={activeNav === item.key ? 'page' : undefined}
             onClick={() => (item.key === 'new' ? handleNewConversation() : setActiveNav(item.key))}
           >
             {item.icon}

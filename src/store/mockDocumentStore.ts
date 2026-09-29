@@ -8,6 +8,7 @@ export const EMPTY_LIBRARY: Library = { documents: MOCK_DOCUMENTS, selected: nul
 interface MockDocumentState {
   libraries: Record<string, Library>;
   select: (scope: string, document: MockDocument | null) => void;
+  update: (scope: string, document: MockDocument) => void;
   generate: (scope: string, code: string, options?: GenerationOptions) => Promise<MockDocument | null>;
 }
 
@@ -17,6 +18,13 @@ export const useMockDocumentStore = create<MockDocumentState>((set, get) => ({
   select: (scope, document) => set(state => ({ libraries: {
     ...state.libraries, [scope]: { ...(state.libraries[scope] ?? EMPTY_LIBRARY), selected: document },
   } })),
+  update: (scope, document) => set(state => {
+    const library = state.libraries[scope] ?? EMPTY_LIBRARY;
+    return { libraries: { ...state.libraries, [scope]: {
+      ...library, documents: library.documents.map(item => item.id === document.id ? document : item),
+      selected: document,
+    } } };
+  }),
   generate: async (scope, code, options) => {
     const category = DOCUMENT_CATEGORIES.find(item => item.code === code);
     if (!category || get().libraries[scope]?.generatingCode) return null;

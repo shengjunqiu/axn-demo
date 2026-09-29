@@ -41,7 +41,7 @@ export interface TaskCardProps {
 const STATUS_META: Record<TaskStatus, { label: string; color: string }> = {
   queued: { label: '排队中', color: 'default' },
   running: { label: '执行中', color: 'processing' },
-  succeeded: { label: '已完成', color: 'success' },
+  succeeded: { label: '已完成', color: 'blue' },
   partial: { label: '部分完成', color: 'warning' },
   waiting_input: { label: '待补充信息', color: 'warning' },
   failed: { label: '失败', color: 'error' },
@@ -327,7 +327,7 @@ export default function TaskCard({ task, onOpenDrawer }: TaskCardProps) {
   const isRunning = task.status === 'running' || task.status === 'queued';
 
   return (
-    <div className="axn-task-card">
+    <div className={`axn-task-card axn-task-card--${task.status}`}>
       <div className="axn-task-head">
         <Space size={6} wrap>
           <Text strong style={{ fontSize: 13 }}>

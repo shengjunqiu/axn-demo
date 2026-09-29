@@ -19,9 +19,11 @@ import { templateByCode } from '@/seed/scenario';
 import { DOCUMENT_CATEGORIES, type MockDocument } from '@/seed/mockDocuments';
 import type { ValidationReport } from '@/domain/types';
 import type { DocumentDraft } from '@/domain/types';
+import MockDocumentDetail from '@/components/doc/MockDocumentDetail';
+import DocumentDetailToolbar from '@/components/doc/DocumentDetailToolbar';
 import DocumentEditor from '@/components/doc/DocumentEditor';
 import { flattenRuns } from '@/services/contentRuns';
-import { FileTextOutlined, ArrowLeftOutlined, RightOutlined, PlusOutlined, RobotOutlined, CalendarOutlined, AlertOutlined, TeamOutlined, BarChartOutlined } from '@ant-design/icons';
+import { FileTextOutlined, RightOutlined, PlusOutlined, RobotOutlined, CalendarOutlined, AlertOutlined, TeamOutlined, BarChartOutlined } from '@ant-design/icons';
 import VersionDrawer from '@/components/doc/VersionDrawer';
 import SourceDrawer from '@/components/doc/SourceDrawer';
 import { ValidationStatusTag, runValidationForDocument } from '@/components/doc/ValidationPanel';
@@ -66,21 +68,6 @@ function HintButton({ hint, ...buttonProps }: React.ComponentProps<typeof Button
       <span>{button}</span>
     </Tooltip>
   );
-}
-
-function MockDocumentDetail({ document, onClose }: { document: MockDocument; onClose: () => void }) {
-  return <div className="doc-center-list">
-<div className="doc-detail-toolbar"><Button className="doc-back" type="text" icon={<ArrowLeftOutlined />} onClick={onClose}>返回文书列表</Button><Tag>模拟文书 · 仅供演示</Tag></div>
-    <article className="axn-redhead-paper" data-testid="mock-redhead-document">
-      <div className="axn-redhead-org">应急管理</div>
-      <div className="axn-redhead-no">{document.number}（模拟）</div>
-      <div className="axn-redhead-rule" />
-      <h2 className="doc-redhead-subject">{document.title}</h2>
-      <div className="axn-redhead-meta-row"><span>编制单位：市应急指挥中心（模拟）</span><span>{document.date}</span></div>
-      <div className="axn-redhead-body">{document.sections.filter(([heading]) => heading !== '文书要素（模拟收集）').map(([heading, body]) => <section key={heading}><h3>{heading}</h3><p>{body}</p></section>)}</div>
-      <div className="axn-redhead-foot"><span>报送：有关单位（模拟）</span><span>模拟样稿，不作为正式公文</span></div>
-    </article>
-  </div>;
 }
 
 export default function DocCenterPanel() {
@@ -271,12 +258,12 @@ export default function DocCenterPanel() {
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       ) : selectedMock ? (
-        <MockDocumentDetail document={selectedMock} onClose={() => setSelectedMock(null)} />
+        <MockDocumentDetail key={selectedMock.id} document={selectedMock} onClose={() => setSelectedMock(null)} onSave={document => useMockDocumentStore.getState().update(libraryScope, document)} />
       ) : (
         <div className="doc-center-list">
           {selectedDraft ? (
             <>
-              <Button className="doc-back" type="text" icon={<ArrowLeftOutlined />} onClick={() => setSelectedDocId(null)}>返回文书列表</Button>
+              <DocumentDetailToolbar title={selectedDraft.title} onBack={() => setSelectedDocId(null)} onEdit={() => setEditorDocId(selectedDraft.documentId)} editDisabled={selectedDraft.lifecycle !== 'draft'} />
               <article className="doc-card doc-detail-paper axn-redhead-paper">
                 <div className="axn-redhead-org">应急管理</div>
                 <div className="axn-redhead-no">文书草稿（模拟）</div>
@@ -299,7 +286,7 @@ export default function DocCenterPanel() {
             </>
           ) : (
             <>
-              <div className="doc-library-heading"><div><h3>文书库 <span>{drafts.length + mockDocuments.length}</span></h3><p>选择文书查看详情，或按分类生成新文书</p></div><span className="doc-format-label"><FileTextOutlined /> 红头公文</span></div>
+              <div className="doc-library-heading"><div><h3>文书库 <span>{drafts.length + mockDocuments.length}</span></h3><p>选择文书查看详情，或按分类生成新文书</p></div></div>
               <div className="doc-category-grid">
               {DOCUMENT_CATEGORIES.map(category => (
                 <section className="doc-card doc-category" key={category.code}>

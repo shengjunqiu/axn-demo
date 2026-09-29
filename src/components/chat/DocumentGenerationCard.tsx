@@ -10,7 +10,7 @@ export default function DocumentGenerationCard({ message }: { message: ChatMessa
   const current = { collecting: 0, calling: 1, generating: 2, completed: 3, interrupted: 0 }[workflow.stage];
   const document = useMockDocumentStore(s => s.libraries[message.sessionId]?.documents.find(item => item.id === workflow.documentId));
   return <div className="axn-document-workflow" data-testid="document-generation-card" aria-live="polite">
-    <Space><RobotOutlined /><Typography.Text strong>文书生成智能体</Typography.Text><Tag color={completed ? 'success' : 'processing'}>{completed ? '已完成' : interrupted ? '已中断' : '执行中'}</Tag></Space>
+    <Space wrap className="axn-document-workflow-head"><RobotOutlined /><Typography.Text strong>文书生成智能体</Typography.Text><Tag color={completed ? 'blue' : 'processing'}>{completed ? '已完成' : interrupted ? '已中断' : '执行中'}</Tag></Space>
     <Typography.Paragraph type="secondary">{message.agentRole} · 模拟演示</Typography.Paragraph>
     <Steps direction="vertical" size="small" current={current} status={interrupted ? 'error' : undefined} items={[
       { title: current === 0 ? '正在整理已收集的文书要素' : '文书要素已收集', description: <>
@@ -26,6 +26,6 @@ export default function DocumentGenerationCard({ message }: { message: ChatMessa
       <Typography.Paragraph type="secondary">{document.date} · 红头格式 · 模拟文书</Typography.Paragraph>
       <Typography.Paragraph ellipsis={{ rows: 3 }}>{document.sections[0]?.[1]}</Typography.Paragraph>
     </div>}
-    {interrupted ? <Typography.Text type="secondary">页面刷新中断了模拟过程，请重新点击生成。</Typography.Text> : completed ? <Space><CheckCircleOutlined /><Typography.Text>已生成，可在右侧查看详情</Typography.Text>{document && <Button size="small" icon={<FileTextOutlined />} onClick={() => useMockDocumentStore.getState().select(message.sessionId, document)}>查看文书</Button>}</Space> : <Space><LoadingOutlined /><Typography.Text>{workflow.stage === 'collecting' ? '整理文书要素…' : workflow.stage === 'calling' ? '正在调用文书生成智能体…' : '正在生成文书…'}</Typography.Text></Space>}
+    {interrupted ? <Typography.Text type="secondary">页面刷新中断了模拟过程，请重新点击生成。</Typography.Text> : completed ? <Space wrap className="axn-document-workflow-footer"><CheckCircleOutlined /><Typography.Text>已生成，可在右侧查看详情</Typography.Text>{document && <Button size="small" icon={<FileTextOutlined />} onClick={() => useMockDocumentStore.getState().select(message.sessionId, document)}>查看文书</Button>}</Space> : <Space><LoadingOutlined /><Typography.Text>{workflow.stage === 'collecting' ? '整理文书要素…' : workflow.stage === 'calling' ? '正在调用文书生成智能体…' : '正在生成文书…'}</Typography.Text></Space>}
   </div>;
 }

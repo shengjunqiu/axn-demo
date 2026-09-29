@@ -62,3 +62,31 @@ test('聊天文书快捷操作无需补录即可生成右侧模拟红头文书',
     await expect(panel.locator('.doc-category').filter({ hasText: name }).locator('.doc-sample-row')).toHaveCount(3);
   }
 });
+
+test('文书详情支持在线编辑、取消和导出演示', async ({ page }) => {
+  await page.goto('/');
+  const panel = page.locator('.doc-center');
+  await panel.locator('.doc-sample-row').first().click();
+  await panel.getByRole('button', { name: '在线编辑', exact: true }).click();
+  await panel.getByRole('textbox', { name: '文书标题', exact: true }).fill('防汛值守日报（修订）');
+  await panel.getByRole('textbox', { name: '第1节正文', exact: true }).fill('本班次已完成重点区域巡查，并记录交接事项（模拟）。');
+  await panel.getByRole('button', { name: '保存修改', exact: true }).click();
+  await expect(panel.getByTestId('mock-redhead-document')).toContainText('本班次已完成重点区域巡查');
+  await panel.getByRole('button', { name: '返回文书列表' }).click();
+  await panel.locator('.doc-sample-row').filter({ hasText: '防汛值守日报（修订）' }).click();
+  await expect(panel.getByTestId('mock-redhead-document')).toContainText('本班次已完成重点区域巡查');
+  await panel.getByRole('button', { name: '在线编辑', exact: true }).click();
+  await panel.getByRole('textbox', { name: '文书标题', exact: true }).fill('未保存标题');
+  await panel.getByRole('button', { name: '取消编辑', exact: true }).click();
+  await expect(panel.getByTestId('mock-redhead-document')).not.toContainText('未保存标题');
+  const downloads: string[] = [];
+  page.on('download', download => downloads.push(download.suggestedFilename()));
+  for (const format of ['Word', 'PDF']) {
+    await panel.getByRole('button', { name: `导出 ${format}`, exact: true }).click();
+    await expect(page.getByRole('dialog')).toContainText('不生成或下载实际文件');
+    await page.getByRole('button', { name: '知道了' }).click();
+    await expect(page.getByRole('dialog')).toBeHidden();
+  }
+  expect(downloads).toEqual([]);
+  await page.screenshot({ path: 'artifacts/document-detail-refined.png' });
+});

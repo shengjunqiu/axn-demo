@@ -16,7 +16,7 @@ export default function AgentSummonCard({ agentName, agentRole, action, status =
     <div className="axn-agent-summon">
       <span className="axn-agent-summon-avatar" aria-hidden><RobotOutlined /></span>
       <div className="axn-agent-summon-body">
-        <div className="axn-agent-summon-head"><Typography.Text strong>{agentName}</Typography.Text><Tag color={active ? 'processing' : status === 'succeeded' ? 'success' : status === 'failed' ? 'error' : 'default'}>{LABELS[status]}</Tag></div>
+        <div className="axn-agent-summon-head"><Typography.Text strong>{agentName}</Typography.Text><Tag color={active ? 'processing' : status === 'succeeded' ? 'blue' : status === 'failed' ? 'error' : 'default'}>{LABELS[status]}</Tag></div>
         <div className="axn-agent-summon-role"><Typography.Text type="secondary">{agentRole} · 模拟执行</Typography.Text></div>
         <div className="axn-agent-summon-action"><Typography.Text>{active ? action : status === 'succeeded' ? '任务已完成，执行过程与结果如下' : status === 'waiting_input' ? '请补充所需信息后继续' : status === 'cancelled' ? '任务已停止，已完成的步骤保留如下' : status === 'failed' ? '执行遇到问题，可查看原因并重试' : '已完成部分任务，详情如下'}</Typography.Text></div>
       </div>

@@ -4,7 +4,7 @@
  * 本界面为模拟数据演示（规则意图识别，不接真实大模型）。
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Input, Select, Space, Tag, Tooltip, Typography } from 'antd';
+import { Alert, Button, Input, Select, Space, Tag, Tooltip, Typography, theme } from 'antd';
 import { Bubble, Sender } from '@ant-design/x';
 import type { BubbleItemType } from '@ant-design/x';
 import { useConversationStore } from '@/store/conversationStore';
@@ -32,27 +32,10 @@ const WELCOME_QUESTIONS = [1, 5, 9, 17]
   .map(id => getQaItem(id)?.question)
   .filter((question): question is string => !!question);
 
-const AVATAR = (
-  <div
-    style={{
-      width: 30,
-      height: 30,
-      borderRadius: '50%',
-      background: '#e8f0fe',
-      color: '#1d5fd2',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontWeight: 700,
-      fontSize: 13,
-      flexShrink: 0,
-    }}
-  >
-    安
-  </div>
-);
+const AVATAR = <div className="axn-chat-avatar">安</div>;
 
 export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
+  const { token } = theme.useToken();
   const currentEventId = useDemoStore((s) => s.currentEventId);
   const activeConversation = useConversationStore((s) =>
     s.activeConversationId ? s.conversations[s.activeConversationId] : null,
@@ -188,7 +171,7 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
           key: m.messageId,
           role: 'task',
           content: m.agentName ?? '智能体协同',
-          avatar: AVATAR,
+          avatar: null,
           styles: {
             root: { flex: '1 1 auto', width: 'auto', minWidth: 0, alignSelf: 'stretch', paddingInlineEnd: 0 },
             body: { flex: '1 1 auto', width: '100%', minWidth: 0, maxWidth: '100%' },
@@ -224,7 +207,7 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
   const hasMessages = items.length > 0;
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#fff' }}>
+    <div className="axn-chat-page" style={{ '--chat-primary': token.colorPrimary, '--chat-tint': token.colorPrimaryBg, '--chat-line': token.colorBorderSecondary, '--chat-muted': token.colorTextSecondary, '--chat-text': token.colorText, '--chat-surface': token.colorBgContainer, '--chat-soft': token.colorFillAlter, '--chat-success': token.colorSuccess, '--chat-error': token.colorError } as React.CSSProperties}>
       {/* 会话头 */}
       <div className="axn-chat-head">
         {/* 标题行：单行省略，窄栏（350px）下不换行 */}
@@ -254,6 +237,7 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
       {/* 消息流 */}
       {hasMessages ? (
         <Bubble.List
+          className="axn-message-list"
           style={{ flex: 1, minHeight: 0 }}
           autoScroll
           items={items}
@@ -262,12 +246,12 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
               placement: 'start',
               variant: 'filled',
               avatar: AVATAR,
-              styles: { content: { background: '#f4f7fb', maxWidth: '100%' } },
+              styles: { content: { background: token.colorBgContainer, border: `1px solid ${token.colorBorderSecondary}`, borderRadius: '4px 14px 14px 14px', padding: '12px 14px', lineHeight: 1.85, maxWidth: '100%', overflowWrap: 'anywhere' } },
             },
             user: {
               placement: 'end',
               variant: 'filled',
-              styles: { content: { background: '#1d6ff2', color: '#fff' } },
+              styles: { content: { background: token.colorPrimary, color: '#fff', borderRadius: '14px 14px 4px 14px', padding: '11px 15px', lineHeight: 1.8, fontSize: 13, overflowWrap: 'anywhere' } },
             },
             system: { placement: 'start', variant: 'borderless' },
             task: {
@@ -322,7 +306,7 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
 
       {/* 补录表单（pendingClarification 存在时内联展示） */}
       {pending && (
-        <div style={{ padding: '8px 12px 0' }}>
+        <div className="axn-clarification">
           <Alert
             type="warning"
             showIcon
@@ -363,7 +347,7 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
       </div>
 
       {/* 输入区 */}
-      <div style={{ padding: '8px 12px 12px' }}>
+      <div className="axn-composer">
         <Sender
           value={input}
           onChange={(v) => setInput(v)}
