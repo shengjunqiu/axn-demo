@@ -14,6 +14,7 @@ import { sendMessage, cancelTask } from '@/services/taskRunner';
 import { factText, incidentById, incidents } from '@/seed/scenario';
 import { eventDisplayName } from '@/services/factLookup';
 import TaskCard from './TaskCard';
+import AgentSummonCard from './AgentSummonCard';
 import './chat.css';
 
 const { Text } = Typography;
@@ -175,6 +176,26 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
             ) : (
               <Tag color="error">任务数据缺失（模拟数据）</Tag>
             ),
+        };
+      }
+      if (m.kind === 'agent') {
+        return {
+          key: m.messageId,
+          role: 'task',
+          content: m.agentName ?? '智能体协同',
+          avatar: AVATAR,
+          styles: {
+            root: { flex: '1 1 auto', width: 'auto', minWidth: 0, alignSelf: 'stretch', paddingInlineEnd: 0 },
+            body: { flex: '1 1 auto', width: '100%', minWidth: 0, maxWidth: '100%' },
+            content: { width: '100%', padding: 0, background: 'transparent' },
+          },
+          contentRender: () => (
+            <AgentSummonCard
+              agentName={m.agentName ?? '智能体协同'}
+              agentRole={m.agentRole ?? ''}
+              action={m.text ?? ''}
+            />
+          ),
         };
       }
       if (m.role === 'user') {

@@ -155,9 +155,59 @@ export function recognize(rawText: string, ctx: { lastResourceResultIds: string[
 
 // ===== 事件流构建 =====
 
+/**
+ * 意图 → 协同智能体映射（模拟协同）：任务执行前先在对话中展示召唤效果。
+ * 知识问答/解释/停止/未知不召唤（直接回答或兜底）。
+ */
+function summonFor(intent: Ctx['intent']):
+  | { agentId: string; agentName: string; agentRole: string; action: string }
+  | null {
+  switch (intent) {
+    case 'summary':
+      return {
+        agentId: 'agent-situation',
+        agentName: '态势感知智能体',
+        agentRole: '汇总事件事实与监测数据',
+        action: '正在比对事件事实、接报信息与水情监测数据，生成灾情摘要',
+      };
+    case 'resource_query':
+    case 'resource_sort_eta':
+    case 'resource_sort_distance':
+    case 'candidate_add_top2':
+    case 'candidate_remove':
+      return {
+        agentId: 'agent-resource',
+        agentName: '资源管理智能体',
+        agentRole: '查询与调度救援资源',
+        action: '正在检索本事件授权范围内的救援队伍与装备仓库，并汇总可用状态',
+      };
+    case 'proposal':
+      return {
+        agentId: 'agent-plan',
+        agentName: '救援方案生成智能体',
+        agentRole: '形成处置建议与响应等级建议',
+        action: '正在结合灾情摘要与候选力量，拟定处置步骤与依据',
+      };
+    case 'doc_brief':
+    case 'doc_daily':
+    case 'fill_reporting_unit':
+    case 'fill_handover':
+      return {
+        agentId: 'agent-doc',
+        agentName: '文书生成智能体',
+        agentRole: '生成与校核应急文书',
+        action: '正在按模板绑定事实字段，起草文书并标注来源',
+      };
+    default:
+      return null;
+  }
+}
+
 async function* runIntent(req: Ctx, signal: AbortSignal): AsyncIterable<TaskEvent> {
   const demo = useDemoStore.getState();
   const paceMs = demo.pace === 'fast' ? 130 : 620;
+  const summon = summonFor(req.intent);
+  if (summon) yield { type: 'agent_summon', ...summon };
   switch (req.intent) {
     case 'summary':
       yield* runSummary(req, signal, paceMs);

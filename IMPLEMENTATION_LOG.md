@@ -165,3 +165,4 @@ pnpm test:e2e         # Playwright E2E（8 项，含主线全链路）
 | 2026-09-29 | 新需求 | 主控 | 欢迎卡"你可以问我"引导问题：关联灾情/空白对话两套（4题各），点击即发送；去重 WELCOME_QUESTIONS 常量（Vite 已声明报错）；chat.css 引导样式 | typecheck✓ lint 0err✓ 单测129✓ 冒烟: 空白4题/关联切换4题/点击发送出答/切换隔离✓ | 待用户复看 |
 
 | 2026-09-29 | 撤回 | 主控 | 用户要求撤回 94e3f53（chips 上下文区分），已 revert（fbb6510）并推送：chips 恢复全局 6 个常驻、欢迎卡引导恢复 4 题含日报 | typecheck✓ 单测129✓ 冒烟✓ | — |
+| 2026-09-29 | 主控 | 智能体召唤效果（用户需求 m03213）| types.ts（TaskEvent+agent_summon、ChatMessage+agent kind/agent 字段、AgentSummonMessage）、sessionStore.ts（applyTaskEvent agent_summon 分支→插入 kind='agent' 消息）、mock/provider.ts（summonFor 意图映射：摘要→态势感知、资源类→资源管理、建议→救援方案、文书类→文书生成；知识问答/停止/未知不召唤）、AgentSummonCard.tsx（新组件，脉冲光圈+协同中 badge+"模拟协同"脚注）、ChatPanel.tsx（agent 分支渲染）、chat.css（召唤卡动画） | typecheck ✓ lint ✓ 单测 129 ✓ 冒烟：摘要/资源/文书三类任务均出现对应召唤卡、QA 不召唤、刷新持久化 ✓ |

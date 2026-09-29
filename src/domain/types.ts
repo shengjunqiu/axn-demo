@@ -182,9 +182,13 @@ export interface ChatMessage {
   messageId: string;
   sessionId: string;
   role: 'user' | 'assistant' | 'system';
-  kind: 'text' | 'task' | 'system';
+  kind: 'text' | 'task' | 'system' | 'agent';
   text: string | null;
   taskId: string | null;
+  /** kind='agent' 专用：召唤的智能体标识与行动描述（text 存行动说明）。 */
+  agentId?: string;
+  agentName?: string;
+  agentRole?: string;
   createdAt: string;
   performedAt: string;
 }
@@ -620,11 +624,24 @@ export type TaskEvent =
       artifact?: Omit<TaskArtifact, 'artifactId'>;
     }
   | { type: 'step_failed'; stepId: string; errorCode: string; message: string }
+  | { type: 'agent_summon'; agentId: string; agentName: string; agentRole: string; action: string }
   | { type: 'text_delta'; text: string }
   | { type: 'artifact'; artifact: Omit<TaskArtifact, 'artifactId'> }
   | { type: 'clarification_required'; clarification: Omit<ClarificationPayload, 'kind' | 'taskId'> }
   | { type: 'failed'; errorCode: string; message: string; hint: string }
   | { type: 'completed'; summary?: string };
+
+/** 智能体召唤消息：主任务执行中协同调用其他智能体的过程展示（kind='agent'）。 */
+export interface AgentSummonMessage {
+  id: string;
+  sessionId: string;
+  kind: 'agent';
+  agentId: string;
+  agentName: string;
+  agentRole: string;
+  action: string;
+  ts: number;
+}
 
 export interface AssistantProvider {
   run(request: AssistantRequest, signal: AbortSignal): AsyncIterable<TaskEvent>;

@@ -347,6 +347,27 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
               : st,
           );
           break;
+        case 'agent_summon': {
+          // 召唤其他智能体：作为独立聊天消息插入（不改变任务状态，仅过程展示）
+          const session = s.sessions[task.sessionId];
+          if (session) {
+            const summonMsg: ChatMessage = {
+              messageId: newMessageId(),
+              sessionId: task.sessionId,
+              role: 'assistant',
+              kind: 'agent',
+              text: ev.action,
+              taskId,
+              agentId: ev.agentId,
+              agentName: ev.agentName,
+              agentRole: ev.agentRole,
+              createdAt: new Date().toISOString(),
+              performedAt: new Date().toISOString(),
+            };
+            s.sessions[task.sessionId] = { ...session, messages: [...session.messages, summonMsg] };
+          }
+          break;
+        }
         case 'text_delta':
           next.textAnswer = (task.textAnswer ?? '') + ev.text;
           break;

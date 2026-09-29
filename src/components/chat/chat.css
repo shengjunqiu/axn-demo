@@ -228,3 +228,89 @@
   gap: 8px;
   padding: 4px 10px 6px;
 }
+
+/* ===== 智能体召唤卡（模拟协同动效） ===== */
+.axn-agent-summon {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid #dce6f5;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f6faff 0%, #eef5ff 100%);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.axn-agent-summon-avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #1d6ff2;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+}
+
+.axn-agent-summon-avatar::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 12px;
+  border: 2px solid rgba(29, 111, 242, 0.45);
+  animation: axn-summon-pulse 1.6s ease-out infinite;
+}
+
+@keyframes axn-summon-pulse {
+  0% { transform: scale(0.92); opacity: 0.9; }
+  70% { transform: scale(1.22); opacity: 0; }
+  100% { transform: scale(1.22); opacity: 0; }
+}
+
+.axn-agent-summon-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.axn-agent-summon-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.axn-agent-summon-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 16px;
+  padding: 0 7px;
+  border-radius: 8px;
+  color: #1d5fd2;
+  background: rgba(29, 111, 242, 0.12);
+  animation: axn-summon-breathe 1.6s ease-in-out infinite;
+}
+
+@keyframes axn-summon-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.axn-agent-summon-role {
+  min-width: 0;
+}
+
+.axn-agent-summon-action {
+  min-width: 0;
+  word-break: break-all;
+}
+
+.axn-agent-summon-foot {
+  margin-top: 2px;
+}
