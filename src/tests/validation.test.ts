@@ -72,6 +72,19 @@ describe('校核引擎', () => {
     expect(report.issues.find((i) => i.ruleId === 'R-006')?.level).toBe('block');
   });
 
+  it('R-006：reference 段不触发（知识引用“不得表述为已调派”/风险提示“尚未形成正式调派”均为合规元信息）', () => {
+    const content = makeContent([
+      { id: 'k-1', role: 'reference', runs: [{ type: 'text', text: '演示文书要素清单（1.0.0-demo；本原型虚构知识包）：候选力量不得表述为已调派。 仅用于演示知识引用交互。' }] },
+      { id: 'r-1', role: 'reference', runs: [{ type: 'text', text: '已采纳建议：险情处置工作建议（模拟 · 待审核）（版本 v1）。' }] },
+      { id: 'risk-2', role: 'narrative', runs: [{ type: 'text', text: '建议风险提示：候选力量尚未形成正式调派命令。' }] },
+      { id: 'neg-1', role: 'narrative', runs: [{ type: 'text', text: '已调派候选救援队伍赶赴现场。' }] },
+    ] as ReturnType<typeof para>[]);
+    const report = validateContent({ documentId: 'doc-test', content, snapshot: snapshotFor() });
+    const r006 = report.issues.filter((i) => i.ruleId === 'R-006');
+    // 仅种子负例“已调派候选救援队伍”命中，reference 段与否定声明均豁免
+    expect(r006.map((i) => i.paragraphId)).toEqual(['neg-1']);
+  });
+
   it('R-003：建议等级写“已确认 III 级”为 block', () => {
     const content = makeContent([para('p-1', [{ type: 'text', text: '已确认 III 级响应。' }])]);
     const report = validateContent({ documentId: 'doc-test', content, snapshot: snapshotFor() });

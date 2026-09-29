@@ -8,6 +8,15 @@ import { collectRunDerivedKeys, collectRunFactIds } from '@/services/contentRuns
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
+/** 深冻结：签发快照/校核报告等不可变对象防篡改（测试与运行时共用语义）。 */
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const key of Object.keys(value as object)) deepFreeze((value as Record<string, unknown>)[key]);
+  }
+  return value;
+}
+
 /** Deterministic local comparison token; this is not a cryptographic signature. */
 export function computeContentHash(content: DocumentContent): string {
   const json = JSON.stringify(content);
@@ -74,7 +83,15 @@ export const useDocumentStore = create<DocumentState>()((set, get) => ({
   drafts: persisted?.drafts ?? {}, revisions: persisted?.revisions ?? {}, reports: persisted?.reports ?? {},
   activeReportByDocument: persisted?.activeReportByDocument ?? {}, audit: persisted?.audit ?? [],
   addAudit: input => set(s => ({ audit: [{ ...input, auditId: `audit-${crypto.randomUUID()}`, isSimulated: true as const }, ...s.audit].slice(0, 200) })),
-  addDraft: draft => set(s => ({ drafts: { ...s.drafts, [draft.documentId]: clone(draft) }, activeReportByDocument: { ...s.activeReportByDocument, [draft.documentId]: null } })),
+  addDraft: draft => {
+    const existing = get().drafts[draft.documentId];
+    // 信任链防线：同 ID 已签发（或已形成版本）的文档不允许被新草稿对象覆盖；
+    // 修订必须走 submit/signNewVersion 生成新 revision，而不是替换工作副本。
+    if (existing && (existing.lifecycle === 'signed' || existing.activeRevisionId)) {
+      throw new Error(`文档 ${draft.documentId} 已签发锁定，禁止用同 ID 草稿覆盖；请通过修订生成新版本。`);
+    }
+    set(s => ({ drafts: { ...s.drafts, [draft.documentId]: clone(draft) }, activeReportByDocument: { ...s.activeReportByDocument, [draft.documentId]: null } }));
+  },
   getDraft: id => get().drafts[id],
   updateWorkingContent: (id, content) => set(s => {
     const draft = s.drafts[id];
@@ -110,7 +127,8 @@ export const useDocumentStore = create<DocumentState>()((set, get) => ({
   })) })),
   addReport: report => {
     const full = { ...clone(report), reportId: `report-${crypto.randomUUID()}`, checkedAt: new Date().toISOString() };
-    set(s => ({ reports: { ...s.reports, [full.reportId]: full } }));
+    // 报告一旦入库即冻结：签发授权依据不可被外部引用篡改。
+    set(s => ({ reports: { ...s.reports, [full.reportId]: deepFreeze(full) } }));
     return full;
   },
   getActiveReport: id => { const rid = get().activeReportByDocument[id]; return rid ? get().reports[rid] ?? null : null; },
@@ -138,7 +156,12 @@ export const useDocumentStore = create<DocumentState>()((set, get) => ({
     } } }));
     return revision;
   },
-  getRevision: id => get().revisions[id],
+  getRevision: id => {
+    const rev = get().revisions[id];
+    if (!rev) return undefined;
+    // 返回深冻结副本：签发历史不可通过返回引用被外部篡改。
+    return deepFreeze(structuredClone(rev));
+  },
   listRevisions: id => Object.values(get().revisions).filter(r => r.documentId === id).sort((a, b) => a.major - b.major || a.minor - b.minor),
   getRevisionGuard: (id, action) => {
     const state = get(); const rev = state.revisions[id];

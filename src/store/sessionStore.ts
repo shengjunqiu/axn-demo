@@ -11,7 +11,7 @@ import type {
   TaskEvent,
   TaskStatus,
 } from '@/domain/types';
-import { DEFAULT_EVENT_ID, DEFAULT_SESSION_ID, incidentById } from '@/seed/scenario';
+import { DEFAULT_EVENT_ID, DEFAULT_SESSION_ID, factById, incidentById } from '@/seed/scenario';
 import { useDemoStore } from './demoStore';
 import { useDocumentStore } from './documentStore';
 import { clearPersist, loadPersist, savePersist } from './persistence';
@@ -112,11 +112,22 @@ function rehydrate(): SessionPersist {
 
 const sessionPersisted = rehydrate();
 
+/** 种子直查事件标题（不经任何 store，模块初始化安全）。 */
+function seedEventTitle(eventId: string): string {
+  const titleFactId = incidentById.get(eventId)?.factRefs.title;
+  if (!titleFactId) return eventId;
+  const fact = factById.get(titleFactId);
+  return fact?.value != null ? String(fact.value) : eventId;
+}
+
 function emptySession(sessionId: string, eventId: string): Session {
   return {
     sessionId,
     eventId,
-    title: incidentById.get(eventId)?.factRefs.title ? '事件会话' : '会话',
+    // 会话标题跟随事件名。注意：此处必须走种子直查（factById），
+    // 不能调用 factLookup.eventDisplayName —— 模块初始化阶段 resolveFact
+    // 会触及 demoStore（循环引用，生产包 TDZ 崩溃：Cannot access before initialization）。
+    title: seedEventTitle(eventId),
     messages: [],
     lastResourceResultIds: [],
     resourceSortBy: null,

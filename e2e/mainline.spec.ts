@@ -125,15 +125,16 @@ test.describe('安小能演示主线（要情全链路）', () => {
 
     // 编辑器内校核面板应显示阻断问题
     await editorDrawer.getByRole('button', { name: '重新校核' }).click();
-    await expect(editorDrawer.getByText('伤亡表述与来源矛盾', { exact: false }).first()).toBeVisible({ timeout: 15000 });
+    await expect(editorDrawer.getByText('未核实伤亡', { exact: false }).first()).toBeVisible({ timeout: 15000 });
     await shot('06-validation-block');
 
-    // 11. 采用建议 → 阻断清零
+    // 11. 采用建议 → 旧报告失效（信任链：改文后必须重新校核）→ 阻断清零
     await editorDrawer.getByRole('button', { name: '采用建议' }).first().click();
     await expect(editorDrawer.getByText('人员伤亡情况待核实', { exact: false }).first()).toBeVisible({ timeout: 10000 });
-    await expect(editorDrawer.locator('.validation-issue--block, [class*="block"]').first()).toBeHidden({ timeout: 15000 }).catch(() => {
-      // 校核面板以分组呈现；阻断清零以最近校核文案在文书中心复核
-    });
+    // 采用建议后旧报告失效（信任链），面板应出现“校核已过期”状态
+    await expect(editorDrawer.getByText('校核已过期', { exact: false }).first()).toBeVisible({ timeout: 10000 });
+    await editorDrawer.getByRole('button', { name: '重新校核' }).click();
+    await expect(editorDrawer.getByText('校核通过', { exact: false }).first()).toBeVisible({ timeout: 15000 });
     await page.keyboard.press('Escape');
     await expect(docCard.getByText(/无问题|阻断 0/)).toBeVisible({ timeout: 20000 });
     await shot('07-validation-clean');

@@ -1,0 +1,265 @@
+/*
+ * 全局导航栏（第一栏）：品牌区 / 一级菜单 / 新建应急对话 / 搜索 / 历史会话 / 底部工具。
+ * 展开宽 224px，折叠宽 56px。浅蓝灰侧栏背景，企业级浅色风格。
+ */
+.axn-global-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: linear-gradient(180deg, #f7f9fc 0%, #f2f5fa 100%);
+  border-right: 1px solid #e5e9f0;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ===== 1. 品牌区 ===== */
+.axn-gs-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 10px;
+  flex: 0 0 auto;
+}
+.axn-gs-brand-logo {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 8px;
+  background: #1d6ff2;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+}
+.axn-gs-brand-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2733;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.axn-gs-brand-sub {
+  font-size: 11px;
+  color: #8a94a6;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.axn-gs-collapse-btn {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+/* ===== 2. 一级功能导航 ===== */
+.axn-gs-nav {
+  padding: 2px 8px;
+  flex: 0 0 auto;
+}
+.axn-gs-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  margin: 1px 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #4a5568;
+  font-size: 13.5px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+.axn-gs-nav-item:hover {
+  background: #e9eef7;
+}
+.axn-gs-nav-item.is-active {
+  background: #e8f0fe;
+  color: #1d5fd2;
+  font-weight: 600;
+}
+.axn-gs-nav-item .anticon {
+  font-size: 15px;
+  flex: 0 0 16px;
+}
+
+/* ===== 3. 新建应急对话 ===== */
+.axn-gs-new {
+  padding: 8px 12px 4px;
+  flex: 0 0 auto;
+}
+.axn-gs-new-btn {
+  width: 100%;
+}
+
+/* ===== 4. 对话搜索 ===== */
+.axn-gs-search {
+  padding: 4px 12px 6px;
+  flex: 0 0 auto;
+}
+
+/* ===== 5. 历史会话 ===== */
+.axn-gs-history {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 8px 8px;
+}
+.axn-gs-group-label {
+  font-size: 11px;
+  color: #8a94a6;
+  padding: 10px 6px 4px;
+  white-space: nowrap;
+}
+.axn-gs-conversation {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 7px 10px;
+  margin: 2px 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+.axn-gs-conversation:hover {
+  background: #e9eef7;
+}
+.axn-gs-conversation.is-active {
+  background: #e8f0fe;
+  box-shadow: inset 3px 0 0 #1d6ff2;
+}
+.axn-gs-conversation-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #2a3444;
+  line-height: 1.35;
+  width: calc(100% - 34px);
+}
+.axn-gs-conversation.is-active .axn-gs-conversation-title {
+  color: #1d5fd2;
+  font-weight: 600;
+}
+.axn-gs-conversation-title .axn-gs-conv-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.axn-gs-conversation-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #8a94a6;
+  line-height: 1.3;
+}
+.axn-gs-conversation-sub .axn-gs-conv-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.axn-gs-conv-time {
+  font-size: 11px;
+  color: #a0a8b8;
+  flex: 0 0 auto;
+}
+.axn-gs-conv-actions {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  background: #e9eef7;
+  border-radius: 4px;
+  padding: 1px 2px;
+}
+.axn-gs-conversation:hover .axn-gs-conv-actions,
+.axn-gs-conversation.is-active:hover .axn-gs-conv-actions {
+  display: flex;
+}
+.axn-gs-conversation.is-active .axn-gs-conv-actions {
+  background: #e8f0fe;
+}
+.axn-gs-conversation:hover .axn-gs-conv-actions {
+  display: flex;
+}
+.axn-gs-conv-action {
+  border: none;
+  background: transparent;
+  color: #8a94a6;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1;
+}
+.axn-gs-conv-action:hover {
+  background: #dbe5f3;
+  color: #1d5fd2;
+}
+.axn-gs-conv-action.is-fav {
+  color: #d48806;
+}
+
+/* 新建会话模板行 */
+.axn-gs-template-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #e5e9f0;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+.axn-gs-template-row:hover {
+  border-color: #1d6ff2;
+  background: #f5f9ff;
+}
+
+/* ===== 6. 底部工具区 ===== */
+.axn-gs-footer {
+  flex: 0 0 auto;
+  border-top: 1px solid #e5e9f0;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 折叠态：仅图标 */
+.axn-global-sidebar.is-collapsed {
+  width: 56px;
+}
+.axn-global-sidebar.is-collapsed .axn-gs-brand {
+  justify-content: center;
+  padding-inline: 8px;
+}
+.axn-global-sidebar.is-collapsed .axn-gs-nav-item {
+  justify-content: center;
+  padding: 0;
+}
+.axn-global-sidebar.is-collapsed .axn-gs-new,
+.axn-global-sidebar.is-collapsed .axn-gs-search,
+.axn-global-sidebar.is-collapsed .axn-gs-history {
+  display: none;
+}
+.axn-global-sidebar.is-collapsed .axn-gs-footer {
+  align-items: center;
+}

@@ -610,3 +610,31 @@ export type TaskEvent =
 export interface AssistantProvider {
   run(request: AssistantRequest, signal: AbortSignal): AsyncIterable<TaskEvent>;
 }
+
+/* ========== 全局导航 · Conversation 模型（需求：全局功能导航 + 对话历史管理） ========== */
+
+/** Conversation = 交互上下文；Event = 业务对象（数据仍挂在 session 上，二者通过 eventId 关联，可多对一）。 */
+export type ConversationType = 'emergency' | 'daily' | 'resource' | 'general';
+
+export type ConversationStatus = 'active' | 'processing' | 'completed' | 'draft';
+
+export interface Conversation {
+  id: string;
+  title: string;
+  type: ConversationType;
+  eventId?: string;
+  summary?: string;
+  status: ConversationStatus;
+  createdAt: string;
+  updatedAt: string;
+  favorite?: boolean;
+}
+
+export type NavPage = 'assistant' | 'projects' | 'agents' | 'schedules' | 'knowledge';
+
+export interface ConversationSettings {
+  openRecentOnStart: boolean;
+  notifyTaskDone: boolean;
+  notifyDocReady: boolean;
+  demoMode: boolean;
+}

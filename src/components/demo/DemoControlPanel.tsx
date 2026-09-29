@@ -6,6 +6,7 @@ import { Alert, App as AntdApp, Button, Descriptions, Divider, Empty, Popconfirm
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { useDocumentStore } from '@/store/documentStore';
+import { useConversationStore } from '@/store/conversationStore';
 import { faultScenarios, factText, incidentById } from '@/seed/scenario';
 
 const FAULT_LABEL: Record<string, string> = {
@@ -136,6 +137,7 @@ export default function DemoControlPanel() {
         okButtonProps={{ danger: true }}
         onConfirm={() => {
           resetAll();
+          useConversationStore.getState().resetAll();
           message.success('演示已重置：会话、文书、版本与审计均已清空（模拟）');
         }}
       >

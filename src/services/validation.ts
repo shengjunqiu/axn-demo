@@ -5,6 +5,7 @@
  */
 import type {
   DocumentContent,
+  DocumentParagraph,
   SourceSnapshot,
   ValidationIssue,
   ValidationReport,
@@ -29,6 +30,8 @@ export interface FlattenedParagraph {
   sectionId: string;
   /** null 表示小节标题（标题同样纳入校核） */
   paragraphId: string | null;
+  /** 段落角色（reference = 模板/知识引用等元信息，断言类规则不应扫描） */
+  role: DocumentParagraph['role'];
   text: string;
   factBindings: { factId: string; suffix?: string }[];
   derivedBindings: { key: string; suffix?: string }[];
@@ -43,6 +46,7 @@ export function flattenContent(content: DocumentContent, snapshot?: SourceSnapsh
       out.push({
         sectionId: section.id,
         paragraphId: null,
+        role: 'narrative',
         text: section.heading,
         factBindings: [],
         derivedBindings: [],
@@ -77,7 +81,7 @@ export function flattenContent(content: DocumentContent, snapshot?: SourceSnapsh
             break;
         }
       }
-      out.push({ sectionId: section.id, paragraphId: p.id, text, factBindings, derivedBindings, knowledgeBindings });
+      out.push({ sectionId: section.id, paragraphId: p.id, role: p.role, text, factBindings, derivedBindings, knowledgeBindings });
     }
   }
   return out;
@@ -211,12 +215,15 @@ export function validateContent(input: ValidateInput): Omit<ValidationReport, 'r
   const CN_NUM = '(\\d+|[一二两三四五六七八九十]+)';
   const DEPLOY_VERB = '(已调派|已出动|已派遣|调派了?|出动了?|派遣了?)';
   for (const p of flat) {
+    // 引用段（知识卡片引用、模板版本、已采纳建议说明）是元信息而非作者断言，
+    // 其文本中出现的“不得表述为已调派”等规则性引用不应触发调派矛盾校核。
+    if (p.role === 'reference') continue;
     const deployHit = new RegExp(`${DEPLOY_VERB}|调派了?${CN_NUM}\\s*支|出动了?${CN_NUM}\\s*支`).test(p.text);
     if (!deployHit) continue;
-    // 豁免：前瞻性拟派表述（拟调派/拟预置/计划调派/建议调派/预置）+12 字内出现“调派/出动/派遣”类动词。
-    // 注意：“已调派候选救援队伍”不豁免（候选队伍不能写成已调派，种子负例）。
+    // 豁免：前瞻性拟派表述（拟调派/拟预置/计划调派/建议调派/预置）+12 字内出现“调派/出动/派遣”类动词；
+    // 以及“候选…尚未(形成/下达…)调派”类否定声明。注意：“已调派候选救援队伍”不豁免（种子负例）。
     const exempt =
-      /(拟|计划|建议|预置)[^。；]{0,10}(调派|出动|派遣|预置)|候选[^。；]{0,10}尚未(调派|出动|派遣)/.test(p.text) &&
+      /(拟|计划|建议|预置)[^。；]{0,10}(调派|出动|派遣|预置)|候选[^。；]{0,12}尚未[^。；]{0,6}(调派|出动|派遣)/.test(p.text) &&
       !/已(调派|出动|派遣)/.test(p.text);
     if (!exempt) {
       issues.push(
@@ -268,7 +275,7 @@ export function validateContent(input: ValidateInput): Omit<ValidationReport, 'r
   for (const section of content.sections) for (const p of section.paragraphs) {
     if (p.role === 'reference') continue;
     const text = p.runs.filter(r => r.type === 'text').map(r => r.text).join('');
-    if (/\d+(?:\.\d+)?|[零〇一二两三四五六七八九十百千万亿]+(?:点[零一二三四五六七八九]+)?\s*(?:人|台|辆|支|米|公里|户|处|起|名|个|套|小时|分钟|%|％)/.test(text)) {
+    if (/\d+(?:\.\d+)?|[零〇一二两三四五六七八九十百千万亿]+(?:点[零一二三四五六七八九]+)?\s*(?:人|台|辆|支|米|公里|户|处|起|名|个|套|小时|分钟|%|％)|[零〇一二两三四五六七八九千万亿]+(?:点\d+)?元/.test(text)) {
       issues.push(issue('R-010', 'block', '叙述包含未结构化绑定的数值；同段其他引用不构成该数值的来源。', section.id, p.id, text.slice(0, 60), '改用事实或派生值芯片', null));
     }
     if (/为了能够进一步更好地|在此基础之上进一步/.test(text)) issues.push(issue('R-012', 'warning', '表述冗长，可精简。', section.id, p.id, text, '精简非事实性表述', null));
