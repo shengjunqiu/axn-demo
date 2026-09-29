@@ -28,7 +28,7 @@ export interface ChatPanelProps {
 }
 
 /** 从 qa.json 已接入的知识库读取原问题，保证点击后命中对应答案。 */
-const WELCOME_QUESTIONS = [1, 5, 9, 17]
+const WELCOME_QUESTIONS = [38, 43, 16, 67]
   .map(id => getQaItem(id)?.question)
   .filter((question): question is string => !!question);
 
