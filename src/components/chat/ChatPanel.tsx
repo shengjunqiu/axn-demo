@@ -41,6 +41,20 @@ const QUICK_TASKS: string[] = [
   '生成值班日报',
 ];
 
+/** 欢迎卡引导问题：关联灾情会话 / 空白对话两套，点击即发送。 */
+const WELCOME_QUESTIONS_EVENT: string[] = [
+  '生成当前灾情摘要',
+  '查询周边救援资源',
+  '它们谁最快能到？',
+  '生成应急要情',
+];
+const WELCOME_QUESTIONS_BLANK: string[] = [
+  '人员被困时，最快的救人方式是什么？',
+  '如何快速判断堤防管涌险情？',
+  '汛期值班交接班要注意什么？',
+  '生成值班日报',
+];
+
 const AVATAR = (
   <div
     style={{
@@ -259,8 +273,27 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
               <li>“候选力量”指拟使用的资源，候选 ≠ 已调派。</li>
               <li>生成的文书需通过校核并按权限提交、签发（均为模拟流程）。</li>
             </ul>
+            <div className="axn-welcome-questions">
+              <Text strong style={{ fontSize: 12 }}>
+                你可以问我：
+              </Text>
+              <ul className="axn-question-list">
+                {(isBlankEvent ? WELCOME_QUESTIONS_BLANK : WELCOME_QUESTIONS_EVENT).map((q) => (
+                  <li key={q}>
+                    <button
+                      type="button"
+                      className="axn-question-item"
+                      disabled={!session || busy}
+                      onClick={() => handleSend(q)}
+                    >
+                      {q}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              可直接输入指令，或点击下方快捷任务开始体验。
+              也可直接输入指令，或点击下方快捷任务。
             </Text>
           </div>
         </div>

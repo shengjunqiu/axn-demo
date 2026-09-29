@@ -41,6 +41,49 @@
   line-height: 1.9;
 }
 
+/* ===== 欢迎卡引导问题 ===== */
+.axn-welcome-questions {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #dce6f5;
+}
+
+.axn-question-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.axn-question-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #1d5fd2;
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.axn-question-item:hover:not(:disabled) {
+  background: #e8f0fe;
+  border-color: #c9d7ee;
+}
+
+.axn-question-item:disabled {
+  color: #9aa7b8;
+  cursor: not-allowed;
+}
+
+.axn-question-item::before {
+  content: '💬 ';
+  opacity: 0.65;
+}
+
 /* ===== 快捷任务 chips ===== */
 .axn-chips {
   display: flex;
