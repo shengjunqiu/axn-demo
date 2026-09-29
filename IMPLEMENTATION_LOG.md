@@ -144,3 +144,16 @@ pnpm test:e2e         # Playwright E2E（8 项，含主线全链路）
 | T-NAV-12 | 新建不弹窗+对话区内关联灾情（标注 vibe_1790652706390） | 主控 | 完成 | 删除 CreateConversationModal/模板；新建任务直接创建空白对话（标题递增）并激活；ChatPanel 头部新增关联灾情 Select（未关联/两个种子事件）；linkConversationToEvent action（取消关联回专属虚拟事件保留独立消息） | typecheck/lint/单测 117 ✓ 冒烟：无弹窗、关联→header 切事件、取消→空白 ✓ | E2E 1/2/2b/4b 已重写待全量 |
 
 | 消息按会话隔离 | 主控 | 完成 | sessionStore（sessionByConversation 映射+ensureSessionForConversation）、conversationStore.syncBusinessContext、ChatPanel、App、tests | typecheck ✓ lint ✓ 单测118（+1 同事件两会话隔离）✓ 冒烟：关联灾情不出旧消息/切换隔离/刷新持久化 ✓ |
+
+## 2026-09-29 抢险救援知识问答接入（qa.json）
+- 负责人：主控
+- 需求：安小能问答可回答 qa.json 的 126 条抢险救援问题，并标注模拟文档来源
+- 修改范围：
+  - qa.json（git 拉取）→ src/fixtures/qaKnowledge.json（应用内副本）
+  - 新增 src/services/qaKnowledge.ts（126 条解析、归一化规则匹配 matchQa、状态文案）
+  - src/domain/types.ts：IntentId+qa_knowledge、QaKnowledgeArtifact
+  - src/services/mock/provider.ts：recognize 优先命中 QA（在 stop/补录之后、业务意图之前）；runQaKnowledge 流式生成（步骤卡→答案卡→分段正文含来源行）
+  - src/components/chat/TaskCard.tsx：QaKnowledgeBlock（答案分区/需现场数据 chips/置信度/模拟文档来源卡/免责声明）
+  - src/tests/qaKnowledge.test.ts（12 用例）；conversation.test.ts 类型修复（非空断言）
+- 验证：typecheck ✓；lint 0 错误 ✓；单测 129 ✓；冒烟：QA 卡（建议动作/禁忌/现场数据/置信度/3 来源卡/手册标题/免责声明）✓、流式正文含来源行 ✓、业务主线（资源查询）不被误吞 ✓、无页面错误 ✓
+- 已知限制：匹配为本地规则（精确+双向包含≥6字），非语义检索；未跑全量 E2E

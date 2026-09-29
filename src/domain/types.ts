@@ -282,6 +282,23 @@ export interface KnowledgeArtifact {
   dataTime: string;
 }
 
+/** 抢险救援知识问答卡（qa.json，模拟文档溯源）。 */
+export interface QaKnowledgeArtifact {
+  kind: 'qa_knowledge';
+  qaId: number;
+  question: string;
+  category: string;
+  summary: string;
+  keyActions: string;
+  doNot: string;
+  supportAndReporting: string;
+  liveDataNeeded: string[];
+  confidence: number;
+  answerStatus: string;
+  sources: { docId: string; title: string; section: string; excerpt: string; simulated: boolean }[];
+  dataTime: string;
+}
+
 export interface ProposalArtifact {
   kind: 'proposal';
   proposalId: string;
@@ -321,6 +338,7 @@ export type TaskArtifactPayload =
   | SummaryArtifact
   | ResourceResultArtifact
   | KnowledgeArtifact
+  | QaKnowledgeArtifact
   | ProposalArtifact
   | DocumentLinkArtifact
   | ClarificationPayload
@@ -557,6 +575,7 @@ export type IntentId =
   | 'candidate_add_top2'
   | 'candidate_remove'
   | 'knowledge'
+  | 'qa_knowledge'
   | 'proposal'
   | 'doc_brief'
   | 'doc_daily'

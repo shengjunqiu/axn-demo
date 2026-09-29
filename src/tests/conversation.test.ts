@@ -35,7 +35,9 @@ afterEach(() => {
 function currentSession() {
   const convId = useConversationStore.getState().activeConversationId;
   const sid = convId ? useSessionStore.getState().sessionByConversation[convId] : undefined;
-  return sid ? useSessionStore.getState().sessions[sid] : undefined;
+  const session = sid ? useSessionStore.getState().sessions[sid] : undefined;
+  if (!session) throw new Error('测试前置失败：当前会话 session 不存在');
+  return session;
 }
 
 describe('Conversation 基础行为（需求 2.3/2.5/九）', () => {
@@ -234,11 +236,11 @@ describe('会话切换与状态隔离（需求五/十）', () => {
     const sessionBId = useSessionStore.getState().sessionByConversation[convB.id];
     await vi.runAllTimersAsync();
 
-    const task = useSessionStore.getState().tasks[taskId];
+    const task = useSessionStore.getState().tasks[taskId]!;
     // 旧 run 失效后任务不得以成功态继续污染
     expect(['cancelled', 'failed']).toContain(task.status);
     // 结果只可能写入 A 的会话，B 的会话中不存在该任务的副作用
-    const sessionB = useSessionStore.getState().sessions[sessionBId];
+    const sessionB = useSessionStore.getState().sessions[sessionBId]!;
     expect(sessionB.messages.every((m) => m.taskId !== taskId)).toBe(true);
     expect(sessionB.lastResourceResultIds).toEqual([]);
     // 切回 A：A 会话不包含 B 的上下文
@@ -272,7 +274,7 @@ describe('会话切换与状态隔离（需求五/十）', () => {
     await vi.runAllTimersAsync();
     useConversationStore.getState().selectConversation(convA.id);
     const backA = currentSession();
-    expect(backA.messages.every((m) => !(m.role === 'user' && m.text.includes('查询周边救援资源')))).toBe(true);
-    expect(backA.messages.some((m) => m.role === 'user' && m.text.includes('生成灾情摘要'))).toBe(true);
+    expect(backA.messages.every((m) => !(m.role === 'user' && (m.text ?? '').includes('查询周边救援资源')))).toBe(true);
+    expect(backA.messages.some((m) => m.role === 'user' && (m.text ?? '').includes('生成灾情摘要'))).toBe(true);
   });
 });

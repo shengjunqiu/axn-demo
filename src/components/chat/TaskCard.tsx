@@ -18,6 +18,7 @@ import type {
   ErrorArtifact,
   KnowledgeArtifact,
   ProposalArtifact,
+  QaKnowledgeArtifact,
   ResourceResultArtifact,
   StepStatus,
   SummaryArtifact,
@@ -25,6 +26,7 @@ import type {
   TaskStatus,
 } from '@/domain/types';
 import { cancelTask, retryTask } from '@/services/taskRunner';
+import { qaStatusLabel } from '@/services/qaKnowledge';
 import { factText, getFact, knowledgeById, teamById } from '@/seed/scenario';
 
 const { Text } = Typography;
@@ -166,8 +168,65 @@ function KnowledgeBlock({ payload, onOpenDrawer }: { payload: KnowledgeArtifact;
   );
 }
 
-function ProposalBlock({ payload, onOpenDrawer }: { payload: ProposalArtifact; onOpenDrawer: TaskCardProps['onOpenDrawer'] }) {
+/** 抢险救援知识问答卡：结构化答案 + 模拟文档溯源（qa.json，模拟数据）。 */
+function QaKnowledgeBlock({ payload }: { payload: QaKnowledgeArtifact }) {
   return (
+    <div className="axn-artifact axn-qa">
+      <div className="axn-artifact-row">
+        <span className="axn-artifact-label">{payload.category}</span>
+        <span className="axn-artifact-value">知识问答（模拟数据）</span>
+      </div>
+      <p style={{ margin: '8px 0 4px', fontWeight: 600, lineHeight: 1.6 }}>{payload.summary}</p>
+      {payload.keyActions && (
+        <div style={{ marginBottom: 4 }}>
+          <Text strong style={{ fontSize: 12 }}>建议动作</Text>
+          <div style={{ fontSize: 12, lineHeight: 1.6 }}>{payload.keyActions}</div>
+        </div>
+      )}
+      {payload.doNot && (
+        <div style={{ marginBottom: 4 }}>
+          <Text strong style={{ fontSize: 12 }}>禁忌提醒</Text>
+          <div style={{ fontSize: 12, lineHeight: 1.6 }}>{payload.doNot}</div>
+        </div>
+      )}
+      {payload.supportAndReporting && (
+        <div style={{ marginBottom: 4 }}>
+          <Text strong style={{ fontSize: 12 }}>协同上报</Text>
+          <div style={{ fontSize: 12, lineHeight: 1.6 }}>{payload.supportAndReporting}</div>
+        </div>
+      )}
+      {payload.liveDataNeeded.length > 0 && (
+        <div style={{ margin: '6px 0' }}>
+          <Text type="secondary" style={{ fontSize: 12 }}>需结合现场实时数据：</Text>
+          {payload.liveDataNeeded.map((d) => (
+            <Tag key={d} style={{ marginInlineEnd: 4, fontSize: 11 }}>{d}</Tag>
+          ))}
+        </div>
+      )}
+      <div style={{ margin: '6px 0', fontSize: 12 }}>
+        <Text type="secondary">置信度 {Math.round(payload.confidence * 100)}% · {qaStatusLabel(payload.answerStatus)}</Text>
+      </div>
+      <div style={{ borderTop: '1px dashed #d9dfe8', paddingTop: 6, marginTop: 6 }}>
+        <Text strong style={{ fontSize: 12 }}>来源（模拟应用文档）</Text>
+        {payload.sources.map((s) => (
+          <div key={`${s.docId}-${s.section}`} className="axn-qa-source" style={{ margin: '6px 0', fontSize: 12, lineHeight: 1.6 }}>
+            <div>
+              <Tag color="blue" style={{ fontSize: 11, marginInlineEnd: 4 }}>模拟</Tag>
+              <Text strong>《{s.title}》</Text>
+              <Text type="secondary"> {s.section}</Text>
+            </div>
+            <div style={{ color: '#666' }}>“{s.excerpt}”</div>
+          </div>
+        ))}
+        <Text type="secondary" style={{ fontSize: 11 }}>
+          演示模拟数据，非正式技术规范；现场处置以现场指挥体系、现行法规标准与专业技术人员判断为准。
+        </Text>
+      </div>
+    </div>
+  );
+}
+
+function ProposalBlock({ payload, onOpenDrawer }: { payload: ProposalArtifact; onOpenDrawer: TaskCardProps['onOpenDrawer'] }) {  return (
     <div className="axn-artifact">
       <div className="axn-artifact-row">
         <span className="axn-artifact-label">处置建议</span>
@@ -213,6 +272,8 @@ function ArtifactBlock({ payload, onOpenDrawer }: { payload: TaskArtifactPayload
       return <ResourceBlock payload={payload} onOpenDrawer={onOpenDrawer} />;
     case 'knowledge':
       return <KnowledgeBlock payload={payload} onOpenDrawer={onOpenDrawer} />;
+    case 'qa_knowledge':
+      return <QaKnowledgeBlock payload={payload} />;
     case 'proposal':
       return <ProposalBlock payload={payload} onOpenDrawer={onOpenDrawer} />;
     case 'document':

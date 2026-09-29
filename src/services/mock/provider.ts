@@ -31,6 +31,7 @@ import {
   missingBriefFields,
   missingDailyFields,
 } from '../documentFactory';
+import { getQaItem, matchQa, qaStatusLabel } from '../qaKnowledge';
 
 export class TaskFault extends Error {
   constructor(
@@ -105,6 +106,11 @@ export function recognize(rawText: string, ctx: { lastResourceResultIds: string[
     const value = ho[1].trim().replace(/^交接事项[是为：:]\s*/, '');
     return { intent: 'fill_handover', params: { value }, displayTitle: '补录交接事项' };
   }
+  // 抢险救援知识问答（qa.json，126 条，模拟文档溯源）：归一化精确/双向包含命中，优先于含“要情/最快”等词的业务正则
+  const qaHit = matchQa(text);
+  if (qaHit) {
+    return { intent: 'qa_knowledge', params: { qaId: qaHit.id }, displayTitle: '知识问答' };
+  }
   if (/(生成|起草|写|形成|出).{0,6}(要情|简报)|要情/.test(text)) {
     return { intent: 'doc_brief', params: {}, displayTitle: '生成应急要情' };
   }
@@ -173,6 +179,9 @@ async function* runIntent(req: Ctx, signal: AbortSignal): AsyncIterable<TaskEven
       break;
     case 'knowledge':
       yield* runKnowledge(req, signal, paceMs);
+      break;
+    case 'qa_knowledge':
+      yield* runQaKnowledge(req, signal, paceMs);
       break;
     case 'proposal':
       yield* runProposal(req, signal, paceMs);
@@ -516,6 +525,63 @@ async function* runKnowledge(req: Ctx, signal: AbortSignal, paceMs: number): Asy
   };
   yield { type: 'text_delta', text: `${chunk.content}\n\n（来源：${chunk.sourceLabel}，${chunk.notice}）` };
   yield { type: 'completed', summary: '知识解答完成' };
+}
+
+/**
+ * 抢险救援知识问答（qa.json，模拟数据）：检索本地问题库 → 结构化答案卡 + 模拟文档溯源。
+ * 回答内容全部来自种子 JSON，不接真实大模型；现场处置以现场指挥体系与专业判断为准。
+ */
+async function* runQaKnowledge(req: Ctx, signal: AbortSignal, paceMs: number): AsyncIterable<TaskEvent> {
+  const qaId = Number(req.params.qaId);
+  const item = getQaItem(qaId);
+  if (!item) {
+    yield* runUnknown(req, signal, paceMs);
+    return;
+  }
+  const a = item.answer;
+  yield { type: 'step_started', stepId: 'q1', name: '检索抢险救援知识库', inputSummary: `${item.category} · ${item.question}` };
+  await sleep(paceMs, signal);
+  assertActive(req);
+  yield {
+    type: 'step_completed',
+    stepId: 'q1',
+    outputSummary: `命中知识条目（${item.sources.length} 个模拟文档来源）`,
+    sourceRefs: item.sources.map((s) => s.docId),
+  };
+  yield {
+    type: 'artifact',
+    artifact: {
+      payload: {
+        kind: 'qa_knowledge',
+        qaId: item.id,
+        question: item.question,
+        category: item.category,
+        summary: a.summary,
+        keyActions: a.keyActions,
+        doNot: a.doNot,
+        supportAndReporting: a.supportAndReporting,
+        liveDataNeeded: a.liveDataNeeded,
+        confidence: item.confidence,
+        answerStatus: item.answerStatus,
+        sources: item.sources.map((s) => ({ docId: s.docId, title: s.title, section: s.section, excerpt: s.excerpt, simulated: s.simulated })),
+        dataTime: DEMO_CLOCK,
+      },
+    },
+  };
+  const parts = [
+    a.summary,
+    a.keyActions ? `建议动作：${a.keyActions}` : '',
+    a.doNot ? `禁忌提醒：${a.doNot}` : '',
+    a.supportAndReporting ? `协同上报：${a.supportAndReporting}` : '',
+    a.liveDataNeeded.length > 0 ? `需结合现场实时数据：${a.liveDataNeeded.join('、')}。` : '',
+    `（回答依据模拟应用文档：${item.sources.map((s) => `《${s.title}》${s.section}`).join('；')}；置信度 ${Math.round(item.confidence * 100)}%，${qaStatusLabel(item.answerStatus)}。演示模拟数据，非正式技术规范。）`,
+  ].filter(Boolean);
+  for (const part of parts) {
+    yield { type: 'text_delta', text: part };
+    await sleep(paceMs, signal);
+    assertActive(req);
+  }
+  yield { type: 'completed', summary: `知识问答完成（模拟文档溯源 · ${item.category}）` };
 }
 
 async function* runProposal(req: Ctx, signal: AbortSignal, paceMs: number): AsyncIterable<TaskEvent> {
