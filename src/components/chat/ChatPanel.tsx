@@ -52,7 +52,6 @@ const WELCOME_QUESTIONS_BLANK: string[] = [
   '人员被困时，最快的救人方式是什么？',
   '如何快速判断堤防管涌险情？',
   '汛期值班交接班要注意什么？',
-  '生成值班日报',
 ];
 
 const AVATAR = (
@@ -324,9 +323,11 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
         </div>
       )}
 
-      {/* 快捷任务 chips */}
+      {/* 快捷任务 chips：仅在已有消息后显示（空会话由欢迎卡引导问题承担），并按会话上下文区分——
+          空白对话只保留不依赖事件数据的知识问答，避免“它们谁最快能到”等无上下文入口 */}
+      {hasMessages && (
       <div className="axn-chips">
-        {QUICK_TASKS.map((label) => (
+        {(isBlankEvent ? WELCOME_QUESTIONS_BLANK : QUICK_TASKS).map((label) => (
           <Button
             key={label}
             size="small"
@@ -338,6 +339,7 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
           </Button>
         ))}
       </div>
+      )}
 
       {/* 输入区 */}
       <div style={{ padding: '8px 12px 12px' }}>
