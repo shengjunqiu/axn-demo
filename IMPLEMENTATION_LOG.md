@@ -93,6 +93,8 @@ pnpm test:e2e         # Playwright E2E（8 项，含主线全链路）
 | 029 | 通过 | 1366×768 / 1440×900 布局检查脚本无溢出；E2E 视口用例关键区域可见（1920×1080 线性更宽松，抽检） |
 | 030 | 通过 | 纪要/总结仅模板预览 Modal；未实现功能不弹伪造成功提示（DocCenterPanel 模板预览实现） |
 
+| 对话删除 | 主控 | 完成 | conversationStore（deleteConversation）/ GlobalSidebar（Popconfirm 删除按钮）/ 单测+2 / E2E 4b | typecheck ✓ lint ✓ 单测 114 ✓ 冒烟 ✓ | - |
+
 ## 五、独立审查结论与修复记录
 
 审查报告：1 blocker + 12 major + 9 minor，全部修复并复核：
@@ -138,3 +140,7 @@ pnpm test:e2e         # Playwright E2E（8 项，含主线全链路）
 - 测试报告：`artifacts/test-results/`（Playwright HTML）
 - 契约：`docs/anneng-demo/CONTRACTS_UI.md`
 - 种子：`src/fixtures/scenario.json`（源自文档包，未改动业务值）
+| T-NAV-11 | 新建对话关联灾情（用户 m02495） | 主控 | 完成 | CreateConversationModal 增加关联灾情下拉（不关联=空白对话/两个种子事件）；createConversation 绑定所选 eventId；关联会话与同事件会话共享 session 消息；选项标题用 eventDisplayName 带 scope 解析 | typecheck/lint/单测 116 ✓ 冒烟：关联后 header 切到对应事件、纯空白对话仍为虚拟事件 ✓ | E2E 2b 用例待全量 |
+| T-NAV-12 | 新建不弹窗+对话区内关联灾情（标注 vibe_1790652706390） | 主控 | 完成 | 删除 CreateConversationModal/模板；新建任务直接创建空白对话（标题递增）并激活；ChatPanel 头部新增关联灾情 Select（未关联/两个种子事件）；linkConversationToEvent action（取消关联回专属虚拟事件保留独立消息） | typecheck/lint/单测 117 ✓ 冒烟：无弹窗、关联→header 切事件、取消→空白 ✓ | E2E 1/2/2b/4b 已重写待全量 |
+
+| 消息按会话隔离 | 主控 | 完成 | sessionStore（sessionByConversation 映射+ensureSessionForConversation）、conversationStore.syncBusinessContext、ChatPanel、App、tests | typecheck ✓ lint ✓ 单测118（+1 同事件两会话隔离）✓ 冒烟：关联灾情不出旧消息/切换隔离/刷新持久化 ✓ |

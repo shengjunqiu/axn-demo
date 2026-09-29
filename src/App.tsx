@@ -7,10 +7,9 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Badge, Button, Drawer, Layout, Select, Space, Typography } from 'antd';
-import { ControlOutlined, FileTextOutlined } from '@ant-design/icons';
+import { ControlOutlined } from '@ant-design/icons';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
-import { useDocumentStore } from '@/store/documentStore';
 import { useConversationStore } from '@/store/conversationStore';
 import { actors } from '@/seed/scenario';
 import DemoControlPanel from '@/components/demo/DemoControlPanel';
@@ -18,13 +17,14 @@ import ChatPanel from '@/components/chat/ChatPanel';
 import ResourcePanel from '@/components/workspace/ResourcePanel';
 import KnowledgePanel from '@/components/workspace/KnowledgePanel';
 import DocCenterPanel from '@/components/workspace/DocCenterPanel';
-import GlobalSidebar, { CreateConversationModal } from '@/components/nav/GlobalSidebar';
+import GlobalSidebar from '@/components/nav/GlobalSidebar';
 import { NavPageContent } from '@/components/nav/NavPages';
 import PrintView from '@/components/doc/PrintView';
 
 const { Header, Sider, Content } = Layout;
 
-export type WorkspaceTab = 'resource' | 'knowledge' | 'doc';
+/** 工作区抽屉目标（原页签枚举仅保留面板类型；文书中心已常驻主区） */
+export type WorkspaceTab = 'resource' | 'knowledge';
 
 export default function AppRoot() {
   const actorId = useDemoStore((s) => s.actorId);
@@ -33,16 +33,14 @@ export default function AppRoot() {
   const globalBanner = useDemoStore((s) => s.globalBanner);
   const storageWarning = useDemoStore((s) => s.storageWarning);
   const activeNav = useConversationStore((s) => s.activeNav);
-  const collapsed = useConversationStore((s) => s.collapsed);
   const activeConversationId = useConversationStore((s) => s.activeConversationId);
   const conversations = useConversationStore((s) => s.conversations);
 
-  const [tab, setTab] = useState<WorkspaceTab>('resource');
   const [controlOpen, setControlOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
+  // 资源/知识面板抽屉（原页签移除后由对话任务卡触发）
+  const [panelDrawer, setPanelDrawer] = useState<'resource' | 'knowledge' | null>(null);
 
-  const session = useSessionStore((s) => s.sessions[s.sessionByEvent[currentEventId] ?? '']);
-  const draftCount = useDocumentStore((s) => Object.keys(s.drafts).length);
+  const session = useSessionStore((s) => s.sessions[s.sessionByConversation[activeConversationId ?? ''] ?? '']);
 
   // 刷新恢复：让业务上下文（事件/会话）对齐已持久化的 activeConversation
   useEffect(() => {
@@ -52,7 +50,9 @@ export default function AppRoot() {
     if (conversation.eventId && conversation.eventId !== demo.currentEventId) {
       demo.switchEvent(conversation.eventId);
     }
-    useSessionStore.getState().ensureSessionForEvent(conversation.eventId ?? demo.currentEventId);
+    useSessionStore
+      .getState()
+      .ensureSessionForConversation(conversation.id, conversation.eventId ?? demo.currentEventId);
     // 仅挂载时执行一次（刷新后对齐已持久化的 activeConversation 与业务上下文）
   }, []);
 
@@ -61,7 +61,7 @@ export default function AppRoot() {
     [session?.pendingClarification],
   );
 
-  const sidebarWidth = collapsed ? 56 : 224;
+  const sidebarWidth = 224;
 
   return (
     <Layout style={{ height: '100%', overflow: 'hidden' }}>
@@ -130,56 +130,22 @@ export default function AppRoot() {
             transition: 'width 0.18s ease',
           }}
         >
-          <GlobalSidebar onCreateClick={() => setCreateOpen(true)} />
+          <GlobalSidebar />
         </div>
 
         {/* 第二栏：当前会话区 */}
         <Sider width={350} style={{ background: '#fff', borderRadius: 10, border: '1px solid #e5e9f0', overflow: 'hidden' }}>
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <ChatPanel onOpenTab={(target: WorkspaceTab) => { setTab(target); }} />
+            <ChatPanel onOpenDrawer={(target: 'resource' | 'knowledge') => { setPanelDrawer(target); }} />
           </div>
         </Sider>
 
-        {/* 第三栏：主业务工作区 */}
+        {/* 第三栏：主业务工作区（按用户标注：移除页签栏，常驻文书中心；资源/知识面板改为对话卡触发的抽屉） */}
         <Content style={{ background: '#fff', borderRadius: 10, border: '1px solid #e5e9f0', overflow: 'hidden', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           {activeNav === 'assistant' ? (
-            <>
-              <div style={{ display: 'flex', gap: 8, padding: '8px 14px 0', borderBottom: '1px solid #eef1f6' }}>
-                {(
-                  [
-                    { key: 'resource', label: '资源与态势' },
-                    { key: 'knowledge', label: '建议与知识' },
-                    { key: 'doc', label: `文书中心${draftCount ? `（${draftCount}）` : ''}`, icon: true },
-                  ] as { key: WorkspaceTab; label: string; icon?: boolean }[]
-                ).map((t) => (
-                  <button
-                    key={t.key}
-                    onClick={() => setTab(t.key)}
-                    style={{
-                      border: 'none',
-                      background: tab === t.key ? '#e8f0fe' : 'transparent',
-                      color: tab === t.key ? '#1d5fd2' : '#555',
-                      padding: '8px 14px',
-                      borderRadius: '8px 8px 0 0',
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      fontWeight: tab === t.key ? 600 : 400,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                    }}
-                  >
-                    {t.icon && <FileTextOutlined />}
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-              <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-                {tab === 'resource' && <ResourcePanel />}
-                {tab === 'knowledge' && <KnowledgePanel />}
-                {tab === 'doc' && <DocCenterPanel />}
-              </div>
-            </>
+            <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+              <DocCenterPanel />
+            </div>
           ) : (
             <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
               <NavPageContent page={activeNav} />
@@ -190,7 +156,12 @@ export default function AppRoot() {
       <Drawer title="演示控制（仅演示用）" width={420} open={controlOpen} onClose={() => setControlOpen(false)}>
         <DemoControlPanel />
       </Drawer>
-      <CreateConversationModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <Drawer title="资源与态势（模拟）" width={760} open={panelDrawer === 'resource'} onClose={() => setPanelDrawer(null)} destroyOnHidden>
+        {panelDrawer === 'resource' && <ResourcePanel />}
+      </Drawer>
+      <Drawer title="建议与知识（模拟）" width={560} open={panelDrawer === 'knowledge'} onClose={() => setPanelDrawer(null)} destroyOnHidden>
+        {panelDrawer === 'knowledge' && <KnowledgePanel />}
+      </Drawer>
       <PrintView />
     </Layout>
   );

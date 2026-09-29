@@ -31,7 +31,7 @@ const { Text } = Typography;
 
 export interface TaskCardProps {
   task: AgentTask;
-  onOpenTab: (tab: 'resource' | 'knowledge' | 'doc') => void;
+  onOpenDrawer: (target: 'resource' | 'knowledge') => void;
 }
 
 const STATUS_META: Record<TaskStatus, { label: string; color: string }> = {
@@ -110,7 +110,7 @@ function SummaryBlock({ payload }: { payload: SummaryArtifact }) {
   );
 }
 
-function ResourceBlock({ payload, onOpenTab }: { payload: ResourceResultArtifact; onOpenTab: TaskCardProps['onOpenTab'] }) {
+function ResourceBlock({ payload, onOpenDrawer }: { payload: ResourceResultArtifact; onOpenDrawer: TaskCardProps['onOpenDrawer'] }) {
   const teamCount = payload.resourceIds.filter((id) => teamById.has(id)).length;
   const warehouseCount = payload.resourceIds.length - teamCount;
   return (
@@ -134,14 +134,14 @@ function ResourceBlock({ payload, onOpenTab }: { payload: ResourceResultArtifact
         );
       })}
       {payload.note && <div className="axn-artifact-foot">{payload.note}</div>}
-      <Button size="small" type="primary" ghost onClick={() => onOpenTab('resource')} style={{ marginTop: 8 }}>
-        查看资源与态势页
+      <Button size="small" type="primary" ghost onClick={() => onOpenDrawer('resource')} style={{ marginTop: 8 }}>
+        查看资源与态势
       </Button>
     </div>
   );
 }
 
-function KnowledgeBlock({ payload, onOpenTab }: { payload: KnowledgeArtifact; onOpenTab: TaskCardProps['onOpenTab'] }) {
+function KnowledgeBlock({ payload, onOpenDrawer }: { payload: KnowledgeArtifact; onOpenDrawer: TaskCardProps['onOpenDrawer'] }) {
   const chunks = payload.chunkIds
     .map((id) => knowledgeById.get(id))
     .filter((c): c is NonNullable<typeof c> => Boolean(c));
@@ -159,14 +159,14 @@ function KnowledgeBlock({ payload, onOpenTab }: { payload: KnowledgeArtifact; on
           </div>
         ))
       )}
-      <Button size="small" type="primary" ghost onClick={() => onOpenTab('knowledge')} style={{ marginTop: 8 }}>
-        查看建议与知识页
+      <Button size="small" type="primary" ghost onClick={() => onOpenDrawer('knowledge')} style={{ marginTop: 8 }}>
+        查看建议与知识
       </Button>
     </div>
   );
 }
 
-function ProposalBlock({ payload, onOpenTab }: { payload: ProposalArtifact; onOpenTab: TaskCardProps['onOpenTab'] }) {
+function ProposalBlock({ payload, onOpenDrawer }: { payload: ProposalArtifact; onOpenDrawer: TaskCardProps['onOpenDrawer'] }) {
   return (
     <div className="axn-artifact">
       <div className="axn-artifact-row">
@@ -175,14 +175,14 @@ function ProposalBlock({ payload, onOpenTab }: { payload: ProposalArtifact; onOp
           已生成（版本 {payload.version}，模拟 · 待人工审核）
         </span>
       </div>
-      <Button size="small" type="primary" ghost onClick={() => onOpenTab('knowledge')} style={{ marginTop: 8 }}>
+      <Button size="small" type="primary" ghost onClick={() => onOpenDrawer('knowledge')} style={{ marginTop: 8 }}>
         查看建议
       </Button>
     </div>
   );
 }
 
-function DocumentBlock({ payload, onOpenTab }: { payload: DocumentLinkArtifact; onOpenTab: TaskCardProps['onOpenTab'] }) {
+function DocumentBlock({ payload }: { payload: DocumentLinkArtifact }) {
   return (
     <div className="axn-artifact">
       <div className="axn-artifact-row">
@@ -201,25 +201,22 @@ function DocumentBlock({ payload, onOpenTab }: { payload: DocumentLinkArtifact; 
           description="请在对话中按提示补录（补录内容确认后生成模拟来源记录）。"
         />
       )}
-      <Button size="small" type="primary" ghost onClick={() => onOpenTab('doc')} style={{ marginTop: 8 }}>
-        打开文书中心
-      </Button>
     </div>
   );
 }
 
-function ArtifactBlock({ payload, onOpenTab }: { payload: TaskArtifactPayload; onOpenTab: TaskCardProps['onOpenTab'] }) {
+function ArtifactBlock({ payload, onOpenDrawer }: { payload: TaskArtifactPayload; onOpenDrawer: TaskCardProps['onOpenDrawer'] }) {
   switch (payload.kind) {
     case 'summary':
       return <SummaryBlock payload={payload} />;
     case 'resources':
-      return <ResourceBlock payload={payload} onOpenTab={onOpenTab} />;
+      return <ResourceBlock payload={payload} onOpenDrawer={onOpenDrawer} />;
     case 'knowledge':
-      return <KnowledgeBlock payload={payload} onOpenTab={onOpenTab} />;
+      return <KnowledgeBlock payload={payload} onOpenDrawer={onOpenDrawer} />;
     case 'proposal':
-      return <ProposalBlock payload={payload} onOpenTab={onOpenTab} />;
+      return <ProposalBlock payload={payload} onOpenDrawer={onOpenDrawer} />;
     case 'document':
-      return <DocumentBlock payload={payload} onOpenTab={onOpenTab} />;
+      return <DocumentBlock payload={payload} />;
     case 'clarification':
       return (
         <Alert type="info" showIcon message="需要补充信息" description={payload.prompt} style={{ marginTop: 8 }} />
@@ -241,7 +238,7 @@ function ArtifactBlock({ payload, onOpenTab }: { payload: TaskArtifactPayload; o
   }
 }
 
-export default function TaskCard({ task, onOpenTab }: TaskCardProps) {
+export default function TaskCard({ task, onOpenDrawer }: TaskCardProps) {
   const meta = STATUS_META[task.status] ?? { label: task.status, color: 'default' };
   const isRunning = task.status === 'running' || task.status === 'queued';
 
@@ -300,7 +297,7 @@ export default function TaskCard({ task, onOpenTab }: TaskCardProps) {
       )}
 
       {task.artifacts.map((artifact) => (
-        <ArtifactBlock key={artifact.artifactId} payload={artifact.payload} onOpenTab={onOpenTab} />
+        <ArtifactBlock key={artifact.artifactId} payload={artifact.payload} onOpenDrawer={onOpenDrawer} />
       ))}
 
       {task.error && (

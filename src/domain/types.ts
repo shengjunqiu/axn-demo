@@ -627,7 +627,6 @@ export interface Conversation {
   status: ConversationStatus;
   createdAt: string;
   updatedAt: string;
-  favorite?: boolean;
 }
 
 export type NavPage = 'assistant' | 'projects' | 'agents' | 'schedules' | 'knowledge';

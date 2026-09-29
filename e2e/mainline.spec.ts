@@ -46,21 +46,24 @@ test.describe('安小能演示主线（要情全链路）', () => {
     await expect(page.getByText('待核实', { exact: false }).first()).toBeVisible();
     await shot('01-summary');
 
-    // 2. 资源查询（任务卡显示结果概要；队伍明细在资源与态势页签）
+    // 2. 资源查询（任务卡显示结果概要；队伍明细在资源与态势抽屉）
     await sendChat(page, '查询周边救援资源');
     await waitTaskDone(page, '查询周边救援资源');
-    await page.getByRole('button', { name: '资源与态势', exact: true }).click();
+    await page.getByRole('button', { name: '查看资源与态势' }).first().click();
+    await expect(page.locator('.ant-drawer', { hasText: '资源与态势（模拟）' })).toBeVisible();
     await expect(page.locator('.ant-table, table').getByText('演示一号工程救援队').first()).toBeVisible();
     await expect(page.locator('.ant-table, table').getByText('演示二号应急救援队').first()).toBeVisible();
     await expect(page.locator('svg').first()).toBeVisible(); // 本地 SVG 态势图
     await shot('02-resources');
+    await page.keyboard.press('Escape'); // 关抽屉，避免遮罩挡对话输入
 
     // 3. 连续追问：谁最快能到
     await sendChat(page, '它们谁最快能到');
     const etaCard = await waitTaskDone(page, '按预计到达排序');
     await expect(etaCard.getByText('演示一号工程救援队').first()).toBeVisible();
 
-    // 4. 勾选前两支候选 → 汇总 2 支 / 64 人 / 7 台
+    // 4. 勾选前两支候选 → 汇总 2 支 / 64 人 / 7 台（重新打开资源抽屉）
+    await page.getByRole('button', { name: '查看资源与态势' }).first().click();
     await page.locator('table tr', { hasText: '演示一号工程救援队' }).first().locator('span.ant-checkbox').click();
     await page.locator('table tr', { hasText: '演示二号应急救援队' }).first().locator('span.ant-checkbox').click();
     await expect(page.locator('.axn-derived-value', { hasText: '64' }).first()).toBeVisible();
@@ -72,14 +75,17 @@ test.describe('安小能演示主线（要情全链路）', () => {
     await page.locator('.axn-candidate-zone .ant-tag', { hasText: '演示二号应急救援队' }).locator('.anticon-close').click();
     await expect(page.locator('.axn-derived-value', { hasText: '36' }).first()).toBeVisible();
     await expect(page.locator('.axn-derived-value', { hasText: '4' }).first()).toBeVisible();
+    await page.keyboard.press('Escape'); // 关抽屉
 
-    // 6. 处置建议 + 采纳
+    // 6. 处置建议 + 采纳（建议与知识抽屉）
     await sendChat(page, '给我处置建议');
     await waitTaskDone(page, '形成处置建议');
-    await page.getByRole('button', { name: '建议与知识' }).click();
+    await page.getByRole('button', { name: '查看建议与知识' }).first().click();
+    await expect(page.locator('.ant-drawer', { hasText: '建议与知识（模拟）' })).toBeVisible();
     await page.getByRole('button', { name: '采纳为当前建议' }).click();
     await expect(page.getByText('已采纳').first()).toBeVisible();
     await shot('04-proposal');
+    await page.keyboard.press('Escape'); // 关抽屉，继续要情流程
 
     // 7. 生成应急要情 → 缺报送单位 → 补录
     await sendChat(page, '生成应急要情');

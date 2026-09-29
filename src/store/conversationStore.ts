@@ -5,7 +5,8 @@
  * - Conversation 是"交互上下文"（导航/历史/收藏），Event 是"业务对象"。
  *   消息、候选资源、文书、任务等业务数据仍挂在 session（按 Event 隔离）上，
  *   切换 Conversation = 切换到其 eventId 对应的事件与 session，不另建第二套数据。
- * - 一个 Event 可对应多个 Conversation（eventId 可选；general 类型会话可不绑事件）。
+ * - 一个 Event 可对应多个 Conversation；未绑事件的会话（空白对话）创建时分配专属虚拟事件 evt-blank-<id>，
+ *   拥有独立空 session，不与任何业务事件共享消息。
  * - 持久化复用 persistence.ts（anneng-demo:v1:conversation），刷新后恢复历史与 active。
  * - 种子会话由 seedConversationRows 生成（全部为虚构演示数据）。
  */
@@ -19,7 +20,6 @@ import { DEMO_CLOCK } from '@/seed/scenario';
 interface ConversationPersist {
   conversations: Record<string, Conversation>;
   activeConversationId: string | null;
-  collapsed: boolean;
   settings: ConversationSettings;
 }
 
@@ -84,7 +84,6 @@ export const seedConversationRows: ConversationSeedRow[] = [
     status: 'active',
     createdAt: '2026-09-28T09:31:00+08:00',
     updatedAt: '2026-09-28T09:31:00+08:00',
-    favorite: true,
   },
   {
     id: 'conv-seed-daily-draft',
@@ -138,15 +137,15 @@ interface ConversationState {
   conversations: Record<string, Conversation>;
   activeConversationId: string | null;
   activeNav: NavPage;
-  collapsed: boolean;
   settings: ConversationSettings;
 
   createConversation: (input: CreateConversationInput) => Conversation;
   selectConversation: (conversationId: string) => void;
+  /** 在对话界面内切换关联灾情：绑定事件共享 session；取消关联则回到会话专属虚拟事件 */
+  linkConversationToEvent: (conversationId: string, eventId: string | undefined) => void;
+  deleteConversation: (conversationId: string) => void;
   updateConversation: (conversationId: string, patch: Partial<Omit<Conversation, 'id' | 'createdAt'>>) => void;
-  toggleFavorite: (conversationId: string) => void;
   setActiveNav: (nav: NavPage) => void;
-  setCollapsed: (collapsed: boolean) => void;
   updateSettings: (patch: Partial<ConversationSettings>) => void;
   resetAll: () => void;
 }
@@ -155,16 +154,18 @@ export const useConversationStore = create<ConversationState>()((set, get) => ({
   conversations: persisted?.conversations ?? buildSeedMap(),
   activeConversationId: persisted?.activeConversationId ?? 'conv-seed-nandi',
   activeNav: 'assistant',
-  collapsed: persisted?.collapsed ?? false,
   settings: { ...DEFAULT_SETTINGS, ...(persisted?.settings ?? {}) },
 
   createConversation: (input) => {
     const now = new Date().toISOString();
+    const id = nextConversationId();
     const conversation: Conversation = {
-      id: nextConversationId(),
+      id,
       title: input.title,
       type: input.type,
-      eventId: input.eventId,
+      // 未绑定事件的会话（如“空白对话”）分配专属虚拟事件 → ensureSessionForEvent
+      // 会为其创建全新的空 session，不复用当前事件的历史消息。
+      eventId: input.eventId ?? `evt-blank-${id}`,
       summary: input.summary,
       status: input.status ?? 'active',
       createdAt: now,
@@ -187,6 +188,34 @@ export const useConversationStore = create<ConversationState>()((set, get) => ({
     syncBusinessContext(conversation);
   },
 
+  linkConversationToEvent: (conversationId, eventId) => {
+    const conversation = get().conversations[conversationId];
+    if (!conversation) return;
+    // eventId 为 undefined：回到该会话专属虚拟事件（保留其独立消息），不落入当前事件。
+    const nextEventId = eventId ?? `evt-blank-${conversationId}`;
+    if (conversation.eventId === nextEventId) return;
+    const updated = { ...conversation, eventId: nextEventId, updatedAt: new Date().toISOString() };
+    set((s) => ({ conversations: { ...s.conversations, [conversationId]: updated } }));
+    if (get().activeConversationId === conversationId) syncBusinessContext(updated);
+  },
+
+  deleteConversation: (conversationId) => {
+    const { conversations, activeConversationId } = get();
+    if (!conversations[conversationId]) return;
+    const remaining = Object.values(conversations).filter((c) => c.id !== conversationId);
+    // 被删的是激活会话时，切换到剩余会话中最近更新的一个；全部删光则无激活会话。
+    // 业务数据（session/任务/候选）按事件共享保留，不随会话条目删除。
+    let nextActive: string | null = null;
+    if (activeConversationId === conversationId) {
+      nextActive =
+        remaining.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0]?.id ?? null;
+    } else {
+      nextActive = activeConversationId;
+    }
+    set({ conversations: Object.fromEntries(remaining.map((c) => [c.id, c])), activeConversationId: nextActive });
+    if (nextActive) syncBusinessContext(get().conversations[nextActive]);
+  },
+
   updateConversation: (conversationId, patch) => {
     set((s) => {
       const conversation = s.conversations[conversationId];
@@ -200,22 +229,7 @@ export const useConversationStore = create<ConversationState>()((set, get) => ({
     });
   },
 
-  toggleFavorite: (conversationId) => {
-    set((s) => {
-      const conversation = s.conversations[conversationId];
-      if (!conversation) return s;
-      return {
-        conversations: {
-          ...s.conversations,
-          [conversationId]: { ...conversation, favorite: !conversation.favorite },
-        },
-      };
-    });
-  },
-
   setActiveNav: (nav) => set({ activeNav: nav }),
-
-  setCollapsed: (collapsed) => set({ collapsed }),
 
   updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
 
@@ -225,7 +239,6 @@ export const useConversationStore = create<ConversationState>()((set, get) => ({
       conversations: buildSeedMap(),
       activeConversationId: 'conv-seed-nandi',
       activeNav: 'assistant',
-      collapsed: false,
       settings: { ...DEFAULT_SETTINGS },
     });
   },
@@ -237,9 +250,9 @@ function syncBusinessContext(conversation: Conversation): void {
   if (conversation.eventId && conversation.eventId !== demo.currentEventId) {
     demo.switchEvent(conversation.eventId);
   }
-  const sessionStore = useSessionStore.getState();
+  // 消息按会话隔离：每个会话专属 session（关联灾情共享业务数据，不共享聊天记录）
   const targetEventId = conversation.eventId ?? demo.currentEventId;
-  sessionStore.ensureSessionForEvent(targetEventId);
+  useSessionStore.getState().ensureSessionForConversation(conversation.id, targetEventId);
 }
 
 // 状态变化即持久化（与会话/文书一致：AC-025 同款机制）
@@ -247,7 +260,6 @@ useConversationStore.subscribe((state) => {
   savePersist('conversation', {
     conversations: state.conversations,
     activeConversationId: state.activeConversationId,
-    collapsed: state.collapsed,
     settings: state.settings,
   } satisfies ConversationPersist);
 });

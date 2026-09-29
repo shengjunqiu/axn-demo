@@ -37,15 +37,17 @@ await topAndShot(`${OUT}/d02-summary.png`);
 // 3. 资源 + 候选 + 派生汇总
 await send('查询周边救援资源');
 await send('它们谁最快能到');
-await page.getByRole('button', { name: '资源与态势', exact: true }).click();
+await page.getByRole('button', { name: '查看资源与态势' }).first().click();
+await page.locator('.ant-drawer', { hasText: '资源与态势（模拟）' }).waitFor({ state: 'visible', timeout: 10000 });
 await page.locator('table tr', { hasText: '演示一号工程救援队' }).first().locator('span.ant-checkbox').click();
 await page.locator('table tr', { hasText: '演示二号应急救援队' }).first().locator('span.ant-checkbox').click();
 await sleep(800);
 await topAndShot(`${OUT}/d03-resource-candidates.png`);
 
-// 4. 建议与知识
-await page.getByRole('button', { name: '建议与知识' }).click();
-await sleep(600);
+// 4. 建议与知识（抽屉）
+await page.keyboard.press('Escape'); // 关资源抽屉
+await page.getByRole('button', { name: '查看建议与知识' }).first().click();
+await page.locator('.ant-drawer', { hasText: '建议与知识（模拟）' }).waitFor({ state: 'visible', timeout: 10000 });
 await topAndShot(`${OUT}/d04-proposal.png`);
 const adoptBtn = page.getByRole('button', { name: '采纳为当前建议' });
 await adoptBtn.waitFor({ state: 'visible', timeout: 25000 }).catch(() => {});
@@ -56,6 +58,7 @@ if (await adoptBtn.isVisible().catch(() => false)) {
 }
 
 // 5. 生成要情 + 编辑器（事实芯片）
+await page.keyboard.press('Escape'); // 关建议抽屉，回到对话区
 await send('报送单位是清河防汛值班室');
 await send('生成应急要情');
 await page.locator('button', { hasText: '文书中心' }).last().click();

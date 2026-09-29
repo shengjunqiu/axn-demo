@@ -4,27 +4,29 @@
  * 本界面为模拟数据演示（规则意图识别，不接真实大模型）。
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Input, Space, Tag, Typography } from 'antd';
+import { Alert, Button, Input, Select, Space, Tag, Tooltip, Typography } from 'antd';
 import { Bubble, Sender } from '@ant-design/x';
 import type { BubbleItemType } from '@ant-design/x';
+import { useConversationStore } from '@/store/conversationStore';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { sendMessage, cancelTask } from '@/services/taskRunner';
-import { factText, incidentById } from '@/seed/scenario';
+import { factText, incidentById, incidents } from '@/seed/scenario';
+import { eventDisplayName } from '@/services/factLookup';
 import TaskCard from './TaskCard';
 import './chat.css';
 
 const { Text } = Typography;
 
 export interface ChatPanelProps {
-  onOpenTab: (tab: 'resource' | 'knowledge' | 'doc') => void;
+  onOpenDrawer: (target: 'resource' | 'knowledge') => void;
 }
 
 /** 引导提示（演示步骤文案，随控制面板 guideStepIndex 切换） */
 const GUIDE_HINTS: string[] = [
   '引导 1/6：发送“生成灾情摘要”，观察回答中的事实来源与待确认标注',
   '引导 2/6：发送“查询周边救援资源”，再追问“它们谁最快能到”',
-  '引导 3/6：选择队伍加入候选，到“资源与态势”页查看派生汇总',
+  '引导 3/6：点击资源卡的“查看资源与态势”，勾选候选并查看派生汇总',
   '引导 4/6：发送“给我处置建议”，在右侧页签查看依据与知识',
   '引导 5/6：生成应急要情 / 值班日报，按提示补录缺失字段',
   '引导 6/6：可在演示控制面板注入故障或重置演示',
@@ -59,23 +61,21 @@ const AVATAR = (
   </div>
 );
 
-function fmtClock(iso: string): string {
-  if (iso.length >= 16) return iso.slice(11, 16);
-  return iso;
-}
-
 function guideHint(index: number): string {
   if (!Number.isFinite(index) || index < 0) return GUIDE_HINTS[0];
   if (index >= GUIDE_HINTS.length) return GUIDE_HINTS[GUIDE_HINTS.length - 1];
   return GUIDE_HINTS[index];
 }
 
-export default function ChatPanel({ onOpenTab }: ChatPanelProps) {
+export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
   const currentEventId = useDemoStore((s) => s.currentEventId);
-  const demoClock = useDemoStore((s) => s.demoClock);
   const guideStepIndex = useDemoStore((s) => s.guideStepIndex);
-  const ensureSessionForEvent = useSessionStore((s) => s.ensureSessionForEvent);
-  const session = useSessionStore((s) => s.sessions[s.sessionByEvent[currentEventId] ?? '']);
+  const activeConversation = useConversationStore((s) =>
+    s.activeConversationId ? s.conversations[s.activeConversationId] : null,
+  );
+  const activeConversationId = activeConversation?.id ?? null;
+  const ensureSessionForConversation = useSessionStore((s) => s.ensureSessionForConversation);
+  const session = useSessionStore((s) => s.sessions[s.sessionByConversation[activeConversationId ?? ''] ?? '']);
   const tasks = useSessionStore((s) => s.tasks);
 
   const [input, setInput] = useState('');
@@ -83,8 +83,8 @@ export default function ChatPanel({ onOpenTab }: ChatPanelProps) {
 
   // 事件切换/重置后确保会话存在并跟随当前事件
   useEffect(() => {
-    ensureSessionForEvent(currentEventId);
-  }, [currentEventId, ensureSessionForEvent]);
+    if (activeConversation) ensureSessionForConversation(activeConversation.id, activeConversation.eventId ?? currentEventId);
+  }, [activeConversation, ensureSessionForConversation, currentEventId]);
 
   const runningTask = useMemo(
     () =>
@@ -112,7 +112,32 @@ export default function ChatPanel({ onOpenTab }: ChatPanelProps) {
   };
 
   const incident = incidentById.get(currentEventId);
-  const eventTitle = incident ? factText(incident.factRefs.title) || currentEventId : currentEventId;
+  const isBlankEvent = currentEventId.startsWith('evt-blank-');
+  const eventTitle = incident
+    ? factText(incident.factRefs.title) || currentEventId
+    : isBlankEvent
+      ? '空白对话（未关联事件）'
+      : currentEventId;
+
+  // 关联灾情（对话界面内切换）：evt-blank- 前缀或未绑定 → 未关联；否则为绑定事件
+  const linkConversationToEvent = useConversationStore((s) => s.linkConversationToEvent);
+  const BLANK = '__blank__';
+  const linkValue =
+    !activeConversation || !activeConversation.eventId || activeConversation.eventId.startsWith('evt-blank-')
+      ? BLANK
+      : activeConversation.eventId;
+  const linkOptions = useMemo(
+    () => [
+      { value: BLANK, label: '未关联事件（空白对话）' },
+      ...incidents.map((i) => ({ value: i.eventId, label: eventDisplayName(i.eventId) })),
+    ],
+    [],
+  );
+  const handleLinkChange = (value: string) => {
+    if (!activeConversation) return;
+    // undefined → 会话回到专属虚拟事件（保留其独立消息）
+    linkConversationToEvent(activeConversation.id, value === BLANK ? undefined : value);
+  };
 
   const items: BubbleItemType[] = useMemo(() => {
     const messages = session?.messages ?? [];
@@ -126,7 +151,7 @@ export default function ChatPanel({ onOpenTab }: ChatPanelProps) {
           avatar: AVATAR,
           contentRender: () =>
             task ? (
-              <TaskCard task={task} onOpenTab={onOpenTab} />
+              <TaskCard task={task} onOpenDrawer={onOpenDrawer} />
             ) : (
               <Tag color="error">任务数据缺失（模拟数据）</Tag>
             ),
@@ -145,7 +170,7 @@ export default function ChatPanel({ onOpenTab }: ChatPanelProps) {
       }
       return { key: m.messageId, role: 'ai', content: m.text ?? '', avatar: AVATAR };
     });
-  }, [session?.messages, tasks, onOpenTab]);
+  }, [session?.messages, tasks, onOpenDrawer]);
 
   const hasMessages = items.length > 0;
 
@@ -153,13 +178,28 @@ export default function ChatPanel({ onOpenTab }: ChatPanelProps) {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#fff' }}>
       {/* 会话头 */}
       <div className="axn-chat-head">
-        <Space size={8} align="center" wrap>
-          <Text strong style={{ fontSize: 14 }}>
+        {/* 标题行：单行省略，窄栏（350px）下不换行 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <Text strong style={{ fontSize: 14, flex: 1, minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
             {eventTitle}
           </Text>
-          <Tag color="orange">模拟数据</Tag>
-          <Tag color="blue">演示时钟 {fmtClock(demoClock)}</Tag>
-        </Space>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>
+            关联灾情
+          </Text>
+          <Tooltip title="关联后共享该事件的会话消息与业务数据；未关联为空白对话">
+            <Select
+              size="small"
+              style={{ flex: 1, minWidth: 0 }}
+              value={linkValue}
+              onChange={handleLinkChange}
+              options={linkOptions}
+              data-testid="chat-link-incident"
+              aria-label="关联灾情"
+            />
+          </Tooltip>
+        </div>
         <div style={{ marginTop: 4 }}>
           <Text type="secondary" style={{ fontSize: 12 }}>
             💡 {guideHint(guideStepIndex)}

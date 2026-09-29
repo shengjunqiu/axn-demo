@@ -40,6 +40,7 @@ interface SessionPersist {
   tasks: Record<string, AgentTask>;
   proposals: Record<string, ProposalRecord>;
   sessionByEvent: Record<string, string>;
+  sessionByConversation: Record<string, string>;
 }
 
 /**
@@ -55,6 +56,7 @@ function rehydrate(): SessionPersist {
       tasks: {},
       proposals: {},
       sessionByEvent: { [DEFAULT_EVENT_ID]: DEFAULT_SESSION_ID },
+      sessionByConversation: SEED_SESSION_BY_CONVERSATION,
     };
   }
   const tasks: Record<string, AgentTask> = {};
@@ -107,13 +109,20 @@ function rehydrate(): SessionPersist {
     tasks,
     proposals: raw.proposals ?? {},
     sessionByEvent: raw.sessionByEvent ?? { [DEFAULT_EVENT_ID]: DEFAULT_SESSION_ID },
+    sessionByConversation: raw.sessionByConversation ?? SEED_SESSION_BY_CONVERSATION,
   };
 }
+
+/** 会话→session 映射种子：消息按会话隔离（关联灾情不共享历史消息）；主种子会话继承演示消息。 */
+const SEED_SESSION_BY_CONVERSATION: Record<string, string> = {
+  'conv-seed-nandi': DEFAULT_SESSION_ID,
+};
 
 const sessionPersisted = rehydrate();
 
 /** 种子直查事件标题（不经任何 store，模块初始化安全）。 */
 function seedEventTitle(eventId: string): string {
+  if (eventId.startsWith('evt-blank-')) return '空白对话（未关联事件）';
   const titleFactId = incidentById.get(eventId)?.factRefs.title;
   if (!titleFactId) return eventId;
   const fact = factById.get(titleFactId);
@@ -152,8 +161,12 @@ interface SessionState {
   proposals: Record<string, ProposalRecord>;
   /** 当前事件的主会话 id（每事件一个会话） */
   sessionByEvent: Record<string, string>;
+  /** 会话→session 映射（消息按会话隔离） */
+  sessionByConversation: Record<string, string>;
   getCurrentSession: () => Session;
   ensureSessionForEvent: (eventId: string) => string;
+  /** 会话专属 session：消息按会话隔离；eventId 仅作为业务上下文（任务/来源解析）记录 */
+  ensureSessionForConversation: (conversationId: string, eventId: string) => string;
   switchSession: (sessionId: string) => void;
   appendMessage: (sessionId: string, msg: Omit<ChatMessage, 'messageId' | 'createdAt' | 'performedAt'>) => ChatMessage;
   createTask: (input: { sessionId: string; eventId: string; userMessageId: string; intent: string; displayTitle: string; attempt: number }) => AgentTask;
@@ -180,6 +193,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
   tasks: sessionPersisted.tasks,
   proposals: sessionPersisted.proposals,
   sessionByEvent: sessionPersisted.sessionByEvent,
+  sessionByConversation: sessionPersisted.sessionByConversation,
 
   getCurrentSession: () => {
     const { sessions, currentSessionId } = get();
@@ -199,6 +213,26 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
     set((s) => ({
       sessions: { ...s.sessions, [sessionId]: session },
       sessionByEvent: { ...s.sessionByEvent, [eventId]: sessionId },
+      currentSessionId: sessionId,
+    }));
+    return sessionId;
+  },
+
+  ensureSessionForConversation: (conversationId, eventId) => {
+    const state = get();
+    const existing = state.sessionByConversation[conversationId];
+    if (existing && state.sessions[existing]) {
+      if (state.currentSessionId !== existing) {
+        if (state.sessions[state.currentSessionId]) invalidateAllRuns();
+        set({ currentSessionId: existing });
+      }
+      return existing;
+    }
+    const sessionId = `session-conv-${conversationId}`;
+    const session = emptySession(sessionId, eventId);
+    set((s) => ({
+      sessions: { ...s.sessions, [sessionId]: session },
+      sessionByConversation: { ...s.sessionByConversation, [conversationId]: sessionId },
       currentSessionId: sessionId,
     }));
     return sessionId;
@@ -532,5 +566,6 @@ useSessionStore.subscribe((state) => {
     tasks: state.tasks,
     proposals: state.proposals,
     sessionByEvent: state.sessionByEvent,
+    sessionByConversation: state.sessionByConversation,
   } satisfies SessionPersist);
 });

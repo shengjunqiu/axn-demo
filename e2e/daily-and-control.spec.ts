@@ -126,13 +126,13 @@ test.describe('1366x768 视口', () => {
   test('关键区域在 1366x768 下可见', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByText('安小能 · 应急智能工作台')).toBeVisible();
-    await expect(page.getByRole('button', { name: '资源与态势', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: /文书中心/ })).toBeVisible();
+    // 主工作区常驻文书中心（资源/知识已改为抽屉）
+    await expect(page.getByRole('heading', { name: '文书中心' })).toBeVisible();
     await expect(page.getByPlaceholder(/向安小能发送指令/)).toBeVisible();
-    // 发送区与页签均可见（不被挤出视口）
+    // 发送区与主工作区均可见（不被挤出视口）
     const sender = page.getByPlaceholder(/向安小能发送指令/);
     await expect(sender).toBeInViewport({ ratio: 0.5 });
-    await expect(page.getByRole('button', { name: '资源与态势', exact: true })).toBeInViewport();
+    await expect(page.getByRole('heading', { name: '文书中心' })).toBeInViewport();
   });
 });
 

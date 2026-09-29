@@ -1,26 +1,23 @@
 /**
  * 全局导航 + 对话历史管理侧栏（需求一/二/三）。
- * 六个区域：品牌区 / 一级功能导航 / 新建应急对话 / 对话搜索 / 历史会话 / 底部工具区。
- * 支持 56px 折叠态（仅图标 + Tooltip）。全部数据为模拟数据。
+ * 区域：一级功能导航/ 新建应急对话 / 对话搜索 / 历史会话 / 底部工具区。品牌区与收藏功能按用户标注移除。
+ * 全部数据为模拟数据。折叠功能与品牌区、收藏功能已按用户标注移除。
  */
 import { useMemo, useState } from 'react';
 import {
   AppstoreOutlined,
   ClockCircleOutlined,
+  DeleteOutlined,
   DingtalkOutlined,
   ExperimentOutlined,
   FileAddOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
   PlusOutlined,
   RobotOutlined,
   SearchOutlined,
   SettingOutlined,
-  StarFilled,
-  StarOutlined,
 } from '@ant-design/icons';
-import { App as AntdApp, Badge, Button, Empty, Input, Modal, Popover, Radio, Tag, Tooltip } from 'antd';
-import type { Conversation, ConversationSettings, ConversationStatus, NavPage } from '@/domain/types';
+import { App as AntdApp, Button, Empty, Input, Modal, Popconfirm, Radio } from 'antd';
+import type { Conversation, ConversationSettings, NavPage } from '@/domain/types';
 import {
   GROUP_LABEL,
   formatConversationTime,
@@ -43,81 +40,6 @@ const NAV: { key: NavKey; label: string; icon: React.ReactNode }[] = [
   { key: 'knowledge', label: '知识库', icon: <ExperimentOutlined /> },
 ];
 
-const STATUS_TAG: Record<ConversationStatus, { label: string; color: string }> = {
-  active: { label: '处理中', color: 'processing' },
-  processing: { label: '研判中', color: 'blue' },
-  completed: { label: '已完成', color: 'success' },
-  draft: { label: '草稿', color: 'default' },
-};
-
-export interface CreateTemplate {
-  key: string;
-  label: string;
-  title: string;
-  type: Conversation['type'];
-  eventId?: string;
-  summary?: string;
-  status?: ConversationStatus;
-  desc: string;
-}
-
-/** 新建应急对话模板（需求 2.3）。 */
-export const CREATE_TEMPLATES: CreateTemplate[] = [
-  { key: 'blank', label: '空白对话', title: '新的应急对话', type: 'general', summary: '空白对话', desc: '不带预设上下文，自由开始' },
-  { key: 'nandi', label: '南堤堤防管涌险情', title: '南堤堤防管涌险情', type: 'emergency', eventId: 'evt-demo-001', summary: '研判任务进行中', status: 'processing', desc: '绑定清河段堤防险情事件上下文' },
-  { key: 'water', label: '河流水位上涨预警', title: '河流水位上涨预警', type: 'emergency', eventId: 'evt-demo-002', summary: '预警信息整理', status: 'processing', desc: '绑定城镇内涝/水位预警事件上下文' },
-  { key: 'dispatch', label: '防汛资源调度', title: '防汛资源调度', type: 'resource', eventId: 'evt-demo-001', summary: '资源调度会话', status: 'active', desc: '面向资源查询与调度的会话' },
-  { key: 'daily', label: '值班日报整理', title: '值班日报整理', type: 'daily', eventId: 'evt-demo-001', summary: '值班信息整理', status: 'draft', desc: '面向值班日报生成的会话' },
-];
-
-/** 新建会话 Modal（"新建任务"菜单与"新建应急对话"按钮共用）。 */
-export function CreateConversationModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const createConversation = useConversationStore((s) => s.createConversation);
-  const { message } = AntdApp.useApp();
-
-  const handleCreate = (template: CreateTemplate) => {
-    const conversation = createConversation({
-      title: template.title,
-      type: template.type,
-      eventId: template.eventId,
-      summary: template.summary,
-      status: template.status,
-    });
-    onClose();
-    message.success(`已创建会话「${conversation.title}」（模拟）`);
-  };
-
-  return (
-    <Modal
-      title="新建应急对话"
-      open={open}
-      onCancel={onClose}
-      footer={null}
-      width={520}
-      data-testid="create-conversation-modal"
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 4 }}>
-        {CREATE_TEMPLATES.map((t) => (
-          <button
-            key={t.key}
-            className="axn-gs-template-row"
-            onClick={() => handleCreate(t)}
-            data-testid={`template-${t.key}`}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 600, color: '#2a3444' }}>{t.label}</div>
-              <div style={{ fontSize: 12, color: '#8a94a6', marginTop: 2 }}>{t.desc}</div>
-            </div>
-            {t.eventId && <Tag style={{ flexShrink: 0 }}>{eventDisplayName(t.eventId)}</Tag>}
-          </button>
-        ))}
-        <div style={{ fontSize: 12, color: '#a0a8b8', paddingTop: 4 }}>
-          全部为模拟数据；创建后自动进入智能助理并切换到对应事件上下文。
-        </div>
-      </div>
-    </Modal>
-  );
-}
 
 /** 对话与通知设置（轻量展示，需求 2.6）。 */
 export function ConversationSettingsPanel() {
@@ -160,25 +82,34 @@ export function ConversationSettingsPanel() {
   );
 }
 
-export default function GlobalSidebar({ onCreateClick }: { onCreateClick: () => void }) {
+export default function GlobalSidebar() {
   const conversations = useConversationStore((s) => s.conversations);
   const activeConversationId = useConversationStore((s) => s.activeConversationId);
   const activeNav = useConversationStore((s) => s.activeNav);
-  const collapsed = useConversationStore((s) => s.collapsed);
   const selectConversation = useConversationStore((s) => s.selectConversation);
-  const toggleFavorite = useConversationStore((s) => s.toggleFavorite);
+  const createConversation = useConversationStore((s) => s.createConversation);
+  const deleteConversation = useConversationStore((s) => s.deleteConversation);
   const setActiveNav = useConversationStore((s) => s.setActiveNav);
-  const setCollapsed = useConversationStore((s) => s.setCollapsed);
+  const { message } = AntdApp.useApp();
+  // 新建不弹窗：直接创建空白对话并激活（关联灾情在对话界面内选择）
+  const handleNewConversation = () => {
+    const samePrefix = Object.values(conversations).filter((c) => c.title.startsWith('新的应急对话')).length;
+    const conversation = createConversation({
+      title: samePrefix === 0 ? '新的应急对话' : `新的应急对话 ${samePrefix + 1}`,
+      type: 'general',
+      status: 'active',
+    });
+    selectConversation(conversation.id);
+    message.success(`已创建「${conversation.title}」，可在对话区选择关联灾情（模拟）`);
+  };
   const [keyword, setKeyword] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [favOpen, setFavOpen] = useState(false);
 
   const list = useMemo(
     () => Object.values(conversations).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
     [conversations],
   );
   const filtered = useMemo(() => list.filter((c) => matchConversation(c, keyword)), [list, keyword]);
-  const favorites = useMemo(() => list.filter((c) => c.favorite), [list]);
 
   const groups = useMemo(() => {
     const map = new Map<ConversationGroup, Conversation[]>();
@@ -194,63 +125,28 @@ export default function GlobalSidebar({ onCreateClick }: { onCreateClick: () => 
   }, [filtered]);
 
   return (
-    <div className={`axn-global-sidebar${collapsed ? ' is-collapsed' : ''}`} data-testid="global-sidebar">
-      {/* 1. 品牌区 */}
-      <div className="axn-gs-brand">
-        <div className="axn-gs-brand-logo">安</div>
-        {!collapsed && (
-          <div style={{ minWidth: 0 }}>
-            <div className="axn-gs-brand-title">安小能</div>
-            <div className="axn-gs-brand-sub">应急协同工作空间</div>
-          </div>
-        )}
-        <Tooltip title={collapsed ? '展开导航' : '收起导航'} placement="right">
-          <Button
-            className="axn-gs-collapse-btn"
-            type="text"
-            size="small"
-            aria-label={collapsed ? '展开导航' : '收起导航'}
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-          />
-        </Tooltip>
-      </div>
-
+    <div className={"axn-global-sidebar"} data-testid="global-sidebar">
       {/* 2. 一级功能导航 */}
       <nav className="axn-gs-nav" aria-label="全局功能导航">
-        {NAV.map((item) =>
-          collapsed ? (
-            <Tooltip key={item.key} title={item.label} placement="right">
-              <button
-                className={`axn-gs-nav-item${activeNav === item.key ? ' is-active' : ''}`}
-                onClick={() => (item.key === 'new' ? onCreateClick() : setActiveNav(item.key))}
-                aria-label={item.label}
-              >
-                {item.icon}
-              </button>
-            </Tooltip>
-          ) : (
-            <button
-              key={item.key}
-              className={`axn-gs-nav-item${activeNav === item.key ? ' is-active' : ''}`}
-              onClick={() => (item.key === 'new' ? onCreateClick() : setActiveNav(item.key))}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </button>
-          ),
-        )}
+        {NAV.map((item) => (
+          <button
+            key={item.key}
+            className={`axn-gs-nav-item${activeNav === item.key ? ' is-active' : ''}`}
+            onClick={() => (item.key === 'new' ? handleNewConversation() : setActiveNav(item.key))}
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </button>
+        ))}
       </nav>
 
-      {!collapsed && (
-        <>
           {/* 3. 新建应急对话 */}
           <div className="axn-gs-new">
             <Button
               className="axn-gs-new-btn"
               type="default"
               icon={<PlusOutlined />}
-              onClick={onCreateClick}
+              onClick={handleNewConversation}
               data-testid="new-conversation-btn"
             >
               新建应急对话
@@ -287,7 +183,7 @@ export default function GlobalSidebar({ onCreateClick }: { onCreateClick: () => 
                       conversation={c}
                       active={c.id === activeConversationId}
                       onSelect={() => selectConversation(c.id)}
-                      onToggleFavorite={() => toggleFavorite(c.id)}
+                      onDelete={() => deleteConversation(c.id)}
                     />
                   ))}
                 </div>
@@ -297,53 +193,11 @@ export default function GlobalSidebar({ onCreateClick }: { onCreateClick: () => 
 
           {/* 6. 底部工具区 */}
           <div className="axn-gs-footer">
-            <Popover
-              title="我的收藏"
-              trigger="click"
-              open={favOpen}
-              onOpenChange={setFavOpen}
-              placement="topRight"
-              content={
-                favorites.length === 0 ? (
-                  <span style={{ fontSize: 12, color: '#8a94a6' }}>
-                    暂无收藏会话（hover 会话条目可星标收藏）
-                  </span>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 260, overflowY: 'auto' }}>
-                    {favorites.map((c) => (
-                      <button
-                        key={c.id}
-                        className="axn-gs-nav-item"
-                        style={{ height: 34, fontSize: 12.5, width: 220 }}
-                        onClick={() => {
-                          selectConversation(c.id);
-                          setFavOpen(false);
-                        }}
-                      >
-                        <StarFilled style={{ color: '#d48806' }} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {c.title}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )
-              }
-            >
-              <button className="axn-gs-nav-item" style={{ height: 34 }}>
-                <Badge count={favorites.length} size="small" offset={[6, 0]}>
-                  <StarOutlined />
-                </Badge>
-                <span>我的收藏</span>
-              </button>
-            </Popover>
             <button className="axn-gs-nav-item" style={{ height: 34 }} onClick={() => setSettingsOpen(true)}>
               <SettingOutlined />
               <span>对话与通知设置</span>
             </button>
           </div>
-        </>
-      )}
 
       <Modal
         title="对话与通知设置"
@@ -362,14 +216,13 @@ function ConversationRow({
   conversation,
   active,
   onSelect,
-  onToggleFavorite,
+  onDelete,
 }: {
   conversation: Conversation;
   active: boolean;
   onSelect: () => void;
-  onToggleFavorite: () => void;
+  onDelete: () => void;
 }) {
-  const status = STATUS_TAG[conversation.status];
   return (
     <div
       role="button"
@@ -388,26 +241,34 @@ function ConversationRow({
     >
       <div className="axn-gs-conversation-title">
         <span className="axn-gs-conv-title-text">{conversation.title}</span>
-        <Tag color={status.color} style={{ fontSize: 10, lineHeight: '16px', padding: '0 5px', marginInlineEnd: 0, flexShrink: 0 }}>
-          {status.label}
-        </Tag>
+        <div className="axn-gs-conv-actions" onClick={(e) => e.stopPropagation()}>
+          <Popconfirm
+            title="删除该对话？"
+            description="仅移除会话条目，不影响事件业务数据。"
+            okText="删除"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+            onConfirm={(e) => {
+              e?.stopPropagation();
+              onDelete();
+            }}
+            onCancel={(e) => e?.stopPropagation()}
+          >
+            <button
+              className="axn-gs-conv-action"
+              aria-label={`删除对话 ${conversation.title}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <DeleteOutlined />
+            </button>
+          </Popconfirm>
+        </div>
       </div>
       <div className="axn-gs-conversation-sub">
         <span className="axn-gs-conv-summary">
           {conversation.summary ?? (conversation.eventId ? eventDisplayName(conversation.eventId) : '模拟会话')}
         </span>
         <span className="axn-gs-conv-time">{formatConversationTime(conversation)}</span>
-      </div>
-      <div className="axn-gs-conv-actions" onClick={(e) => e.stopPropagation()}>
-        <Tooltip title={conversation.favorite ? '取消收藏' : '收藏'}>
-          <button
-            className={`axn-gs-conv-action${conversation.favorite ? ' is-fav' : ''}`}
-            onClick={onToggleFavorite}
-            aria-label={conversation.favorite ? '取消收藏' : '收藏'}
-          >
-            {conversation.favorite ? <StarFilled /> : <StarOutlined />}
-          </button>
-        </Tooltip>
       </div>
     </div>
   );

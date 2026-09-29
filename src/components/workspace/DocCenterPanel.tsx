@@ -301,12 +301,10 @@ export default function DocCenterPanel() {
 
   return (
     <div className="doc-center">
-      <Alert
-        type="info"
-        showIcon
-        message="文书中心 · 模拟数据"
-        description="生成、编辑、校核、签发、导出全流程均为本地演示（dataMode: mock）；签发为模拟状态变化，不代表真实审批效力。"
-      />
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '2px 2px 0' }}>
+        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>文书中心</h2>
+        <span style={{ fontSize: 11, color: '#8a94a6' }}>模拟数据</span>
+      </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <Space size={8} wrap>

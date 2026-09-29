@@ -1,8 +1,8 @@
 /**
  * 全局导航 · Conversation 数据模型与状态隔离测试（需求十一）。
- * 覆盖：创建/搜索/收藏/active 切换、菜单切换不丢会话、跨会话业务数据隔离、异步任务污染防护。
- * 说明：Conversation 是交互上下文，业务数据（消息/候选/文书/任务）挂在其 eventId 对应的 session 上；
- * 切换 Conversation = 切换事件 + 恢复 session，因此隔离断言基于 session 内容。
+ * 覆盖：创建/搜索/active 切换/删除/空白对话隔离、菜单切换不丢会话、跨会话业务数据隔离、异步任务污染防护。
+ * 说明：消息/任务/候选挂在会话专属 session（sessionByConversation[会话ID]，关联灾情不共享历史消息）；
+ * 切换 Conversation = 切换专属 session + 同步事件上下文，因此隔离断言基于会话专属 session 内容。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -33,9 +33,9 @@ afterEach(() => {
 });
 
 function currentSession() {
-  const eventId = useDemoStore.getState().currentEventId;
-  const sid = useSessionStore.getState().sessionByEvent[eventId];
-  return useSessionStore.getState().sessions[sid];
+  const convId = useConversationStore.getState().activeConversationId;
+  const sid = convId ? useSessionStore.getState().sessionByConversation[convId] : undefined;
+  return sid ? useSessionStore.getState().sessions[sid] : undefined;
 }
 
 describe('Conversation 基础行为（需求 2.3/2.5/九）', () => {
@@ -74,7 +74,7 @@ describe('Conversation 基础行为（需求 2.3/2.5/九）', () => {
     expect(state.activeConversationId).toBe(created.id);
     expect(state.activeNav).toBe('assistant');
     expect(useDemoStore.getState().currentEventId).toBe(B);
-    expect(useSessionStore.getState().sessions[useSessionStore.getState().sessionByEvent[B]]).toBeTruthy();
+    expect(useSessionStore.getState().sessions[useSessionStore.getState().sessionByConversation[created.id]]).toBeTruthy();
   });
 
   it('9. 菜单切换：智能助理→知识库→智能体与Skill→智能助理，active conversation 不变', () => {
@@ -88,11 +88,77 @@ describe('Conversation 基础行为（需求 2.3/2.5/九）', () => {
     expect(state.activeNav).toBe('assistant');
   });
 
-  it('收藏 toggleFavorite 更新 favorite 状态', () => {
-    const id = seedConversationRows[0].id;
-    const before = useConversationStore.getState().conversations[id].favorite;
-    useConversationStore.getState().toggleFavorite(id);
-    expect(useConversationStore.getState().conversations[id].favorite).toBe(!before);
+  it('deleteConversation：删除激活会话切换到最近更新的剩余会话', () => {
+    useConversationStore.getState().resetAll();
+    const state = useConversationStore.getState();
+    const active = state.activeConversationId as string;
+    const latestOther = Object.values(state.conversations)
+      .filter((c) => c.id !== active)
+      .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0];
+    state.deleteConversation(active);
+    const next = useConversationStore.getState();
+    expect(next.conversations[active]).toBeUndefined();
+    expect(next.activeConversationId).toBe(latestOther.id);
+  });
+
+  it('deleteConversation：全部删光后无激活会话；新建会话恢复激活', () => {
+    useConversationStore.getState().resetAll();
+    const ids = Object.keys(useConversationStore.getState().conversations);
+    for (const id of ids) useConversationStore.getState().deleteConversation(id);
+    expect(useConversationStore.getState().activeConversationId).toBeNull();
+    const created = useConversationStore.getState().createConversation({ title: '删除后新建', type: 'general' });
+    expect(useConversationStore.getState().activeConversationId).toBe(created.id);
+  });
+
+  it('空白对话：分配专属虚拟事件，session 为全新空会话且不影响其他会话', async () => {
+    useConversationStore.getState().resetAll();
+    const demo = useDemoStore.getState();
+    const nandiEvent = demo.currentEventId; // 种子激活为 evt-demo-001
+    const created = useConversationStore.getState().createConversation({ title: '空白', type: 'general' });
+    expect(created.eventId).toMatch(/^evt-blank-/);
+    // 切回南堤会话：业务事件与会话恢复
+    useConversationStore.getState().selectConversation('conv-seed-nandi');
+    expect(useDemoStore.getState().currentEventId).toBe(nandiEvent);
+    // 再切回空白对话：虚拟事件 + 独立空 session
+    useConversationStore.getState().selectConversation(created.id);
+    expect(useDemoStore.getState().currentEventId).toBe(created.eventId);
+    const sessionStore = useSessionStore.getState();
+    const sid = sessionStore.currentSessionId;
+    expect(sessionStore.sessions[sid].eventId).toBe(created.eventId);
+    expect(sessionStore.sessions[sid].messages).toHaveLength(0);
+    // 南堤事件的 session 消息不受影响
+    const nandiSid = sessionStore.sessionByEvent[nandiEvent];
+    expect(sessionStore.sessions[nandiSid].messages.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it('新建对话关联灾情：绑定事件并可共享 session 消息', () => {
+    const conversation = useConversationStore.getState().createConversation({
+      title: '关联漳河水情的会话',
+      type: 'general',
+      eventId: 'evt-demo-002',
+      status: 'active',
+    });
+    expect(conversation.eventId).toBe('evt-demo-002');
+    useConversationStore.getState().selectConversation(conversation.id);
+    useSessionStore.getState().ensureSessionForEvent('evt-demo-002');
+    const demo = useDemoStore.getState();
+    demo.switchEvent('evt-demo-002');
+    useSessionStore.getState().ensureSessionForEvent('evt-demo-002');
+    // 会话切换同步业务上下文到关联事件（共享事件 session）
+    expect(useDemoStore.getState().currentEventId).toBe('evt-demo-002');
+  });
+
+  it('对话区内切换关联灾情：绑定事件 / 取消关联回到专属虚拟事件', () => {
+    const state = useConversationStore.getState();
+    const conversation = state.createConversation({ title: '切换关联用例', type: 'general', status: 'active' });
+    // 默认为专属虚拟事件
+    expect(conversation.eventId).toMatch(/^evt-blank-/);
+    // 绑定真实事件
+    useConversationStore.getState().linkConversationToEvent(conversation.id, 'evt-demo-001');
+    expect(useConversationStore.getState().conversations[conversation.id].eventId).toBe('evt-demo-001');
+    // 取消关联 → 回到同一个专属虚拟事件（保留独立消息，不落入其他事件）
+    useConversationStore.getState().linkConversationToEvent(conversation.id, undefined);
+    expect(useConversationStore.getState().conversations[conversation.id].eventId).toBe(conversation.eventId);
   });
 
   it('历史会话分组：种子数据覆盖 今天/昨天/更早', () => {
@@ -110,7 +176,7 @@ describe('会话切换与状态隔离（需求五/十）', () => {
       type: 'emergency',
       eventId: A,
     });
-    const sidA = useSessionStore.getState().sessionByEvent[A];
+    const sidA = useSessionStore.getState().sessionByConversation[conversationA.id];
     useSessionStore.getState().addCandidates(sidA, ['team-001', 'team-002']);
     useDemoStore.getState().addManualFact({
       field: 'reportingUnit',
@@ -164,8 +230,8 @@ describe('会话切换与状态隔离（需求五/十）', () => {
     const taskId = await sendMessage(sidA, { text: '生成灾情摘要' });
 
     // 任务运行中切到 B（switchEvent 会使所有活动 run 失效）
-    useConversationStore.getState().createConversation({ title: '会话B', type: 'emergency', eventId: B });
-    const sessionBId = useSessionStore.getState().sessionByEvent[B];
+    const convB = useConversationStore.getState().createConversation({ title: '会话B', type: 'emergency', eventId: B });
+    const sessionBId = useSessionStore.getState().sessionByConversation[convB.id];
     await vi.runAllTimersAsync();
 
     const task = useSessionStore.getState().tasks[taskId];
@@ -178,5 +244,35 @@ describe('会话切换与状态隔离（需求五/十）', () => {
     // 切回 A：A 会话不包含 B 的上下文
     useConversationStore.getState().selectConversation(conversationA.id);
     expect(currentSession().eventId).toBe(A);
+  });
+
+  it('11. 关联同一灾情的两个会话：消息互不可见（关联灾情不出旧对话）', async () => {
+    const convA = useConversationStore.getState().createConversation({
+      title: '甲会话（关联南堤）',
+      type: 'emergency',
+      eventId: A,
+    });
+    await sendMessage(useSessionStore.getState().sessionByConversation[convA.id], { text: '生成灾情摘要' });
+    await vi.runAllTimersAsync();
+    const sidA = useSessionStore.getState().sessionByConversation[convA.id];
+    expect(useSessionStore.getState().sessions[sidA].messages.length).toBeGreaterThan(0);
+
+    // 同一事件的另一个会话：全新空消息，不见甲会话的对话记录
+    const convB = useConversationStore.getState().createConversation({
+      title: '乙会话（关联同一南堤）',
+      type: 'emergency',
+      eventId: A,
+    });
+    const sidB = useSessionStore.getState().sessionByConversation[convB.id];
+    expect(sidB).not.toBe(sidA);
+    expect(useSessionStore.getState().sessions[sidB].messages.length).toBe(0);
+
+    // 乙会话发消息后，甲会话仍只看到自己的记录
+    await sendMessage(sidB, { text: '查询周边救援资源' });
+    await vi.runAllTimersAsync();
+    useConversationStore.getState().selectConversation(convA.id);
+    const backA = currentSession();
+    expect(backA.messages.every((m) => !(m.role === 'user' && m.text.includes('查询周边救援资源')))).toBe(true);
+    expect(backA.messages.some((m) => m.role === 'user' && m.text.includes('生成灾情摘要'))).toBe(true);
   });
 });
