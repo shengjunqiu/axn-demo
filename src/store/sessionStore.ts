@@ -59,6 +59,11 @@ function rehydrate(): SessionPersist {
       sessionByConversation: SEED_SESSION_BY_CONVERSATION,
     };
   }
+  for (const session of Object.values(raw.sessions)) {
+    session.messages = session.messages.map(message => message.documentWorkflow && !['completed', 'interrupted'].includes(message.documentWorkflow.stage)
+      ? { ...message, documentWorkflow: { ...message.documentWorkflow, stage: 'interrupted' } }
+      : message);
+  }
   const tasks: Record<string, AgentTask> = {};
   const interruptedBySession = new Map<string, number>();
   for (const [taskId, task] of Object.entries(raw.tasks ?? {})) {
@@ -169,6 +174,7 @@ interface SessionState {
   ensureSessionForConversation: (conversationId: string, eventId: string) => string;
   switchSession: (sessionId: string) => void;
   appendMessage: (sessionId: string, msg: Omit<ChatMessage, 'messageId' | 'createdAt' | 'performedAt'>) => ChatMessage;
+  updateDocumentWorkflow: (sessionId: string, messageId: string, workflow: NonNullable<ChatMessage['documentWorkflow']>) => void;
   createTask: (input: { sessionId: string; eventId: string; userMessageId: string; intent: string; displayTitle: string; attempt: number }) => AgentTask;
   applyTaskEvent: (taskId: string, ev: TaskEvent, attemptId: string) => void;
   beginAttempt: (taskId: string) => AgentTask | undefined;
@@ -221,15 +227,19 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
   ensureSessionForConversation: (conversationId, eventId) => {
     const state = get();
     const existing = state.sessionByConversation[conversationId];
-    if (existing && state.sessions[existing]) {
+    if (existing && state.sessions[existing]?.eventId === eventId) {
       if (state.currentSessionId !== existing) {
-        if (state.sessions[state.currentSessionId]) invalidateAllRuns();
+        invalidateAllRuns();
         set({ currentSessionId: existing });
       }
       return existing;
     }
-    const sessionId = `session-conv-${conversationId}`;
-    const session = emptySession(sessionId, eventId);
+    // 重新关联时切换到独立事件会话；不把旧事件的候选、补录或任务带入新事件。
+    invalidateAllRuns();
+    const legacyId = [`session-conv-${conversationId}`, SEED_SESSION_BY_CONVERSATION[conversationId]]
+      .find(id => id && state.sessions[id]?.eventId === eventId);
+    const sessionId = legacyId ?? `session-conv-${conversationId}-${eventId}`;
+    const session = state.sessions[sessionId] ?? emptySession(sessionId, eventId);
     set((s) => ({
       sessions: { ...s.sessions, [sessionId]: session },
       sessionByConversation: { ...s.sessionByConversation, [conversationId]: sessionId },
@@ -262,6 +272,14 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
     });
     return msg;
   },
+
+  updateDocumentWorkflow: (sessionId, messageId, workflow) => set(state => {
+    const session = state.sessions[sessionId];
+    if (!session) return state;
+    return { sessions: { ...state.sessions, [sessionId]: {
+      ...session, messages: session.messages.map(message => message.messageId === messageId ? { ...message, documentWorkflow: workflow } : message),
+    } } };
+  }),
 
   createTask: ({ sessionId, eventId, userMessageId, intent, displayTitle, attempt }) => {
     const task: AgentTask = {
@@ -397,7 +415,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
           break;
         case 'completed':
           if (task.status !== 'waiting_input' && task.status !== 'cancelled') {
-            next.status = ev.summary ? 'succeeded' : 'succeeded';
+            next.status = ev.status ?? 'succeeded';
           }
           next.error = null;
           next.finishedAt = new Date().toISOString();

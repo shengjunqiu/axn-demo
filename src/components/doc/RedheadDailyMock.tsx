@@ -18,7 +18,7 @@ export default function RedheadDailyMock() {
         </Text>
       </div>
       <div className="axn-redhead-paper" data-testid="redhead-daily-mock">
-        <div className="axn-redhead-org">安能市应急管理局</div>
+        <div className="axn-redhead-org">应急管理</div>
         <div className="axn-redhead-title">应急值班日报</div>
         <div className="axn-redhead-no">应急值〔2025〕第 042 期（模拟）</div>
         <div className="axn-redhead-rule" />

@@ -314,3 +314,21 @@
 .axn-agent-summon-foot {
   margin-top: 2px;
 }
+
+.axn-document-workflow { padding: 14px; border: 1px solid #dce6f5; border-radius: 10px; background: #f6faff; }
+.axn-document-elements { margin: 10px 0; font-size: 12px; }
+.axn-document-elements > div { padding: 5px 0; }
+.axn-document-elements dt { color: #8c8c8c; }
+.axn-document-elements dd { margin: 2px 0 0; overflow-wrap: anywhere; color: #1f2329; }
+.axn-document-workflow .ant-steps { margin-bottom: 12px; }
+
+.axn-agent-execution { border: 1px solid #dce6f5; border-radius: 10px; overflow: hidden; background: #fff; }
+.axn-agent-execution > .axn-agent-summon { border: 0; border-radius: 0; }
+.axn-agent-execution:not(.is-running) .axn-agent-summon-avatar::after { animation: none; display: none; }
+.axn-agent-execution > .axn-task-card { border: 0; border-top: 1px solid #eef1f6; border-radius: 0; margin: 0; }
+.axn-resource-results { display: grid; gap: 8px; margin: 10px 0; }
+.axn-resource-result, .axn-document-result { padding: 10px; border: 1px solid #e8edf5; border-radius: 7px; background: #f8faff; }
+.axn-resource-result { display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
+.axn-resource-result .ant-typography { font-size: 12px; }
+.axn-document-result { margin: 12px 0; }
+.axn-document-result .ant-typography { margin-bottom: 6px; font-size: 12px; }

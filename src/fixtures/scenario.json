@@ -310,8 +310,8 @@
         "disasterType": "堤防管涌",
         "controlStatus": "ongoing",
         "incidentDescription": "接报发现堤防管涌险情，现场正在持续处置。",
-        "impactScope": "待核实",
-        "casualty": "待核实",
+        "impactScope": "清河段 K12+100—K12+500 沿线约400米，涉及周边2个村组、约120名群众（模拟）",
+        "casualty": "2人轻伤，已送医处置；无死亡、无失联人员（模拟）",
         "confirmedResponseLevel": "IV"
       }
     },
@@ -757,7 +757,7 @@
     },
     {
       "factId": "fact-incident-001-impactScope",
-      "value": "待核实",
+      "value": "清河段 K12+100—K12+500 沿线约400米，涉及周边2个村组、约120名群众（模拟）",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.incident.impactScope.evt-demo-001",
@@ -765,7 +765,7 @@
       "sourceFieldKey": "impactScope",
       "sourceVersion": 1,
       "capturedAt": "2026-09-28T21:00:00+08:00",
-      "verification": "pending",
+      "verification": "confirmed",
       "dataMode": "mock",
       "scope": {
         "kind": "event",
@@ -775,7 +775,7 @@
     },
     {
       "factId": "fact-incident-001-casualty",
-      "value": "待核实",
+      "value": "2人轻伤，已送医处置；无死亡、无失联人员（模拟）",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.incident.casualty.evt-demo-001",
@@ -783,7 +783,7 @@
       "sourceFieldKey": "casualty",
       "sourceVersion": 1,
       "capturedAt": "2026-09-28T21:00:00+08:00",
-      "verification": "pending",
+      "verification": "confirmed",
       "dataMode": "mock",
       "scope": {
         "kind": "event",

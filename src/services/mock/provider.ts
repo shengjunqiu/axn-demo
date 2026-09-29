@@ -17,6 +17,7 @@ import {
   warehouseById,
   faultScenarios,
 } from '@/seed/scenario';
+import { RESCUE_EVALUATION_MOCK } from '@/seed/rescueEvaluation';
 import { computeDerived } from '@/seed/derived';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
@@ -106,6 +107,12 @@ export function recognize(rawText: string, ctx: { lastResourceResultIds: string[
     const value = ho[1].trim().replace(/^交接事项[是为：:]\s*/, '');
     return { intent: 'fill_handover', params: { value }, displayTitle: '补录交接事项' };
   }
+  if (/^(评估救援效果|救援效果评估|评估救援成效)$/.test(text)) {
+    return { intent: 'evaluation', params: {}, displayTitle: '评估救援效果' };
+  }
+  if (text === '生成救援方案') {
+    return { intent: 'proposal', params: {}, displayTitle: '生成救援方案' };
+  }
   // 抢险救援知识问答（qa.json，126 条，模拟文档溯源）：归一化精确/双向包含命中，优先于含“要情/最快”等词的业务正则
   const qaHit = matchQa(text);
   if (qaHit) {
@@ -163,6 +170,8 @@ function summonFor(intent: Ctx['intent']):
   | { agentId: string; agentName: string; agentRole: string; action: string }
   | null {
   switch (intent) {
+    case 'evaluation':
+      return { agentId: 'agent-eval', agentName: '效果评估智能体', agentRole: '评估救援进展、处置成效与剩余风险', action: '正在汇总现场反馈与模拟救援记录，对比目标完成情况并生成阶段性评估' };
     case 'summary':
       return {
         agentId: 'agent-situation',
@@ -208,7 +217,19 @@ async function* runIntent(req: Ctx, signal: AbortSignal): AsyncIterable<TaskEven
   const paceMs = demo.pace === 'fast' ? 130 : 620;
   const summon = summonFor(req.intent);
   if (summon) yield { type: 'agent_summon', ...summon };
+  if (['summary', 'proposal', 'doc_brief', 'evaluation'].includes(req.intent) && !incidentById.has(req.eventId)) {
+    yield { type: 'step_started', stepId: 'context', name: '检查关联灾情' };
+    await sleep(paceMs, signal);
+    assertActive(req);
+    yield { type: 'step_completed', stepId: 'context', outputSummary: '当前对话尚未关联有效灾情' };
+    yield { type: 'text_delta', text: '当前对话尚未关联有效灾情。请在对话顶部“关联灾情”中选择一个事件，再点击对应快捷按钮继续；不会引用其他事件的数据。' };
+    yield { type: 'completed', summary: '等待关联灾情', status: 'waiting_input' };
+    return;
+  }
   switch (req.intent) {
+    case 'evaluation':
+      yield* runEvaluation(req, signal, paceMs);
+      break;
     case 'summary':
       yield* runSummary(req, signal, paceMs);
       break;
@@ -257,6 +278,29 @@ async function* runIntent(req: Ctx, signal: AbortSignal): AsyncIterable<TaskEven
   }
 }
 
+async function* runEvaluation(req: Ctx, signal: AbortSignal, paceMs: number): AsyncIterable<TaskEvent> {
+  const incident = incidentById.get(req.eventId)!;
+  const scope = { kind: 'event' as const, eventId: req.eventId };
+  const sample = RESCUE_EVALUATION_MOCK[req.eventId];
+  yield { type: 'step_started', stepId: 'e1', name: '汇总灾情与救援反馈', inputSummary: '事件事实 + 模拟作业记录' };
+  await sleep(paceMs, signal);
+  assertActive(req);
+  yield { type: 'step_completed', stepId: 'e1', outputSummary: factDisplay(incident.factRefs.title, scope), sourceRefs: [incident.factRefs.controlStatus, incident.factRefs.casualty] };
+  yield { type: 'step_started', stepId: 'e2', name: '对比救援目标与阶段成效' };
+  await sleep(paceMs, signal);
+  assertActive(req);
+  const metrics = sample
+    ? `目标完成：${sample.objective} ${sample.completed}/${sample.target}${sample.unit}，完成率 ${Math.round(sample.completed / sample.target * 100)}%。\n响应时效：模拟首次响应 ${sample.responseMinutes} 分钟，目标 ${sample.targetMinutes} 分钟，达到目标。\n力量投入：模拟作业记录为 ${sample.personnel} 人、${sample.equipment} 台设备（独立演示记录，不代表候选力量已调派）。`
+    : '当前事件尚无模拟救援作业记录，目标完成率、响应时效和投入效能待补充现场反馈后评估。';
+  yield { type: 'step_completed', stepId: 'e2', outputSummary: sample ? `${sample.objective}完成率 ${Math.round(sample.completed / sample.target * 100)}%，响应时效达到模拟目标` : '缺少作业记录，保留待评估项' };
+  yield { type: 'step_started', stepId: 'e3', name: '形成救援效果评估与改进建议' };
+  await sleep(paceMs, signal);
+  assertActive(req);
+  yield { type: 'text_delta', text: `救援效果评估 · ${factDisplay(incident.factRefs.title, scope)}（模拟）\n\n一、当前处置情况\n险情状态：${factDisplay(incident.factRefs.controlStatus, scope)}。\n人员情况：${factDisplay(incident.factRefs.casualty, scope)}。\n\n二、阶段性救援成效\n${metrics}\n\n三、评估结论\n${sample ? '模拟记录显示阶段目标正在推进、响应及时，仍有未完成事项，尚不能判定救援任务全部完成。' : '资料不足，暂不形成救援成效结论。'}\n\n四、剩余风险与改进建议\n${sample?.risk ?? '需补齐救援进展、现场监测和人员救助记录。'}\n${sample?.next ?? '补充任务目标、实际完成量、到场时间和投入记录后重新评估。'}\n\n评估依据：当前事件模拟事实与独立模拟作业记录；用于展示阶段复盘，不作为真实现场结论。` };
+  yield { type: 'step_completed', stepId: 'e3', outputSummary: '救援效果评估已生成（模拟）' };
+  yield { type: 'completed', summary: '救援效果评估完成' };
+}
+
 async function* runSummary(req: Ctx, signal: AbortSignal, paceMs: number): AsyncIterable<TaskEvent> {
   const incident = incidentById.get(req.eventId)!;
   const refs = incident.factRefs;
@@ -274,8 +318,8 @@ async function* runSummary(req: Ctx, signal: AbortSignal, paceMs: number): Async
     { label: '事发地点', factId: refs.location },
     { label: '险情类型', factId: refs.disasterType },
     { label: '处置状态', factId: refs.controlStatus, displayOverride: CONTROL_STATUS_LABEL[String(factById.get(refs.controlStatus)?.value ?? '')] ?? undefined },
-    { label: '影响范围', factId: refs.impactScope, emphasize: 'pending' },
-    { label: '人员伤亡情况', factId: refs.casualty, emphasize: 'pending' },
+    { label: '影响范围', factId: refs.impactScope, emphasize: resolveFact(refs.impactScope, scope)?.verification === 'pending' ? 'pending' : undefined },
+    { label: '人员伤亡情况', factId: refs.casualty, emphasize: resolveFact(refs.casualty, scope)?.verification === 'pending' ? 'pending' : undefined },
     ...(waterFactId ? [{ label: '最新水位', factId: waterFactId, displayOverride: `${factDisplay(waterFactId, scope)}（${observedAt} 观测）` }] : []),
     {
       label: '建议响应等级',
@@ -334,7 +378,7 @@ async function* runSummary(req: Ctx, signal: AbortSignal, paceMs: number): Async
   yield {
     type: 'text_delta',
     text: waterFactId
-      ? '已按模拟数据源汇总当前灾情。影响范围与人员伤亡仍为“待核实”，建议响应等级来自上游态势服务（尚未确认）。全部数据为演示模拟数据。'
+      ? '已按模拟数据源汇总当前灾情，影响范围与人员伤亡情况详见下方摘要。建议响应等级来自上游态势服务（尚未确认），全部数据为演示模拟数据。'
       : '已汇总当前事件事实。当前事件无水情监测及上游态势建议依据；未确认字段保持待核实。全部数据为演示模拟数据。',
   };
   yield { type: 'completed', summary: '灾情摘要已生成' };

@@ -26,8 +26,10 @@ import type {
   TaskStatus,
 } from '@/domain/types';
 import { cancelTask, retryTask } from '@/services/taskRunner';
+import { factDisplay, resolveFact } from '@/services/factLookup';
+import { useSessionStore } from '@/store/sessionStore';
 import { qaStatusLabel } from '@/services/qaKnowledge';
-import { factText, getFact, knowledgeById, teamById } from '@/seed/scenario';
+import { factText, getFact, knowledgeById, teamById, warehouseById } from '@/seed/scenario';
 
 const { Text } = Typography;
 
@@ -75,6 +77,8 @@ function factValueText(factId: string, override?: string): string {
 }
 
 function SummaryBlock({ payload }: { payload: SummaryArtifact }) {
+  const isPending = (id: string) => resolveFact(id, { kind: 'event', eventId: payload.eventId })?.verification !== 'confirmed';
+  const pendingKeys = payload.pendingKeys.filter(isPending);
   return (
     <div className="axn-artifact">
       {payload.rows.map((row) => (
@@ -87,7 +91,7 @@ function SummaryBlock({ payload }: { payload: SummaryArtifact }) {
                 建议值
               </Tag>
             )}
-            {row.emphasize === 'pending' && (
+            {row.emphasize === 'pending' && isPending(row.factId) && (
               <Tag color="orange" style={{ marginLeft: 6 }}>
                 待确认
               </Tag>
@@ -95,12 +99,12 @@ function SummaryBlock({ payload }: { payload: SummaryArtifact }) {
           </span>
         </div>
       ))}
-      {payload.pendingKeys.length > 0 && (
+      {pendingKeys.length > 0 && (
         <Alert
           type="warning"
           showIcon
           style={{ marginTop: 8 }}
-          title={`待确认字段：${payload.pendingKeys.join('、')}`}
+          title={`待确认字段：${pendingKeys.map(id => payload.rows.find(row => row.factId === id)?.label ?? '待补充信息').join('、')}`}
           description="以上字段暂无可靠来源，需人工补录后才会进入正式产物（模拟）。"
         />
       )}
@@ -122,6 +126,22 @@ function ResourceBlock({ payload, onOpenDrawer }: { payload: ResourceResultArtif
         <span className="axn-artifact-value">
           {teamCount} 支队伍 · {warehouseCount} 处仓库（模拟数据）
         </span>
+      </div>
+      <div className="axn-resource-results" data-testid="resource-result-details">
+        {payload.resourceIds.map(id => {
+          const team = teamById.get(id);
+          const warehouse = warehouseById.get(id);
+          const refs = team?.factRefs ?? warehouse?.factRefs;
+          if (!refs) return null;
+          const value = (factId: string) => factDisplay(factId, { kind: 'event', eventId: payload.eventId });
+          return <div className="axn-resource-result" key={id}>
+            <Space wrap size={4}><Text strong>{value(refs.name)}</Text><Tag>{team ? '救援队伍' : '物资仓库'}</Tag></Space>
+            <Text type="secondary">{team
+              ? `人员 ${value(team.factRefs.peopleCount)} · 挖掘机 ${value(team.factRefs.excavatorCount)}`
+              : warehouse ? `${value(warehouse.factRefs.materialName)} · 库存 ${value(warehouse.factRefs.stockQuantity)}` : ''}</Text>
+            {team && <Text type="secondary">距离 {value(team.factRefs.distanceKm)} · 预计到达 {value(team.factRefs.etaMinutes)}</Text>}
+          </div>;
+        })}
       </div>
       {payload.excluded.map((ex) => {
         const team = teamById.get(ex.resourceId);
@@ -226,7 +246,9 @@ function QaKnowledgeBlock({ payload }: { payload: QaKnowledgeArtifact }) {
   );
 }
 
-function ProposalBlock({ payload, onOpenDrawer }: { payload: ProposalArtifact; onOpenDrawer: TaskCardProps['onOpenDrawer'] }) {  return (
+function ProposalBlock({ payload, onOpenDrawer }: { payload: ProposalArtifact; onOpenDrawer: TaskCardProps['onOpenDrawer'] }) {
+  const proposal = useSessionStore(s => s.proposals[payload.proposalId]);
+  return (
     <div className="axn-artifact">
       <div className="axn-artifact-row">
         <span className="axn-artifact-label">处置建议</span>
@@ -234,6 +256,7 @@ function ProposalBlock({ payload, onOpenDrawer }: { payload: ProposalArtifact; o
           已生成（版本 {payload.version}，模拟 · 待人工审核）
         </span>
       </div>
+      {proposal?.sections.map(section => <div className="axn-resource-result" key={section.id}><Text strong>{section.title}</Text><Text>{section.text}</Text></div>)}
       <Button size="small" type="primary" ghost onClick={() => onOpenDrawer('knowledge')} style={{ marginTop: 8 }}>
         查看建议
       </Button>

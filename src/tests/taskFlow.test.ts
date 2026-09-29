@@ -62,6 +62,28 @@ describe('任务链路', () => {
     return useSessionStore.getState().ensureSessionForEvent(eventId);
   }
 
+  it('重新关联灾情时切换会话上下文并保留原会话', () => {
+    const store = useSessionStore.getState();
+    const blankId = store.ensureSessionForConversation('relink-test', 'evt-blank-relink');
+    const linkedId = store.ensureSessionForConversation('relink-test', DEFAULT_EVENT_ID);
+    expect(linkedId).not.toBe(blankId);
+    expect(useSessionStore.getState().sessions[linkedId].eventId).toBe(DEFAULT_EVENT_ID);
+    expect(store.ensureSessionForConversation('relink-test', 'evt-blank-relink')).toBe(blankId);
+    expect(useSessionStore.getState().sessions[blankId].eventId).toBe('evt-blank-relink');
+  });
+
+  it.each(['evt-blank-regression', 'evt-no-longer-exists'])('无有效事件 %s 时请求关联灾情，不读取空 factRefs', async (eventId) => {
+    useDemoStore.getState().setPace('fast');
+    useDemoStore.getState().switchEvent(eventId);
+    const sessionId = sessionIdFor(eventId);
+    const taskId = await sendMessage(sessionId, { text: '生成灾情摘要' });
+    await expect.poll(() => useSessionStore.getState().tasks[taskId]?.status).toBe('waiting_input');
+    const task = useSessionStore.getState().tasks[taskId];
+    expect(task.error).toBeNull();
+    expect(task.artifacts).toHaveLength(0);
+    expect(task.textAnswer).toContain('关联灾情');
+  });
+
   it('发送消息产生 user 消息并创建任务', async () => {
     const sessionId = sessionIdFor();
     sendMessage(sessionId, { text: '生成灾情摘要' });
@@ -74,7 +96,7 @@ describe('任务链路', () => {
     expect(tasks[0].intent).toBe('summary');
   });
 
-  it('摘要任务完成后产生 rows 且标注待核实项（不伪造伤亡为 0）', async () => {
+  it('摘要任务引用已补齐的模拟影响范围和伤亡情况', async () => {
     useDemoStore.getState().setPace('fast');
     const sessionId = sessionIdFor();
     sendMessage(sessionId, { text: '生成灾情摘要' });
@@ -85,7 +107,9 @@ describe('任务链路', () => {
     if (summary && summary.payload.kind === 'summary') {
       const casualtyRow = summary.payload.rows.find((r) => r.label.includes('伤亡'));
       expect(casualtyRow?.factId).toBeTruthy();
-      expect(factText(casualtyRow!.factId!)).toContain('待核实');
+      expect(factText(casualtyRow!.factId!)).toContain('2人轻伤');
+      expect(summary.payload.pendingKeys).not.toContain(casualtyRow!.factId);
+      expect(factText('fact-incident-001-impactScope')).toContain('约120名群众');
     }
   }, 10000);
 

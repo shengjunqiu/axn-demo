@@ -4,32 +4,33 @@
  * 修订只能基于已签发版本新建草稿；编辑一律走 DocumentEditor 抽屉。
  * 全部数据为模拟数据。
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Modal, Space, Tag, Tooltip, Typography, message } from 'antd';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Skeleton, Spin, Space, Tag, Tooltip, Typography, message, theme } from 'antd';
 import { useDocumentStore } from '@/store/documentStore';
 import { useDemoStore } from '@/store/demoStore';
+import { useConversationStore } from '@/store/conversationStore';
+import { EMPTY_LIBRARY, useMockDocumentStore } from '@/store/mockDocumentStore';
 import { useSessionStore } from '@/store/sessionStore';
 import {
-  createDailyDocument,
-  createEventDocument,
-  derivedMetaLabel,
-  fieldLabel,
   refreshDraftSnapshot,
 } from '@/services/documentFactory';
-import { shiftEventIds } from '@/services/factLookup';
-import { DERIVED_META, type DerivedKey } from '@/seed/derived';
+import { shiftEventIds, formatFactValue } from '@/services/factLookup';
 import { templateByCode } from '@/seed/scenario';
-import type { FixtureTemplate } from '@/seed/scenario';
+import { DOCUMENT_CATEGORIES, type MockDocument } from '@/seed/mockDocuments';
 import type { ValidationReport } from '@/domain/types';
 import type { DocumentDraft } from '@/domain/types';
 import DocumentEditor from '@/components/doc/DocumentEditor';
-import RedheadDailyMock from '@/components/doc/RedheadDailyMock';
+import { flattenRuns } from '@/services/contentRuns';
+import { FileTextOutlined, ArrowLeftOutlined, RightOutlined, PlusOutlined, RobotOutlined, CalendarOutlined, AlertOutlined, TeamOutlined, BarChartOutlined } from '@ant-design/icons';
 import VersionDrawer from '@/components/doc/VersionDrawer';
 import SourceDrawer from '@/components/doc/SourceDrawer';
 import { ValidationStatusTag, runValidationForDocument } from '@/components/doc/ValidationPanel';
 import '../doc/doc.css';
 
 const SOURCE_EVENT = 'axn:open-source';
+
+// 用户指定移出文书库的两条旧演示草稿；保留底层历史记录。
+const HIDDEN_DEMO_DRAFT_IDS = new Set(['doc-mum9lm4u-2', 'doc-mum9lbqs-1']);
 
 const LIFECYCLE_TAG: Record<DocumentDraft['lifecycle'], { color: string; label: string }> = {
   draft: { color: 'blue', label: '草稿' },
@@ -67,89 +68,79 @@ function HintButton({ hint, ...buttonProps }: React.ComponentProps<typeof Button
   );
 }
 
-/** 只读模板预览弹窗（会议纪要 / 工作总结）。 */
-function TemplatePreviewModal({ template, onClose }: { template: FixtureTemplate | null; onClose: () => void }) {
-  return (
-    <Modal
-      title={template ? `模板预览 · ${template.name}` : '模板预览'}
-      open={template !== null}
-      onCancel={onClose}
-      footer={<Button onClick={onClose}>关闭</Button>}
-      width={560}
-    >
-      {template && (
-        <>
-          <Alert
-            type="info"
-            showIcon
-            style={{ marginBottom: 12 }}
-            message="只读预览（模拟）"
-            description="该模板在当前演示中仅支持只读预览，不参与生成-编辑-签发流程。"
-          />
-          <Space direction="vertical" size={6} style={{ width: '100%' }}>
-            <Space size={8} wrap>
-              <Tag>{template.templateCode}</Tag>
-              <Tag>模板版本 {template.templateVersion}</Tag>
-              <Tag color={template.status === 'enabled' ? 'green' : 'orange'}>
-                {template.status === 'enabled' ? '启用' : '仅预览'}
-              </Tag>
-            </Space>
-            <Typography.Text strong style={{ fontSize: 13 }}>
-              小节结构
-            </Typography.Text>
-            <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13 }}>
-              {template.sections.map((section) => (
-                <li key={section}>{section}</li>
-              ))}
-            </ol>
-            {template.requiredFields && template.requiredFields.length > 0 && (
-              <>
-                <Typography.Text strong style={{ fontSize: 13 }}>
-                  必填字段
-                </Typography.Text>
-                <Space size={[4, 4]} wrap>
-                  {template.requiredFields.map((field) => (
-                    <Tag key={field.field}>{fieldLabel(field.field)}</Tag>
-                  ))}
-                </Space>
-              </>
-            )}
-            {template.note && (
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                说明：{template.note}
-              </Typography.Text>
-            )}
-          </Space>
-        </>
-      )}
-    </Modal>
-  );
+function MockDocumentDetail({ document, onClose }: { document: MockDocument; onClose: () => void }) {
+  return <div className="doc-center-list">
+<div className="doc-detail-toolbar"><Button className="doc-back" type="text" icon={<ArrowLeftOutlined />} onClick={onClose}>返回文书列表</Button><Tag>模拟文书 · 仅供演示</Tag></div>
+    <article className="axn-redhead-paper" data-testid="mock-redhead-document">
+      <div className="axn-redhead-org">应急管理</div>
+      <div className="axn-redhead-no">{document.number}（模拟）</div>
+      <div className="axn-redhead-rule" />
+      <h2 className="doc-redhead-subject">{document.title}</h2>
+      <div className="axn-redhead-meta-row"><span>编制单位：市应急指挥中心（模拟）</span><span>{document.date}</span></div>
+      <div className="axn-redhead-body">{document.sections.filter(([heading]) => heading !== '文书要素（模拟收集）').map(([heading, body]) => <section key={heading}><h3>{heading}</h3><p>{body}</p></section>)}</div>
+      <div className="axn-redhead-foot"><span>报送：有关单位（模拟）</span><span>模拟样稿，不作为正式公文</span></div>
+    </article>
+  </div>;
 }
 
 export default function DocCenterPanel() {
+  const { token } = theme.useToken();
+  const tasks = useSessionStore((s) => s.tasks);
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const observedRuns = useRef(new Set<string>());
   const draftsMap = useDocumentStore((s) => s.drafts);
   const revisionsMap = useDocumentStore((s) => s.revisions);
   const activeReportMap = useDocumentStore((s) => s.activeReportByDocument);
   const reportsMap = useDocumentStore((s) => s.reports);
   const currentEventId = useDemoStore((s) => s.currentEventId);
   const actor = useDemoStore((s) => s.getActor());
-  const sessionId = useSessionStore((s) => s.sessionByEvent[currentEventId] ?? '');
+  const conversationId = useConversationStore(s => s.activeConversationId);
+  const sessionId = useSessionStore(s => s.sessionByConversation[conversationId ?? ''] ?? '');
+  const libraryScope = sessionId || conversationId || currentEventId;
 
   const [editorDocId, setEditorDocId] = useState<string | null>(null);
   const [versionDocId, setVersionDocId] = useState<string | null>(null);
   const [sourceFactId, setSourceFactId] = useState<string | null>(null);
   const [sourceDocumentId, setSourceDocumentId] = useState<string | null>(null);
   const [sourceOpen, setSourceOpen] = useState(false);
-  const [previewCode, setPreviewCode] = useState<string | null>(null);
+  const library = useMockDocumentStore(s => s.libraries[libraryScope] ?? EMPTY_LIBRARY);
+  const { documents: mockDocuments, selected: selectedMock, generatingCode } = library;
+  const selectMock = useMockDocumentStore(s => s.select);
+  const setSelectedMock = useCallback((document: MockDocument | null) => selectMock(libraryScope, document), [libraryScope, selectMock]);
+  const generateMock = (code: string) => {
+    setSelectedDocId(null);
+    void useMockDocumentStore.getState().generate(libraryScope, code);
+  };
 
   const drafts = useMemo(
-    () => Object.values(draftsMap).filter(draft => draft.scopeKind === 'event' ? draft.eventId === currentEventId : !!draft.shiftId && shiftEventIds(draft.shiftId).includes(currentEventId)).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
+    () => Object.values(draftsMap).filter(draft => !HIDDEN_DEMO_DRAFT_IDS.has(draft.documentId)).filter(draft => draft.scopeKind === 'event' ? draft.eventId === currentEventId : !!draft.shiftId && shiftEventIds(draft.shiftId).includes(currentEventId)).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
     [draftsMap, currentEventId],
   );
 
   useEffect(() => {
-    setEditorDocId(null); setVersionDocId(null); setSourceOpen(false); setSourceDocumentId(null); setSourceFactId(null);
-  }, [currentEventId]);
+    setSelectedDocId(null); setEditorDocId(null); setVersionDocId(null); setSourceOpen(false); setSourceDocumentId(null); setSourceFactId(null);
+  }, [currentEventId, sessionId]);
+
+  const documentTask = Object.values(tasks)
+    .filter(task => task.eventId === currentEventId && task.sessionId === sessionId && ['doc_brief', 'doc_daily'].includes(task.intent))
+    .sort((a, b) => b.seq - a.seq)[0];
+  const generating = documentTask && ['queued', 'running'].includes(documentTask.status);
+  useEffect(() => {
+    if (!documentTask) return;
+    const runKey = `${documentTask.taskId}:${documentTask.attemptId}`;
+    if (['queued', 'running'].includes(documentTask.status)) {
+      observedRuns.current.add(runKey);
+      setSelectedDocId(null);
+      setSelectedMock(null);
+    } else if (observedRuns.current.has(runKey)) {
+      const result = documentTask.artifacts.find(a => a.payload.kind === 'document' && a.payload.state === 'draft_created');
+      if (result?.payload.kind === 'document' && draftsMap[result.payload.documentId]) {
+        setSelectedDocId(result.payload.documentId);
+      }
+      observedRuns.current.delete(runKey);
+    }
+  }, [documentTask, draftsMap, setSelectedMock]);
+  const selectedDraft = drafts.find(draft => draft.documentId === selectedDocId);
 
   // 编辑器内点击事实芯片 → 打开来源抽屉（事件由 DocumentEditor 派发）。
   useEffect(() => {
@@ -193,36 +184,6 @@ export default function DocCenterPanel() {
     },
     [activeReportMap, reportsMap],
   );
-
-  const handleCreateEvent = useCallback(() => {
-    if (!sessionId) {
-      message.warning('当前事件尚无对话会话，请先在对话工作台发起咨询（模拟）');
-      return;
-    }
-    const result = createEventDocument(sessionId);
-    if (result.ok && result.documentId) {
-      message.success('已生成事件要情草稿（模拟），可在编辑抽屉中核对后校核提交');
-      setEditorDocId(result.documentId);
-    } else {
-      const labels = result.missingFields.map((field) => fieldLabel(field));
-      message.warning(`缺少必填信息：${labels.join('、')}，请在对话中补录后重试（模拟）`);
-    }
-  }, [sessionId]);
-
-  const handleCreateDaily = useCallback(() => {
-    if (!sessionId) {
-      message.warning('当前事件尚无对话会话，请先在对话工作台发起咨询（模拟）');
-      return;
-    }
-    const result = createDailyDocument(sessionId);
-    if (result.ok && result.documentId) {
-      message.success('已生成值班日报草稿（模拟），可在编辑抽屉中核对后校核提交');
-      setEditorDocId(result.documentId);
-    } else {
-      const labels = result.missingFields.map((field) => fieldLabel(field));
-      message.warning(`缺少必填信息：${labels.join('、')}，请在对话中补录后重试（模拟）`);
-    }
-  }, [sessionId]);
 
   const handleValidate = useCallback((documentId: string) => {
     const report = runValidationForDocument(documentId);
@@ -294,58 +255,73 @@ export default function DocCenterPanel() {
     [actor.name],
   );
 
-  const previewTemplate = previewCode ? templateByCode.get(previewCode) ?? null : null;
-  const previewButtons = useMemo(
-    () => (['MEETING_MINUTES', 'WORK_SUMMARY'] as const).filter((code) => templateByCode.has(code)),
-    [],
-  );
-
   return (
-    <div className="doc-center">
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '2px 2px 0' }}>
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>文书中心</h2>
-        <span style={{ fontSize: 11, color: '#8a94a6' }}>模拟数据</span>
-      </div>
+    <div className="doc-center" style={{ '--doc-primary': token.colorPrimary, '--doc-hover': token.colorPrimaryBg, '--doc-muted': token.colorTextSecondary, '--doc-border': token.colorBorderSecondary, '--doc-surface': token.colorBgContainer, '--doc-canvas': token.colorBgLayout, '--doc-text': token.colorText, '--doc-radius': `${token.borderRadiusLG}px` } as React.CSSProperties}>
+      <header className="doc-agent-header">
+        <span className="doc-agent-avatar"><RobotOutlined /></span>
+        <div className="doc-agent-heading"><h2>文书生成智能体</h2><p>规范成文，让每一份文书清晰有据</p></div>
+        <Tag className="doc-demo-badge">模拟演示</Tag>
+      </header>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <Space size={8} wrap>
-          <HintButton
-            type="primary"
-            size="small"
-            disabled={!sessionId}
-            hint={sessionId ? null : '当前事件尚无对话会话，请先在对话工作台发起咨询'}
-            onClick={handleCreateEvent}
-          >
-            生成事件要情
-          </HintButton>
-          <HintButton
-            size="small"
-            disabled={!sessionId}
-            hint={sessionId ? null : '当前事件尚无对话会话，请先在对话工作台发起咨询'}
-            onClick={handleCreateDaily}
-          >
-            生成值班日报
-          </HintButton>
-        </Space>
-        <Space size={6} wrap>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            只读模板：
-          </Typography.Text>
-          {previewButtons.map((code) => (
-            <Button key={code} size="small" onClick={() => setPreviewCode(code)}>
-              {templateByCode.get(code)?.name ?? code}
-            </Button>
-          ))}
-        </Space>
-      </div>
-
-      {drafts.length === 0 ? (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflow: 'auto', padding: '4px 12px 16px' }}>
-          <RedheadDailyMock />
+      {generating || generatingCode ? (
+        <div className="doc-generation" role="status" aria-live="polite">
+          <Spin size="large" />
+          <Typography.Title level={4}>正在生成文书</Typography.Title>
+          <Typography.Text type="secondary">{generatingCode ? `生成${DOCUMENT_CATEGORIES.find(category => category.code === generatingCode)?.name} · 正在编排红头文书（模拟）` : `${documentTask?.displayTitle} · ${documentTask?.steps.find(step => step.status === 'running')?.name ?? '正在整理文书资料'}`}</Typography.Text>
+          <Skeleton active paragraph={{ rows: 8 }} />
         </div>
+      ) : selectedMock ? (
+        <MockDocumentDetail document={selectedMock} onClose={() => setSelectedMock(null)} />
       ) : (
         <div className="doc-center-list">
-          {drafts.map((draft) => {
+          {selectedDraft ? (
+            <>
+              <Button className="doc-back" type="text" icon={<ArrowLeftOutlined />} onClick={() => setSelectedDocId(null)}>返回文书列表</Button>
+              <article className="doc-card doc-detail-paper axn-redhead-paper">
+                <div className="axn-redhead-org">应急管理</div>
+                <div className="axn-redhead-no">文书草稿（模拟）</div>
+                <div className="axn-redhead-rule" />
+                <Tag color="blue">{templateByCode.get(selectedDraft.templateCode)?.name}</Tag>
+                <Typography.Title level={3}>{selectedDraft.working.content.title}</Typography.Title>
+                {selectedDraft.working.content.sections.map(section => (
+                  <section key={section.id}>
+                    <Typography.Title level={5}>{section.heading}</Typography.Title>
+                    {section.paragraphs.map((paragraph, index) => (
+                      <Typography.Paragraph key={index}>{flattenRuns(paragraph.runs, {
+                        facts: Object.fromEntries(Object.entries(selectedDraft.snapshot.facts).map(([id, fact]) => [id, formatFactValue(fact.value, fact.unit, fact.sourceFieldKey)])),
+                        derived: Object.fromEntries(Object.entries(selectedDraft.snapshot.derived).map(([id, value]) => [id, `${value.value}${value.unit ?? ''}`])),
+                      })}</Typography.Paragraph>
+                    ))}
+                  </section>
+                ))}
+                <Typography.Text type="secondary">{selectedDraft.working.content.footerNote}</Typography.Text>
+              </article>
+            </>
+          ) : (
+            <>
+              <div className="doc-library-heading"><div><h3>文书库 <span>{drafts.length + mockDocuments.length}</span></h3><p>选择文书查看详情，或按分类生成新文书</p></div><span className="doc-format-label"><FileTextOutlined /> 红头公文</span></div>
+              <div className="doc-category-grid">
+              {DOCUMENT_CATEGORIES.map(category => (
+                <section className="doc-card doc-category" key={category.code}>
+                  <div className="doc-library-row">
+                    <span className={`doc-category-icon doc-category-icon--${category.code}`}>{category.code === 'DUTY_DAILY' ? <CalendarOutlined /> : category.code === 'EMERGENCY_BRIEF' ? <AlertOutlined /> : category.code === 'MEETING_MINUTES' ? <TeamOutlined /> : <BarChartOutlined />}</span>
+                    <span className="doc-library-copy"><strong>{category.name}</strong><span>{mockDocuments.filter(doc => doc.code === category.code).length} 份文书</span></span>
+                    <Button className="doc-create-button" size="small" icon={<PlusOutlined />} aria-label={`生成${category.name}`} onClick={() => generateMock(category.code)}>生成</Button>
+                  </div>
+                  <div className="doc-category-items">
+                    {mockDocuments.filter(doc => doc.code === category.code).map(doc => (
+                      <button className="doc-sample-row" key={doc.id} onClick={() => setSelectedMock(doc)}>
+                        <span className="doc-file-mark"><FileTextOutlined /></span><span className="doc-file-copy"><span>{doc.title}</span><small>{doc.date}<span className="doc-file-status">模拟稿</span></small></span><RightOutlined className="doc-file-arrow" />
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ))}
+              </div>
+            </>
+          )}
+          {(selectedDraft ? [selectedDraft] : drafts).map((draft) => {
+
             const report = getReport(draft.documentId);
             const activeRev = draft.activeRevisionId ? revisionsMap[draft.activeRevisionId] : undefined;
             const submitReason = checkSubmit(draft, report);
@@ -360,7 +336,7 @@ export default function DocCenterPanel() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <Space size={8} wrap>
-                      <Typography.Text strong>{draft.title}</Typography.Text>
+                      <Button type="link" onClick={() => setSelectedDocId(draft.documentId)}>{draft.title}</Button>
                       <Tag color={lifecycle.color}>{lifecycle.label}</Tag>
                       <ValidationStatusTag status={draft.validation.status} />
                       {draft.freshness === 'stale' && <Tag color="orange">快照已过期</Tag>}
@@ -461,15 +437,11 @@ export default function DocCenterPanel() {
         </div>
       )}
 
-      <Typography.Paragraph type="secondary" style={{ fontSize: 12, margin: 0 }}>
-        操作流：生成草稿 → 编辑（事实芯片可溯源）→ 校核（阻断级清零）→ 提交送审 → 指挥员签发（锁定）→ 导出/打印/修订。
-        派生数据可插入：{Object.keys(DERIVED_META).map((key) => derivedMetaLabel(key as DerivedKey)).join('、')}（模拟）。
-      </Typography.Paragraph>
 
       <DocumentEditor documentId={editorDocId ?? ''} open={editorDocId !== null} onClose={() => setEditorDocId(null)} />
       <VersionDrawer documentId={versionDocId ?? ''} open={versionDocId !== null} onClose={() => setVersionDocId(null)} />
       <SourceDrawer documentId={sourceDocumentId} factId={sourceFactId} open={sourceOpen} onClose={() => setSourceOpen(false)} />
-      <TemplatePreviewModal template={previewTemplate} onClose={() => setPreviewCode(null)} />
+
     </div>
   );
 }

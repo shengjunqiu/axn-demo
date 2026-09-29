@@ -189,6 +189,11 @@ export interface ChatMessage {
   agentId?: string;
   agentName?: string;
   agentRole?: string;
+  documentWorkflow?: {
+    stage: 'collecting' | 'calling' | 'generating' | 'completed' | 'interrupted';
+    elements: { label: string; value: string }[];
+    documentId?: string;
+  };
   createdAt: string;
   performedAt: string;
 }
@@ -581,6 +586,7 @@ export type IntentId =
   | 'knowledge'
   | 'qa_knowledge'
   | 'proposal'
+  | 'evaluation'
   | 'doc_brief'
   | 'doc_daily'
   | 'fill_reporting_unit'
@@ -629,7 +635,7 @@ export type TaskEvent =
   | { type: 'artifact'; artifact: Omit<TaskArtifact, 'artifactId'> }
   | { type: 'clarification_required'; clarification: Omit<ClarificationPayload, 'kind' | 'taskId'> }
   | { type: 'failed'; errorCode: string; message: string; hint: string }
-  | { type: 'completed'; summary?: string };
+  | { type: 'completed'; summary?: string; status?: 'succeeded' | 'waiting_input' };
 
 /** 智能体召唤消息：主任务执行中协同调用其他智能体的过程展示（kind='agent'）。 */
 export interface AgentSummonMessage {

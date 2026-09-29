@@ -1,47 +1,26 @@
-/**
- * 智能体召唤卡（kind='agent' 消息）：主任务执行中协同调用其他智能体的过程展示。
- * 纯演示动效：脉冲光圈表示“协同中”，不伪造真实耗时或真实多智能体系统。
- */
+/** 智能体调用与真实任务状态同步，执行步骤和模拟结果在同一张卡中展示。 */
+import type { ReactNode } from 'react';
 import { RobotOutlined } from '@ant-design/icons';
-import { Typography } from 'antd';
+import { Tag, Typography } from 'antd';
+import type { TaskStatus } from '@/domain/types';
 
-const { Text } = Typography;
-
-export default function AgentSummonCard({
-  agentName,
-  agentRole,
-  action,
-}: {
-  agentName: string;
-  agentRole: string;
-  action: string;
+const LABELS: Record<TaskStatus, string> = {
+  queued: '正在调用', running: '执行中', succeeded: '已完成', partial: '部分完成',
+  waiting_input: '待补充信息', failed: '执行失败', cancelled: '已取消',
+};
+export default function AgentSummonCard({ agentName, agentRole, action, status = 'running', children }: {
+  agentName: string; agentRole: string; action: string; status?: TaskStatus; children?: ReactNode;
 }) {
-  return (
-    <div className="axn-agent-summon" data-testid="agent-summon-card">
-      <span className="axn-agent-summon-avatar" aria-hidden>
-        <RobotOutlined />
-      </span>
+  const active = status === 'running' || status === 'queued';
+  return <section className={`axn-agent-execution ${active ? 'is-running' : ''}`} data-testid="agent-summon-card" aria-live="polite">
+    <div className="axn-agent-summon">
+      <span className="axn-agent-summon-avatar" aria-hidden><RobotOutlined /></span>
       <div className="axn-agent-summon-body">
-        <div className="axn-agent-summon-head">
-          <Text strong style={{ fontSize: 13 }}>
-            {agentName}
-          </Text>
-          <span className="axn-agent-summon-badge">协同中</span>
-        </div>
-        <div className="axn-agent-summon-role">
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {agentRole}
-          </Text>
-        </div>
-        <div className="axn-agent-summon-action">
-          <Text style={{ fontSize: 12 }}>{action}</Text>
-        </div>
-        <div className="axn-agent-summon-foot">
-          <Text type="secondary" style={{ fontSize: 11 }}>
-            模拟协同 · 非真实多智能体调用
-          </Text>
-        </div>
+        <div className="axn-agent-summon-head"><Typography.Text strong>{agentName}</Typography.Text><Tag color={active ? 'processing' : status === 'succeeded' ? 'success' : status === 'failed' ? 'error' : 'default'}>{LABELS[status]}</Tag></div>
+        <div className="axn-agent-summon-role"><Typography.Text type="secondary">{agentRole} · 模拟执行</Typography.Text></div>
+        <div className="axn-agent-summon-action"><Typography.Text>{active ? action : status === 'succeeded' ? '任务已完成，执行过程与结果如下' : status === 'waiting_input' ? '请补充所需信息后继续' : status === 'cancelled' ? '任务已停止，已完成的步骤保留如下' : status === 'failed' ? '执行遇到问题，可查看原因并重试' : '已完成部分任务，详情如下'}</Typography.Text></div>
       </div>
     </div>
-  );
+    {children}
+  </section>;
 }

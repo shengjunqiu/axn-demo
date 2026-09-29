@@ -9,11 +9,15 @@ import { Bubble, Sender } from '@ant-design/x';
 import type { BubbleItemType } from '@ant-design/x';
 import { useConversationStore } from '@/store/conversationStore';
 import { useDemoStore } from '@/store/demoStore';
+import { useMockDocumentStore } from '@/store/mockDocumentStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { sendMessage, cancelTask } from '@/services/taskRunner';
+import { AGENT_QUICK_TASKS } from '@/seed/agentQuickTasks';
+import { getQaItem } from '@/services/qaKnowledge';
 import { factText, incidentById, incidents } from '@/seed/scenario';
 import { eventDisplayName } from '@/services/factLookup';
 import TaskCard from './TaskCard';
+import DocumentGenerationCard from './DocumentGenerationCard';
 import AgentSummonCard from './AgentSummonCard';
 import './chat.css';
 
@@ -23,38 +27,10 @@ export interface ChatPanelProps {
   onOpenDrawer: (target: 'resource' | 'knowledge') => void;
 }
 
-/** 引导提示（演示步骤文案，随控制面板 guideStepIndex 切换） */
-const GUIDE_HINTS: string[] = [
-  '引导 1/6：发送“生成灾情摘要”，观察回答中的事实来源与待确认标注',
-  '引导 2/6：发送“查询周边救援资源”，再追问“它们谁最快能到”',
-  '引导 3/6：点击资源卡的“查看资源与态势”，勾选候选并查看派生汇总',
-  '引导 4/6：发送“给我处置建议”，在右侧页签查看依据与知识',
-  '引导 5/6：生成应急要情 / 值班日报，按提示补录缺失字段',
-  '引导 6/6：可在演示控制面板注入故障或重置演示',
-];
-
-const QUICK_TASKS: string[] = [
-  '生成灾情摘要',
-  '查询周边救援资源',
-  '它们谁最快能到',
-  '给我处置建议',
-  '生成应急要情',
-  '生成值班日报',
-];
-
-/** 欢迎卡引导问题：关联灾情会话 / 空白对话两套，点击即发送。 */
-const WELCOME_QUESTIONS_EVENT: string[] = [
-  '生成当前灾情摘要',
-  '查询周边救援资源',
-  '它们谁最快能到？',
-  '生成应急要情',
-];
-const WELCOME_QUESTIONS_BLANK: string[] = [
-  '人员被困时，最快的救人方式是什么？',
-  '如何快速判断堤防管涌险情？',
-  '汛期值班交接班要注意什么？',
-  '生成值班日报',
-];
+/** 从 qa.json 已接入的知识库读取原问题，保证点击后命中对应答案。 */
+const WELCOME_QUESTIONS = [1, 5, 9, 17]
+  .map(id => getQaItem(id)?.question)
+  .filter((question): question is string => !!question);
 
 const AVATAR = (
   <div
@@ -76,15 +52,8 @@ const AVATAR = (
   </div>
 );
 
-function guideHint(index: number): string {
-  if (!Number.isFinite(index) || index < 0) return GUIDE_HINTS[0];
-  if (index >= GUIDE_HINTS.length) return GUIDE_HINTS[GUIDE_HINTS.length - 1];
-  return GUIDE_HINTS[index];
-}
-
 export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
   const currentEventId = useDemoStore((s) => s.currentEventId);
-  const guideStepIndex = useDemoStore((s) => s.guideStepIndex);
   const activeConversation = useConversationStore((s) =>
     s.activeConversationId ? s.conversations[s.activeConversationId] : null,
   );
@@ -108,13 +77,48 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
       ) ?? null,
     [tasks, session?.sessionId],
   );
-  const busy = runningTask != null;
+  const generatingDocument = useMockDocumentStore(s => s.libraries[session?.sessionId ?? '']?.generatingCode);
+  const busy = runningTask != null || !!generatingDocument;
 
   const handleSend = (raw: string) => {
     const text = raw.trim();
     if (!session || !text || busy) return;
     setInput('');
     void sendMessage(session.sessionId, { text });
+  };
+
+  const handleQuickTask = async (text: string) => {
+    const code = text === '生成值班日报' ? 'DUTY_DAILY' : text === '生成应急要情' ? 'EMERGENCY_BRIEF' : null;
+    if (!code) { handleSend(text); return; }
+    if (!session || busy) return;
+    const sessionId = session.sessionId;
+    useSessionStore.getState().appendMessage(sessionId, { sessionId, role: 'user', kind: 'text', text, taskId: null });
+    const elements = [
+      { label: '文书类型', value: code === 'DUTY_DAILY' ? '值班日报' : '应急要情' },
+      { label: '编制单位', value: '应急指挥中心（模拟）' },
+      { label: '报送对象', value: '相关应急工作部门（模拟）' },
+      { label: code === 'DUTY_DAILY' ? '值班时段' : '关联事项', value: code === 'DUTY_DAILY' ? '当日 08:00—20:00（模拟）' : eventTitle },
+      { label: code === 'DUTY_DAILY' ? '交接要求' : '内容要求', value: code === 'DUTY_DAILY' ? '持续跟踪重点风险、核实待报信息并做好交接' : '汇总基本情况、先期处置和下一步工作；未核实信息保留待核实标记' },
+      { label: '文书格式', value: '红头格式，包含标题、正文与落款' },
+    ];
+    const invocation = useSessionStore.getState().appendMessage(sessionId, {
+      sessionId, role: 'assistant', kind: 'agent', text: '根据已收集的文书要素生成红头文书', taskId: null,
+      agentName: '文书生成智能体', agentRole: text,
+      documentWorkflow: { stage: 'collecting', elements },
+    });
+    const document = await useMockDocumentStore.getState().generate(sessionId, code, {
+      elements,
+      onStage: stage => useSessionStore.getState().updateDocumentWorkflow(sessionId, invocation.messageId, { stage, elements }),
+    });
+    useSessionStore.getState().updateDocumentWorkflow(sessionId, invocation.messageId, {
+      stage: document ? 'completed' : 'interrupted', elements, documentId: document?.id,
+    });
+    if (document && useSessionStore.getState().sessions[sessionId]) {
+      useSessionStore.getState().appendMessage(sessionId, {
+        sessionId, role: 'assistant', kind: 'text', taskId: null,
+        text: `已生成《${document.title}》（模拟文书），请在右侧文书生成智能体查看红头文书详情。`,
+      });
+    }
   };
 
   const pending = session?.pendingClarification ?? null;
@@ -156,7 +160,8 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
 
   const items: BubbleItemType[] = useMemo(() => {
     const messages = session?.messages ?? [];
-    return messages.map((m) => {
+    const summonedTasks = new Set(messages.filter(message => message.kind === 'agent' && message.taskId && tasks[message.taskId]).map(message => message.taskId));
+    return messages.filter(message => !(message.kind === 'task' && summonedTasks.has(message.taskId))).map((m) => {
       if (m.kind === 'task' && m.taskId) {
         const task = tasks[m.taskId];
         return {
@@ -189,12 +194,15 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
             body: { flex: '1 1 auto', width: '100%', minWidth: 0, maxWidth: '100%' },
             content: { width: '100%', padding: 0, background: 'transparent' },
           },
-          contentRender: () => (
+          contentRender: () => m.documentWorkflow ? <DocumentGenerationCard message={m} /> : (
             <AgentSummonCard
               agentName={m.agentName ?? '智能体协同'}
               agentRole={m.agentRole ?? ''}
               action={m.text ?? ''}
-            />
+              status={m.taskId ? tasks[m.taskId]?.status : undefined}
+            >
+              {m.taskId && tasks[m.taskId] && <TaskCard task={tasks[m.taskId]} onOpenDrawer={onOpenDrawer} />}
+            </AgentSummonCard>
           ),
         };
       }
@@ -241,11 +249,6 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
             />
           </Tooltip>
         </div>
-        <div style={{ marginTop: 4 }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            💡 {guideHint(guideStepIndex)}
-          </Text>
-        </div>
       </div>
 
       {/* 消息流 */}
@@ -288,24 +291,21 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
               </Text>
               <Tag color="orange">模拟数据</Tag>
             </Space>
-            <ul className="axn-welcome-list">
-              <li>我的回答全部锚定本演示环境的种子事实与派生结果，不使用外部大模型。</li>
-              <li>缺少可靠来源的信息会明确标注“待确认”，不会编造数值。</li>
-              <li>“候选力量”指拟使用的资源，候选 ≠ 已调派。</li>
-              <li>生成的文书需通过校核并按权限提交、签发（均为模拟流程）。</li>
-            </ul>
+            <Typography.Paragraph style={{ margin: '14px 0', lineHeight: 1.8 }}>
+              我是安小能，你的应急工作智能助手。可以帮你梳理灾情、查询救援资源、生成工作文书，让信息整理与日常协同更高效。
+            </Typography.Paragraph>
             <div className="axn-welcome-questions">
               <Text strong style={{ fontSize: 12 }}>
                 你可以问我：
               </Text>
               <ul className="axn-question-list">
-                {(isBlankEvent ? WELCOME_QUESTIONS_BLANK : WELCOME_QUESTIONS_EVENT).map((q) => (
+                {WELCOME_QUESTIONS.map((q) => (
                   <li key={q}>
                     <button
                       type="button"
                       className="axn-question-item"
                       disabled={!session || busy}
-                      onClick={() => handleSend(q)}
+                      onClick={() => { void handleQuickTask(q); }}
                     >
                       {q}
                     </button>
@@ -347,13 +347,15 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
 
       {/* 快捷任务 chips */}
       <div className="axn-chips">
-        {QUICK_TASKS.map((label) => (
+        {AGENT_QUICK_TASKS.map(({ label, agentName, agentId }) => (
           <Button
             key={label}
             size="small"
             className="axn-chip"
+            title={agentName}
+            data-agent-id={agentId}
             disabled={!session || busy}
-            onClick={() => handleSend(label)}
+            onClick={() => { void handleQuickTask(label); }}
           >
             {label}
           </Button>
@@ -366,14 +368,14 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
           value={input}
           onChange={(v) => setInput(v)}
           onSubmit={(message) => handleSend(message)}
-          loading={busy}
+          loading={runningTask != null}
           onCancel={() => {
             if (runningTask) cancelTask(runningTask.taskId);
           }}
           placeholder={
             session ? '向安小能发送指令，Enter 发送（模拟环境，不接真实模型）' : '会话初始化中…'
           }
-          disabled={!session}
+          disabled={!session || !!generatingDocument}
         />
       </div>
     </div>

@@ -25,7 +25,7 @@ function makeContent(paragraphs: ReturnType<typeof para>[]): DocumentContent {
 }
 
 function snapshotFor() {
-  return buildSnapshot({
+  const snapshot = buildSnapshot({
     scopeKind: 'event',
     eventId: DEFAULT_EVENT_ID,
     shiftId: null,
@@ -37,6 +37,10 @@ function snapshotFor() {
     ],
     label: '测试快照',
   });
+  // 校核规则测试显式构造待核实场景，不依赖演示种子的默认值。
+  snapshot.facts['fact-incident-001-casualty'].value = '待核实';
+  snapshot.facts['fact-incident-001-casualty'].verification = 'pending';
+  return snapshot;
 }
 
 function ruleIds(issues: ReturnType<typeof validateContent>['issues']) {
