@@ -304,8 +304,8 @@
       "isSimulated": true,
       "label": "接报与事件服务（模拟）",
       "fields": {
-        "title": "演示区域 A · 清河段堤防险情",
-        "location": "演示区域 A 清河段 K12+300",
+        "title": "清河段堤防险情",
+        "location": "清河段 K12+300",
         "occurredAt": "2026-09-28T20:18:00+08:00",
         "disasterType": "堤防管涌",
         "controlStatus": "ongoing",
@@ -352,8 +352,8 @@
       "isSimulated": true,
       "label": "接报与事件服务（模拟）",
       "fields": {
-        "title": "演示区域 B 下穿道路积水",
-        "location": "演示区域 B 下穿道路示意点",
+        "title": "下穿道路积水",
+        "location": "下穿道路示意点",
         "occurredAt": "2026-09-28T17:40:00+08:00",
         "disasterType": "城市积水",
         "controlStatus": "controlled",
@@ -649,7 +649,7 @@
   "facts": [
     {
       "factId": "fact-incident-001-title",
-      "value": "演示区域 A · 清河段堤防险情",
+      "value": "清河段堤防险情",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.incident.title.evt-demo-001",
@@ -667,7 +667,7 @@
     },
     {
       "factId": "fact-incident-001-location",
-      "value": "演示区域 A 清河段 K12+300",
+      "value": "清河段 K12+300",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.incident.location.evt-demo-001",
@@ -865,7 +865,7 @@
     },
     {
       "factId": "fact-incident-002-title",
-      "value": "演示区域 B 下穿道路积水",
+      "value": "下穿道路积水",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.incident.title.evt-demo-002",
@@ -883,7 +883,7 @@
     },
     {
       "factId": "fact-incident-002-location",
-      "value": "演示区域 B 下穿道路示意点",
+      "value": "下穿道路示意点",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.incident.location.evt-demo-002",

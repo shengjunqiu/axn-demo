@@ -82,7 +82,7 @@ test.describe('值班日报与演示控制', () => {
     // 打开演示控制 → 切换事件
     await page.getByRole('button', { name: '演示控制' }).click();
     const panel = page.locator('.ant-drawer', { hasText: '演示控制' });
-    await panel.getByRole('button', { name: '演示区域 B 下穿道路积水' }).click();
+    await panel.getByRole('button', { name: '下穿道路积水' }).click();
     await page.keyboard.press('Escape');
     // 新事件会话无任务
     await expect(page.locator('.axn-task-card')).toHaveCount(0, { timeout: 10000 });
@@ -90,7 +90,7 @@ test.describe('值班日报与演示控制', () => {
     // 回到原事件，任务仍在（互不污染）
     await page.getByRole('button', { name: '演示控制' }).click();
     const panel2 = page.locator('.ant-drawer', { hasText: '演示控制' });
-    await panel2.getByRole('button', { name: '演示区域 A · 清河段堤防险情' }).click();
+    await panel2.getByRole('button', { name: '清河段堤防险情' }).click();
     await page.keyboard.press('Escape');
     await expect(page.locator('.axn-task-card', { hasText: '汇总灾情摘要' }).first()).toBeVisible({ timeout: 10000 });
     // 重置演示（二次确认，FR-016）→ 状态清空

@@ -4,7 +4,7 @@
  * 不写入任何真实系统；清空时只清理本命名空间（AC-026）。
  */
 const NAMESPACE = 'anneng-demo:v1';
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2; // v2：种子事件标题去除“演示区域 A/B”前缀，旧持久化数据失效重建
 
 interface PersistEnvelope {
   __schema: number;

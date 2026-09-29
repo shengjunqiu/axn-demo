@@ -64,7 +64,7 @@ test('2. 对话区内关联灾情 → 切换事件上下文与共享 session', a
   await page.locator('.ant-select-item-option', { hasText: '清河段堤防险情' }).click();
   await page.waitForTimeout(500);
   // 头部上下文切到关联事件
-  await expect(page.getByTestId('header-event')).toContainText('演示区域 A · 清河段堤防险情', { timeout: 10000 });
+  await expect(page.getByTestId('header-event')).toContainText('清河段堤防险情', { timeout: 10000 });
   await expect(page.getByText('空白对话（未关联事件）')).toHaveCount(0);
   // 取消关联 → 回到未关联（专属虚拟事件）
   await page.getByTestId('chat-link-incident').click();
