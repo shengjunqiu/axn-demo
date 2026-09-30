@@ -1,3 +1,4 @@
+import { generateWorkSummary } from '@/services/workSummaryWorkflow';
 /**
  * 文书中心（T-011）：文书列表 + 状态机操作中枢。
  * 状态机硬约束：提交（草稿+有效校核+无阻断+指纹一致）→ 签发（指挥员+校核通过）→ 锁定；
@@ -96,6 +97,10 @@ export default function DocCenterPanel() {
   const setSelectedMock = useCallback((document: MockDocument | null) => selectMock(libraryScope, document), [libraryScope, selectMock]);
   const generateMock = (code: string) => {
     setSelectedDocId(null);
+    if (code === 'WORK_SUMMARY' && sessionId) {
+      void generateWorkSummary(sessionId);
+      return;
+    }
     void useMockDocumentStore.getState().generate(libraryScope, code);
   };
 

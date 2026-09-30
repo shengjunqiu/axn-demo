@@ -1,3 +1,4 @@
+import { generateWorkSummary, submitWorkSummaryImprovement } from '@/services/workSummaryWorkflow';
 /**
  * 安小能对话工作流（T-005）：会话头 + 消息流（Bubble.List）+ 输入区（Sender）+ 快捷任务 + 补录表单。
  * 会话跟随演示事件切换（ensureSessionForEvent）；消息与任务状态全部订阅 sessionStore，不本地复制。
@@ -67,10 +68,23 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
     const text = raw.trim();
     if (!session || !text || busy) return;
     setInput('');
+    const waitingSummary = session.messages.find(message => message.documentWorkflow?.stage === 'waiting_input');
+    if (waitingSummary) {
+      void submitWorkSummaryImprovement(session.sessionId, waitingSummary.messageId, text);
+      return;
+    }
+    if (/生成.*工作总结|工作总结.*生成/.test(text)) {
+      void generateWorkSummary(session.sessionId, text);
+      return;
+    }
     void sendMessage(session.sessionId, { text });
   };
 
   const handleQuickTask = async (text: string) => {
+    if (text === '生成工作总结') {
+      if (session && !busy) await generateWorkSummary(session.sessionId, text);
+      return;
+    }
     const code = text === '生成值班日报' ? 'DUTY_DAILY' : text === '生成应急要情' ? 'EMERGENCY_BRIEF' : null;
     if (!code) { handleSend(text); return; }
     if (!session || busy) return;

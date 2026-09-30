@@ -190,8 +190,11 @@ export interface ChatMessage {
   agentName?: string;
   agentRole?: string;
   documentWorkflow?: {
-    stage: 'collecting' | 'calling' | 'generating' | 'completed' | 'interrupted';
+    stage: 'collecting' | 'waiting_input' | 'calling' | 'generating' | 'completed' | 'interrupted';
     elements: { label: string; value: string }[];
+    collection?: { question: string; answer: string }[];
+    collectedCount?: number;
+    reportSections?: [string, string][];
     documentId?: string;
   };
   createdAt: string;

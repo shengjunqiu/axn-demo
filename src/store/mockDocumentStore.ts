@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { ChatMessage } from '@/domain/types';
 import { DOCUMENT_CATEGORIES, MOCK_DOCUMENTS, type MockDocument } from '@/seed/mockDocuments';
 
-type GenerationOptions = { elements: NonNullable<ChatMessage['documentWorkflow']>['elements']; onStage: (stage: 'calling' | 'generating') => void };
+type GenerationOptions = { collect?: () => Promise<void | false>; sections?: MockDocument['sections']; elements: NonNullable<ChatMessage['documentWorkflow']>['elements']; onStage: (stage: 'calling' | 'generating') => void };
 type Library = { documents: MockDocument[]; selected: MockDocument | null; generatingCode: string | null };
 export const EMPTY_LIBRARY: Library = { documents: MOCK_DOCUMENTS, selected: null, generatingCode: null };
 interface MockDocumentState {
@@ -32,6 +32,10 @@ export const useMockDocumentStore = create<MockDocumentState>((set, get) => ({
       ...(state.libraries[scope] ?? EMPTY_LIBRARY), selected: null, generatingCode: code,
     } } }));
     if (options) {
+      if (await options.collect?.() === false) {
+        set(state => ({ libraries: { ...state.libraries, [scope]: { ...state.libraries[scope], generatingCode: null } } }));
+        return null;
+      }
       await new Promise(resolve => setTimeout(resolve, 700));
       options.onStage('calling');
       await new Promise(resolve => setTimeout(resolve, 700));
@@ -43,7 +47,7 @@ export const useMockDocumentStore = create<MockDocumentState>((set, get) => ({
       id: `generated-${code}-${now.getTime()}`, code,
       title: `${category.topics[0]}（新生成）`,
       date: now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }),
-      number: `${category.prefix}〔${now.getFullYear()}〕模拟草稿`, sections: category.sections,
+      number: `${category.prefix}〔${now.getFullYear()}〕模拟草稿`, sections: options?.sections ?? category.sections,
     };
     set(state => ({ libraries: { ...state.libraries, [scope]: {
       documents: [document, ...(state.libraries[scope] ?? EMPTY_LIBRARY).documents],

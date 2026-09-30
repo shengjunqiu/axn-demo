@@ -101,3 +101,10 @@
 .axn-document-workflow-footer .ant-typography { font-size: 12px; }
 .axn-document-workflow-footer .anticon { color: var(--chat-success); }
 @media (prefers-reduced-motion: reduce) { .is-running .axn-agent-summon-avatar::after { animation: none; } .axn-question-item, .axn-chip { transition: none; } }
+
+.axn-summary-collection { display: grid; gap: 12px; margin: 14px 0; }
+.axn-summary-round { padding: 12px 14px; border: 1px solid var(--ant-color-border-secondary, #e8edf3); border-radius: 10px; background: var(--ant-color-fill-quaternary, #fafbfd); }
+.axn-summary-round .ant-typography { line-height: 1.8; }
+.axn-summary-round .ant-typography + .ant-typography { margin: 8px 0 0; }
+.axn-summary-input { display: grid; gap: 12px; margin-top: 10px; }
+.axn-summary-input > .ant-btn { justify-self: start; }

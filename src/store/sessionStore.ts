@@ -60,7 +60,7 @@ function rehydrate(): SessionPersist {
     };
   }
   for (const session of Object.values(raw.sessions)) {
-    session.messages = session.messages.map(message => message.documentWorkflow && !['completed', 'interrupted'].includes(message.documentWorkflow.stage)
+    session.messages = session.messages.map(message => message.documentWorkflow && !['completed', 'interrupted', 'waiting_input'].includes(message.documentWorkflow.stage)
       ? { ...message, documentWorkflow: { ...message.documentWorkflow, stage: 'interrupted' } }
       : message);
   }

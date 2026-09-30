@@ -14,6 +14,10 @@ test('文书智能体：列表、详情与对话生成', async ({ page }) => {
     await panel.getByRole('button', { name: '返回文书列表' }).click();
     await category.getByRole('button', { name: `生成${name}`, exact: true }).click();
     await expect(panel.getByText('正在生成文书', { exact: true })).toBeVisible();
+    if (name === '工作总结') {
+      await page.getByRole('textbox', { name: '下一步改进措施' }).fill('完善通信保障和人员轮换机制。');
+      await page.getByRole('button', { name: '提交并生成工作总结' }).click();
+    }
     await expect(panel.getByTestId('mock-redhead-document')).toContainText('新生成');
     await panel.getByRole('button', { name: '返回文书列表' }).click();
     await expect(category.locator('.doc-sample-row')).toHaveCount(3);
