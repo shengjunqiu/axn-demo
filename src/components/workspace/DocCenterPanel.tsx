@@ -85,6 +85,7 @@ export default function DocCenterPanel() {
   const conversationId = useConversationStore(s => s.activeConversationId);
   const sessionId = useSessionStore(s => s.sessionByConversation[conversationId ?? ''] ?? '');
   const libraryScope = sessionId || conversationId || currentEventId;
+  const waitingForImprovement = useSessionStore(s => s.sessions[sessionId]?.messages.some(message => message.documentWorkflow?.stage === 'waiting_input') ?? false);
 
   const [editorDocId, setEditorDocId] = useState<string | null>(null);
   const [versionDocId, setVersionDocId] = useState<string | null>(null);
@@ -255,11 +256,11 @@ export default function DocCenterPanel() {
         <Tag className="doc-demo-badge">模拟演示</Tag>
       </header>
 
-      {generating || generatingCode ? (
+      {generating || generatingCode || waitingForImprovement ? (
         <div className="doc-generation" role="status" aria-live="polite">
           <Spin size="large" />
-          <Typography.Title level={4}>正在生成文书</Typography.Title>
-          <Typography.Text type="secondary">{generatingCode ? `生成${DOCUMENT_CATEGORIES.find(category => category.code === generatingCode)?.name} · 正在编排红头文书（模拟）` : `${documentTask?.displayTitle} · ${documentTask?.steps.find(step => step.status === 'running')?.name ?? '正在整理文书资料'}`}</Typography.Text>
+          <Typography.Title level={4}>{waitingForImprovement ? '等待补充改进计划' : '正在生成文书'}</Typography.Title>
+          <Typography.Text type="secondary">{waitingForImprovement ? '工作总结要素已收集 5/6 · 请在对话中填写下一步改进措施，提交后继续生成文书' : generatingCode ? `生成${DOCUMENT_CATEGORIES.find(category => category.code === generatingCode)?.name} · 正在编排红头文书（模拟）` : `${documentTask?.displayTitle} · ${documentTask?.steps.find(step => step.status === 'running')?.name ?? '正在整理文书资料'}`}</Typography.Text>
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       ) : selectedMock ? (
