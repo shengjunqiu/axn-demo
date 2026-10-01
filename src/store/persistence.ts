@@ -41,15 +41,4 @@ export function clearPersist(key: string): void {
   }
 }
 
-export function clearNamespace(): void {
-  try {
-    const stale: string[] = [];
-    for (let i = 0; i < window.localStorage.length; i += 1) {
-      const k = window.localStorage.key(i);
-      if (k && k.startsWith(`${NAMESPACE}:`)) stale.push(k);
-    }
-    stale.forEach((k) => window.localStorage.removeItem(k));
-  } catch (error) {
-    console.warn('[anneng-demo] 命名空间清理失败。', error);
-  }
-}
+

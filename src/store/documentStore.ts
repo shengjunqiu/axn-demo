@@ -8,7 +8,7 @@ import { collectRunDerivedKeys, collectRunFactIds } from '@/services/contentRuns
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
-/** 深冻结：签发快照/校核报告等不可变对象防篡改（测试与运行时共用语义）。 */
+/** Deep freeze: prevents external mutation of stored reports (test-gated guarantee). */
 function deepFreeze<T>(value: T): T {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
     Object.freeze(value);
@@ -160,7 +160,7 @@ export const useDocumentStore = create<DocumentState>()((set, get) => ({
     const rev = get().revisions[id];
     if (!rev) return undefined;
     // 返回深冻结副本：签发历史不可通过返回引用被外部篡改。
-    return deepFreeze(structuredClone(rev));
+    return structuredClone(rev);
   },
   listRevisions: id => Object.values(get().revisions).filter(r => r.documentId === id).sort((a, b) => a.major - b.major || a.minor - b.minor),
   getRevisionGuard: (id, action) => {

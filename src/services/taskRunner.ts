@@ -159,7 +159,6 @@ async function executeTask(
     }, attemptId);
   } finally {
     finishRun(taskId, attemptId);
-    await refreshDerivedViews(task.taskId);
   }
 }
 
@@ -175,9 +174,6 @@ function applySideEffects(taskId: string, ev: TaskEvent): void {
   }
 }
 
-async function refreshDerivedViews(_taskId: string): Promise<void> {
-  // 派生事实在渲染时即时计算，这里无需持久化；保留钩子以便扩展。
-}
 
 export function cancelTask(taskId: string): void {
   invalidateRun(taskId);

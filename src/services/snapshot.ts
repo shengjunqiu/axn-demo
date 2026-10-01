@@ -2,7 +2,7 @@
  * 来源快照构建：生成文书 / 保存版本前，把当前事实与派生值固化为快照。
  */
 import type { SourceSnapshot, WaterSeriesPoint } from '@/domain/types';
-import { computeContentHash } from '@/store/documentStore';
+
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import {
@@ -14,7 +14,7 @@ import {
   warehouseById,
 } from '@/seed/scenario';
 import { currentContextVersion, resolveFact, resolveSourceRecord, latestClockFactId, resourceAllowed, shiftEventIds, type FactQueryScope } from './factLookup';
-import { computeDerived, DERIVED_META, type DerivedKey } from '@/seed/derived';
+import { computeDerived, type DerivedKey } from '@/seed/derived';
 
 let snapshotCounter = 0;
 function nextSnapshotId(): string {
@@ -171,8 +171,6 @@ export function buildSnapshot(input: SnapshotInput): SourceSnapshot {
     waterSeries,
     label: input.label,
   };
-  void computeContentHash; // hash 属于内容层，这里不使用
-  void DEMO_CLOCK;
-  void DERIVED_META;
+
   return JSON.parse(JSON.stringify(snapshot)) as SourceSnapshot;
 }
