@@ -28,6 +28,8 @@ import type {
 import { cancelTask, retryTask } from '@/services/taskRunner';
 import { factDisplay, resolveFact } from '@/services/factLookup';
 import { useSessionStore } from '@/store/sessionStore';
+import { useDocumentStore } from '@/store/documentStore';
+import { useDocumentNavigation } from '@/components/workspace/useDocumentNavigation';
 import { qaStatusLabel } from '@/services/qaKnowledge';
 import { factText, getFact, knowledgeById, teamById, warehouseById } from '@/seed/scenario';
 
@@ -258,13 +260,20 @@ function ProposalBlock({ payload, onOpenDrawer }: { payload: ProposalArtifact; o
       </div>
       {proposal?.sections.map(section => <div className="axn-resource-result" key={section.id}><Text strong>{section.title}</Text><Text>{section.text}</Text></div>)}
       <Button size="small" type="primary" ghost onClick={() => onOpenDrawer('knowledge')} style={{ marginTop: 8 }}>
-        查看建议
+        查看建议与知识
       </Button>
     </div>
   );
 }
 
-function DocumentBlock({ payload }: { payload: DocumentLinkArtifact }) {
+/** 任务产出的文书：草稿已创建时提供真实的预览/打开工作区动作（不伪造下载）。 */
+function DocumentBlock({ payload, sessionId }: { payload: DocumentLinkArtifact; sessionId: string }) {
+  const draft = useDocumentStore(s => s.drafts[payload.documentId]);
+  const openDocument = useDocumentNavigation();
+  const openDraft = () => {
+    if (!draft) return;
+    openDocument(sessionId, { kind: 'draft', id: payload.documentId });
+  };
   return (
     <div className="axn-artifact">
       <div className="axn-artifact-row">
@@ -283,11 +292,16 @@ function DocumentBlock({ payload }: { payload: DocumentLinkArtifact }) {
           description="请在对话中按提示补录（补录内容确认后生成模拟来源记录）。"
         />
       )}
+      {payload.state === 'draft_created' && draft && (
+        <Button size="small" type="primary" ghost onClick={openDraft} style={{ marginTop: 8 }} data-testid="task-open-draft">
+          预览/打开真实草稿
+        </Button>
+      )}
     </div>
   );
 }
 
-function ArtifactBlock({ payload, onOpenDrawer }: { payload: TaskArtifactPayload; onOpenDrawer: TaskCardProps['onOpenDrawer'] }) {
+function ArtifactBlock({ payload, onOpenDrawer, sessionId }: { payload: TaskArtifactPayload; onOpenDrawer: TaskCardProps['onOpenDrawer']; sessionId: string }) {
   switch (payload.kind) {
     case 'summary':
       return <SummaryBlock payload={payload} />;
@@ -300,7 +314,7 @@ function ArtifactBlock({ payload, onOpenDrawer }: { payload: TaskArtifactPayload
     case 'proposal':
       return <ProposalBlock payload={payload} onOpenDrawer={onOpenDrawer} />;
     case 'document':
-      return <DocumentBlock payload={payload} />;
+      return <DocumentBlock payload={payload} sessionId={sessionId} />;
     case 'clarification':
       return (
         <Alert type="info" showIcon message="需要补充信息" description={payload.prompt} style={{ marginTop: 8 }} />
@@ -381,7 +395,7 @@ export default function TaskCard({ task, onOpenDrawer }: TaskCardProps) {
       )}
 
       {task.artifacts.map((artifact) => (
-        <ArtifactBlock key={artifact.artifactId} payload={artifact.payload} onOpenDrawer={onOpenDrawer} />
+        <ArtifactBlock key={artifact.artifactId} payload={artifact.payload} onOpenDrawer={onOpenDrawer} sessionId={task.sessionId} />
       ))}
 
       {task.error && (

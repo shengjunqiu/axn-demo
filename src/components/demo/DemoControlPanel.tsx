@@ -7,6 +7,9 @@ import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { useDocumentStore } from '@/store/documentStore';
 import { useConversationStore } from '@/store/conversationStore';
+import { useWorkspaceStore } from '@/store/workspaceStore';
+import { useActiveScope } from '@/store/workspaceStore';
+import { useMockDocumentStore } from '@/store/mockDocumentStore';
 import { faultScenarios, factText, incidentById } from '@/seed/scenario';
 
 const FAULT_LABEL: Record<string, string> = {
@@ -20,7 +23,25 @@ function fmtClock(iso: string): string {
 }
 
 export default function DemoControlPanel() {
-  const { message } = AntdApp.useApp();
+  const { message, modal } = AntdApp.useApp();
+  const scope = useActiveScope();
+  const selectEvent = (id: string) => {
+    const proceed = () => {
+      const store = useConversationStore.getState();
+      const target = Object.values(store.conversations).find((c) => c.eventId === id);
+      if (target) store.selectConversation(target.id);
+      else if (store.activeConversationId) store.linkConversationToEvent(store.activeConversationId, id);
+      else switchEvent(id);
+    };
+    if (!useWorkspaceStore.getState().isDirty(scope)) { proceed(); return; }
+    modal.confirm({ title: '有未保存的文书修改', content: '切换事件前将放弃这些修改。',
+      okText: '放弃修改并继续', cancelText: '继续编辑', onOk: () => {
+        useWorkspaceStore.getState().setDirty(scope, false);
+        useWorkspaceStore.getState().close(scope);
+        proceed();
+      },
+    });
+  };
   const resetAll = useSessionStore((s) => s.resetAll);
   const pace = useDemoStore((s) => s.pace);
   const setPace = useDemoStore((s) => s.setPace);
@@ -65,7 +86,7 @@ export default function DemoControlPanel() {
       <Divider>事件切换</Divider>
       <Space>
         {['evt-demo-001', 'evt-demo-002'].map((id) => (
-          <Button key={id} size="small" type={currentEventId === id ? 'primary' : 'default'} onClick={() => switchEvent(id)}>
+          <Button key={id} size="small" type={currentEventId === id ? 'primary' : 'default'} onClick={() => selectEvent(id)}>
             {eventLabel(id)}
           </Button>
         ))}
@@ -138,6 +159,8 @@ export default function DemoControlPanel() {
         onConfirm={() => {
           resetAll();
           useConversationStore.getState().resetAll();
+          useWorkspaceStore.getState().resetAll();
+          useMockDocumentStore.setState({ libraries: {} });
           message.success('演示已重置：会话、文书、版本与审计均已清空（模拟）');
         }}
       >

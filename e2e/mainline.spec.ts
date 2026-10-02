@@ -20,6 +20,11 @@ async function waitTaskDone(page: Page, title: string, timeout = 30000) {
   return card;
 }
 
+/** 打开独立文书库（原全宽页头「文书中心」入口已改为侧栏「文书库」导航）。 */
+async function openLibrary(page: Page) {
+  await page.locator('.axn-gs-nav-item', { hasText: '文书库' }).first().click();
+}
+
 test.describe('安小能演示主线（要情全链路）', () => {
   let consoleErrors: string[] = [];
   const errorStacks: string[] = [];
@@ -43,7 +48,7 @@ test.describe('安小能演示主线（要情全链路）', () => {
     // 1. 灾情摘要
     await sendChat(page, '生成灾情摘要');
     await waitTaskDone(page, '汇总灾情摘要');
-    await expect(page.getByText('待核实', { exact: false }).first()).toBeVisible();
+    await expect(page.getByText(/尚未确认|待核实/).first()).toBeVisible();
     await shot('01-summary');
 
     // 2. 资源查询（任务卡显示结果概要；队伍明细在资源与态势抽屉）
@@ -97,7 +102,7 @@ test.describe('安小能演示主线（要情全链路）', () => {
     // 8. 再次生成 → 草稿建立 → 打开文书中心
     await sendChat(page, '生成应急要情');
     await waitTaskDone(page, '生成应急要情');
-    await page.locator('button', { hasText: '文书中心' }).last().click();
+    await openLibrary(page);
     const docCard = page.locator('.doc-card', { hasText: '应急要情' }).first();
     await expect(docCard).toBeVisible();
     await shot('05-doc-center');
@@ -107,7 +112,7 @@ test.describe('安小能演示主线（要情全链路）', () => {
     await expect(docCard.getByText(/最近校核/)).toBeVisible({ timeout: 15000 });
     await expect(docCard.getByText(/无问题|阻断 0/)).toBeVisible({ timeout: 15000 });
 
-    // 10. 编辑注入“无人员伤亡” → 保存 → 重新校核出现 R-004 阻断
+    // 10. 编辑注入未经确认的响应等级 → 保存 → 重新校核出现 R-003 阻断
     await docCard.getByRole('button', { name: /编\s*辑/ }).click();
     const editorDrawer = page.locator('.ant-drawer', { hasText: '工作副本' }).last();
     await expect(editorDrawer).toBeVisible();
@@ -116,7 +121,7 @@ test.describe('安小能演示主线（要情全链路）', () => {
     await nextStepPara.click();
     await page.keyboard.press('Control+End');
     await page.keyboard.press('Enter');
-    await page.keyboard.type('经初步了解，现场无人员伤亡。');
+    await page.keyboard.type('已确认III级响应。');
     await expect(editorDrawer.getByText('有未保存修改')).toBeVisible({ timeout: 10000 });
     // 若误点事实芯片打开了来源抽屉，先关闭（Esc 只关最上层）
     const sourceDrawer = page.locator('.ant-drawer', { hasText: '事实来源' }).last();
@@ -131,12 +136,12 @@ test.describe('安小能演示主线（要情全链路）', () => {
 
     // 编辑器内校核面板应显示阻断问题
     await editorDrawer.getByRole('button', { name: '重新校核' }).click();
-    await expect(editorDrawer.getByText('未核实伤亡', { exact: false }).first()).toBeVisible({ timeout: 15000 });
+    await expect(editorDrawer.getByText('值与来源不一致', { exact: false }).first()).toBeVisible({ timeout: 15000 });
     await shot('06-validation-block');
 
     // 11. 采用建议 → 旧报告失效（信任链：改文后必须重新校核）→ 阻断清零
     await editorDrawer.getByRole('button', { name: '采用建议' }).first().click();
-    await expect(editorDrawer.getByText('人员伤亡情况待核实', { exact: false }).first()).toBeVisible({ timeout: 10000 });
+    await expect(editorDrawer.getByText('建议响应等级为 III 级（尚未确认）', { exact: false }).first()).toBeVisible({ timeout: 10000 });
     // 采用建议后旧报告失效（信任链），面板应出现“校核已过期”状态
     await expect(editorDrawer.getByText('校核已过期', { exact: false }).first()).toBeVisible({ timeout: 10000 });
     await editorDrawer.getByRole('button', { name: '重新校核' }).click();
@@ -193,7 +198,7 @@ test.describe('安小能演示主线（要情全链路）', () => {
     // 15. 刷新恢复（AC-025）：已签发文书与校核状态保留，不回初始空态
     await page.reload();
     await expect(page.getByText('安小能 · 应急智能工作台')).toBeVisible({ timeout: 15000 });
-    await page.locator('button', { hasText: '文书中心' }).last().click();
+    await openLibrary(page);
     const signedAfterReload = page.locator('.doc-card', { hasText: '应急要情' }).filter({ hasText: '已签发' }).first();
     await expect(signedAfterReload).toBeVisible({ timeout: 15000 });
 

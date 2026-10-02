@@ -84,11 +84,16 @@ test('3. 搜索"南堤"→过滤；清空→恢复', async ({ page }) => {
   expect(restored).toBeGreaterThan(visible.length);
 });
 
-test('4. 收藏功能已按标注移除（无入口、无星标）', async ({ page }) => {
+test('4. 收藏功能已按标注移除（无入口、无星标；删除入口保留）', async ({ page }) => {
   await expect(page.getByText('我的收藏')).toHaveCount(0);
   const first = page.locator('.axn-gs-conversation').first();
   await first.hover();
-  await expect(first.locator('.axn-gs-conv-action')).toHaveCount(0);
+  // 明确断言不存在星标/收藏控件（会话行内唯一操作是删除）
+  await expect(page.locator('.axn-gs-conv-action .anticon-star')).toHaveCount(0);
+  await expect(page.locator('.axn-gs-conv-action [aria-label*="收藏"]')).toHaveCount(0);
+  await expect(page.locator('.axn-gs-conv-favorite')).toHaveCount(0);
+  // 保留删除覆盖
+  await expect(first.locator('.axn-gs-conv-action .anticon-delete')).toHaveCount(1);
 });
 
 test('4b. 删除对话（Popconfirm 确认 → 条目移除 → active 切换）', async ({ page }) => {
@@ -175,7 +180,7 @@ test('11. 折叠功能已按标注移除（无折叠按钮，侧栏固定宽度�
   expect(width).toBeGreaterThan(200);
 });
 
-test('12. 智能体与 Skill / 定时任务 / 知识库导航页可访问', async ({ page }) => {
+test('12. 智能体与 Skill / 定时任务 / 知识库导航页可访问，文书库导航独立成页', async ({ page }) => {
   await openNav(page, '智能体与 Skill');
   await expect(page.getByTestId('agents-page')).toBeVisible();
   await expect(page.getByText('态势感知智能体')).toBeVisible();
@@ -184,4 +189,9 @@ test('12. 智能体与 Skill / 定时任务 / 知识库导航页可访问', asyn
   await expect(page.getByText('每日值班日报')).toBeVisible();
   await openNav(page, '知识库');
   await expect(page.getByTestId('knowledge-page')).toBeVisible();
+  await openNav(page, '文书库');
+  await expect(page.getByTestId('document-library-page')).toBeVisible();
+  await expect(page.getByTestId('document-workspace')).toHaveCount(0);
+  await openNav(page, '智能助理');
+  await expect(page.locator('.axn-chat-page')).toBeVisible();
 });

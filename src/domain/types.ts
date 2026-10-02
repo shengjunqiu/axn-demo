@@ -674,7 +674,8 @@ export interface Conversation {
   updatedAt: string;
 }
 
-export type NavPage = 'assistant' | 'projects' | 'agents' | 'schedules' | 'knowledge';
+/** 一级导航页；'library' 为本次 UI 改版新增的独立文书库入口。 */
+export type NavPage = 'assistant' | 'library' | 'projects' | 'agents' | 'schedules' | 'knowledge';
 
 export interface ConversationSettings {
   openRecentOnStart: boolean;

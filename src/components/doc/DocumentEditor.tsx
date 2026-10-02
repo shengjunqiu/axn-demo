@@ -5,7 +5,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { Alert, Button, Drawer, Dropdown, Empty, Space, Tag, Tooltip, Typography, message } from 'antd';
+import { App as AntdApp, Alert, Button, Drawer, Dropdown, Empty, Space, Tag, Tooltip, Typography, message } from 'antd';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/react';
 import { Node, mergeAttributes } from '@tiptap/core';
@@ -32,6 +32,7 @@ export interface DocumentEditorProps {
   documentId: string;
   open: boolean;
   onClose: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 const SOURCE_EVENT = 'axn:open-source';
@@ -401,7 +402,8 @@ function EditorInstance({ draft, editable, onDirty, onEditorReady }: EditorInsta
   }, [editor, onEditorReady]);
 
   useEffect(() => {
-    editor?.setEditable(editable);
+    // 权限切换与建议回写后的重挂载不属于用户编辑。
+    editor?.setEditable(editable, false);
   }, [editor, editable]);
 
   return <EditorContent editor={editor} />;
@@ -414,14 +416,29 @@ interface EditorSurfaceProps {
   locked: boolean;
   signedVersion: string | null;
   onCloseRequest: () => void;
+  onDirtyChange: (dirty: boolean) => void;
+  onDiscardReady: (discard: (() => void) | null) => void;
 }
 
-function EditorSurface({ draft, locked, signedVersion, onCloseRequest }: EditorSurfaceProps) {
+function EditorSurface({ draft, locked, signedVersion, onCloseRequest, onDirtyChange, onDiscardReady }: EditorSurfaceProps) {
   const [dirty, setDirty] = useState(false);
   const [nonce, setNonce] = useState(0);
   const [revisionMode, setRevisionMode] = useState(false);
   const editorRef = useRef<Editor | null>(null);
+  const savedContent = useRef(draft.working.content);
   const editable = !locked;
+  useEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
+  useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
+  useEffect(() => {
+    onDiscardReady(() => {
+      const store = useDocumentStore.getState();
+      store.updateWorkingContent(draft.documentId, savedContent.current);
+      store.invalidateReportForDocument(draft.documentId);
+      setDirty(false);
+      onDirtyChange(false);
+    });
+    return () => onDiscardReady(null);
+  }, [draft.documentId, onDirtyChange, onDiscardReady]);
 
   const handleDirty = useCallback(() => setDirty(true), []);
   const handleEditorReady = useCallback((editor: Editor | null) => {
@@ -431,12 +448,13 @@ function EditorSurface({ draft, locked, signedVersion, onCloseRequest }: EditorS
   // 采用建议等外部内容替换后：重挂编辑器同步最新工作副本。
   useEffect(() => {
     const handler = () => {
+      savedContent.current = useDocumentStore.getState().getDraft(draft.documentId)!.working.content;
       setDirty(false);
       setNonce((n) => n + 1);
     };
     window.addEventListener(CONTENT_REPLACED_EVENT, handler);
     return () => window.removeEventListener(CONTENT_REPLACED_EVENT, handler);
-  }, []);
+  }, [draft.documentId]);
 
   const factItems = useMemo(
     () =>
@@ -500,6 +518,7 @@ function EditorSurface({ draft, locked, signedVersion, onCloseRequest }: EditorS
       try {
         const newDraft = createRevisionDraftFromSigned({ documentId: draft.documentId, content, actorName: actor.name });
         setDirty(false);
+        onDirtyChange(false);
         setRevisionMode(false);
         message.success(`已基于已签发版本创建修订草稿（${newDraft.title}），请在文书中心继续编辑；原版本保持锁定`);
         window.dispatchEvent(new CustomEvent('axn:doc-open', { detail: { documentId: newDraft.documentId } }));
@@ -510,6 +529,7 @@ function EditorSurface({ draft, locked, signedVersion, onCloseRequest }: EditorS
       return;
     }
     store.updateWorkingContent(draft.documentId, content);
+    savedContent.current = content;
     store.invalidateReportForDocument(draft.documentId);
     const currentRev = draft.activeRevisionId ? store.getRevision(draft.activeRevisionId) : undefined;
     store.addAudit({
@@ -522,6 +542,7 @@ function EditorSurface({ draft, locked, signedVersion, onCloseRequest }: EditorS
       detail: '工作副本更新，原校核结果失效',
     });
     setDirty(false);
+    onDirtyChange(false);
     message.success('工作副本已保存（模拟）；原校核结果已失效，请重新校核');
   };
 
@@ -621,7 +642,23 @@ function EditorSurface({ draft, locked, signedVersion, onCloseRequest }: EditorS
 
 /* ================= 对外组件 ================= */
 
-export default function DocumentEditor({ documentId, open, onClose }: DocumentEditorProps) {
+export default function DocumentEditor({ documentId, open, onClose, onDirtyChange }: DocumentEditorProps) {
+  const { modal } = AntdApp.useApp();
+  const dirty = useRef(false);
+  const discard = useRef<(() => void) | null>(null);
+  const reportDiscard = useCallback((handler: (() => void) | null) => { discard.current = handler; }, []);
+  const reportDirty = useCallback((value: boolean) => {
+    dirty.current = value;
+    onDirtyChange?.(value);
+  }, [onDirtyChange]);
+  const requestClose = () => {
+    if (!dirty.current) { onClose(); return; }
+    modal.confirm({
+      title: '有未保存的文书修改', content: '关闭后将放弃未保存的工作副本修改。',
+      okText: '放弃修改并关闭', cancelText: '继续编辑', okButtonProps: { danger: true },
+      onOk: () => { discard.current?.(); reportDirty(false); onClose(); },
+    });
+  };
   const draft = useDocumentStore((s) => s.drafts[documentId]);
   const revisionsMap = useDocumentStore((s) => s.revisions);
 
@@ -643,7 +680,7 @@ export default function DocumentEditor({ documentId, open, onClose }: DocumentEd
       title={draft ? `编辑文书 · ${draft.title}` : '编辑文书'}
       width={880}
       open={open}
-      onClose={onClose}
+      onClose={requestClose}
       destroyOnHidden
     >
       {draft ? (
@@ -652,7 +689,9 @@ export default function DocumentEditor({ documentId, open, onClose }: DocumentEd
           draft={draft}
           locked={locked}
           signedVersion={signedRevision?.displayVersion ?? null}
-          onCloseRequest={onClose}
+          onCloseRequest={requestClose}
+          onDirtyChange={reportDirty}
+          onDiscardReady={reportDiscard}
         />
       ) : (
         <Empty description="文书不存在或演示数据已重置" />

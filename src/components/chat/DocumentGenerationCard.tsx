@@ -4,15 +4,22 @@ import { CheckCircleOutlined, FileTextOutlined, LoadingOutlined, RobotOutlined }
 import { Button, Input, Space, Steps, Tag, Typography } from 'antd';
 import type { ChatMessage } from '@/domain/types';
 import { useMockDocumentStore } from '@/store/mockDocumentStore';
+import { useDocumentNavigation } from '@/components/workspace/useDocumentNavigation';
 
 export default function DocumentGenerationCard({ message }: { message: ChatMessage }) {
   const [improvement, setImprovement] = useState('');
+  const openDocument = useDocumentNavigation();
   const workflow = message.documentWorkflow!;
   const waiting = workflow.stage === 'waiting_input';
   const completed = workflow.stage === 'completed';
   const interrupted = workflow.stage === 'interrupted';
   const current = { collecting: 0, waiting_input: 0, calling: 1, generating: 2, completed: 3, interrupted: 0 }[workflow.stage];
   const document = useMockDocumentStore(s => s.libraries[message.sessionId]?.documents.find(item => item.id === workflow.documentId));
+  // 完成后的“查看文书”显式打开右侧文书工作区（不触发重新生成）。
+  const openInWorkspace = () => {
+    if (!document) return;
+    openDocument(message.sessionId, { kind: 'mock', id: document.id });
+  };
   return <div className="axn-document-workflow" data-testid="document-generation-card" aria-live="polite">
     <Space wrap className="axn-document-workflow-head"><RobotOutlined /><Typography.Text strong>文书生成智能体</Typography.Text><Tag color={completed ? 'blue' : 'processing'}>{completed ? '已完成' : interrupted ? '已中断' : waiting ? '待补充' : '执行中'}</Tag></Space>
     <Typography.Paragraph type="secondary">{message.agentRole} · 模拟演示</Typography.Paragraph>
@@ -38,6 +45,6 @@ export default function DocumentGenerationCard({ message }: { message: ChatMessa
       <Typography.Paragraph type="secondary">{document.date} · 红头格式 · 模拟文书</Typography.Paragraph>
       <Typography.Paragraph ellipsis={{ rows: 3 }}>{document.sections[0]?.[1]}</Typography.Paragraph>
     </div>}
-    {waiting ? <Typography.Text type="secondary">等待你补充改进计划，也可以在下方对话框直接回复。</Typography.Text> : interrupted ? <Typography.Text type="secondary">页面刷新中断了模拟过程，请重新点击生成。</Typography.Text> : completed ? <Space wrap className="axn-document-workflow-footer"><CheckCircleOutlined /><Typography.Text>已生成，可在右侧查看详情</Typography.Text>{document && <Button size="small" icon={<FileTextOutlined />} onClick={() => useMockDocumentStore.getState().select(message.sessionId, document)}>查看文书</Button>}</Space> : <Space><LoadingOutlined /><Typography.Text>{workflow.stage === 'collecting' ? '整理文书要素…' : workflow.stage === 'calling' ? '正在调用文书生成智能体…' : '正在生成文书…'}</Typography.Text></Space>}
+    {waiting ? <Typography.Text type="secondary">等待你补充改进计划，也可以在下方对话框直接回复。</Typography.Text> : interrupted ? <Typography.Text type="secondary">页面刷新中断了模拟过程，请重新点击生成。</Typography.Text> : completed ? <Space wrap className="axn-document-workflow-footer"><CheckCircleOutlined /><Typography.Text>已生成，可在右侧文书工作区查看详情</Typography.Text>{document && <Button aria-label="查看文书" size="small" icon={<FileTextOutlined />} onClick={openInWorkspace}>查看文书</Button>}</Space> : <Space><LoadingOutlined /><Typography.Text>{workflow.stage === 'collecting' ? '整理文书要素…' : workflow.stage === 'calling' ? '正在调用文书生成智能体…' : '正在生成文书…'}</Typography.Text></Space>}
   </div>;
 }
