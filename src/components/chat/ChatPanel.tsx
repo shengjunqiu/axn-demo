@@ -432,8 +432,9 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             onCancel={() => {
               if (runningTask) cancelTask(runningTask.taskId);
             }}
-            suffix={(_, { components: { SendButton } }) => (
+            suffix={(_, { components: { SendButton, SpeechButton } }) => (
               <>
+                <SpeechButton />
                 <Tooltip title="关联后使用该事件的业务资料，对话消息保持独立">
                   <Select
                     size="small"
