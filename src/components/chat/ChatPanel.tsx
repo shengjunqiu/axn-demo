@@ -374,8 +374,8 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
       )}
 
       {/* 快捷任务 chips：位于输入框上方 */}
-      <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-        <div className="axn-chips" style={{ marginBottom: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '0 16px', width: '100%', boxSizing: 'border-box' }}>
+        <div className="axn-chips" style={{ maxWidth: 880, margin: '0 0 8px', padding: '0 8px', width: '100%', boxSizing: 'border-box' }}>
         {PRIMARY_TASKS.map(({ label, agentName, agentId }) => (
           <Button
             key={label}
