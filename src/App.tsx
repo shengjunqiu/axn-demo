@@ -5,20 +5,23 @@
  * 其余导航页占满主内容区。原全宽业务页头移除，其承载项下移至侧栏底部。
  * 单页应用不引入 react-router；导航页与工作区可见性均为本地/UI 状态。
  */
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Drawer } from 'antd';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { useConversationStore } from '@/store/conversationStore';
 import { useActiveScope, useWorkspaceStore } from '@/store/workspaceStore';
 import ChatPanel from '@/components/chat/ChatPanel';
-import ResourcePanel from '@/components/workspace/ResourcePanel';
-import KnowledgePanel from '@/components/workspace/KnowledgePanel';
-import DocumentLibraryPage from '@/components/workspace/DocumentLibraryPage';
-import DocumentWorkspace, { WorkspaceSync } from '@/components/workspace/DocumentWorkspace';
 import GlobalSidebar from '@/components/nav/GlobalSidebar';
-import { NavPageContent } from '@/components/nav/NavPages';
-import PrintView from '@/components/doc/PrintView';
+import WorkspaceSync from '@/components/workspace/WorkspaceSync';
+
+/** 工作区抽屉中按需渲染的面板。 */
+const DocumentLibraryPage = lazy(() => import('@/components/workspace/DocumentLibraryPage'));
+const DocumentWorkspace = lazy(() => import('@/components/workspace/DocumentWorkspace'));
+const ResourcePanel = lazy(() => import('@/components/workspace/ResourcePanel'));
+const KnowledgePanel = lazy(() => import('@/components/workspace/KnowledgePanel'));
+const NavPageContent = lazy(() => import('@/components/nav/NavPages').then(m => ({ default: m.NavPageContent })));
+const PrintView = lazy(() => import('@/components/doc/PrintView'));
 
 /** 工作区抽屉目标（资源/知识面板由对话任务卡触发的抽屉承载）。 */
 export type WorkspaceTab = 'resource' | 'knowledge';
@@ -69,7 +72,7 @@ export default function AppRoot() {
         {storageWarning && <div className="axn-shell-warning">{storageWarning}</div>}
 
         {activeNav === 'library' ? (
-          <DocumentLibraryPage />
+          <Suspense><DocumentLibraryPage /></Suspense>
         ) : activeNav === 'assistant' ? (
           <div className={`axn-assistant${workspaceOpen ? ' axn-assistant--split' : ''}`}>
             <div className="axn-chat-pane">
@@ -77,24 +80,24 @@ export default function AppRoot() {
             </div>
             {workspaceOpen && (
               <div className="axn-workspace-pane">
-                <DocumentWorkspace />
+                <Suspense><DocumentWorkspace /></Suspense>
               </div>
             )}
           </div>
         ) : (
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-            <NavPageContent page={activeNav} />
+            <Suspense><NavPageContent page={activeNav} /></Suspense>
           </div>
         )}
       </main>
 
       <Drawer title="资源与态势（模拟）" width={760} open={panelDrawer === 'resource'} onClose={() => setPanelDrawer(null)} destroyOnHidden>
-        {panelDrawer === 'resource' && <ResourcePanel />}
+        <Suspense>{panelDrawer === 'resource' && <ResourcePanel />}</Suspense>
       </Drawer>
       <Drawer title="建议与知识（模拟）" width={560} open={panelDrawer === 'knowledge'} onClose={() => setPanelDrawer(null)} destroyOnHidden>
-        {panelDrawer === 'knowledge' && <KnowledgePanel />}
+        <Suspense>{panelDrawer === 'knowledge' && <KnowledgePanel />}</Suspense>
       </Drawer>
-      <PrintView />
+      <Suspense><PrintView /></Suspense>
     </div>
   );
 }

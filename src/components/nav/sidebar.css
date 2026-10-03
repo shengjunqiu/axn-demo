@@ -86,3 +86,36 @@
 .axn-gs-footer .axn-gs-nav-item { font-size: 12px; gap: 10px; height: 32px; padding-inline: 8px; }
 .axn-gs-footer .axn-gs-nav-item .anticon { font-size: 15px; }
 @media (prefers-reduced-motion: reduce) { .axn-gs-nav-item, .axn-gs-conversation, .axn-gs-conv-actions { transition: none; } }
+
+/* NavPages 工具类 */
+.axn-np-section { padding: 6px 18px 18px; }
+.axn-np-col { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; max-width: 860px; }
+.axn-np-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; max-width: 1100px; }
+.axn-np-grid-wide { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-top: 10px; max-width: 1100px; }
+.axn-np-flex-row { display: flex; align-items: center; gap: 8px; }
+.axn-np-flex-1 { flex: 1; min-width: 0; }
+.axn-np-header { display: flex; align-items: baseline; gap: 12px; padding: 14px 18px 4px; flex-wrap: wrap; }
+.axn-np-meta { font-size: 12px; color: #8a94a6; margin-top: 2px; }
+.axn-np-meta-nowrap { font-size: 12px; color: #8a94a6; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.axn-np-meta2 { font-size: 12px; color: #a0a8b8; margin-top: 2px; }
+.axn-np-label { color: #8a94a6; margin-bottom: 4px; }
+.axn-np-fs12 { font-size: 12px; }
+.axn-np-fs13 { font-size: 13.5px; }
+.axn-np-fs14 { font-size: 14px; }
+.axn-np-fs16 { font-size: 16px; }
+.axn-np-margin-input { margin: 8px 0 12px; max-width: 860px; }
+.axn-np-search { width: 220px; }
+.axn-np-mt8 { margin-top: 8px; }
+.axn-np-mt10 { margin-top: 10px; }
+.axn-np-mb12 { margin-bottom: 12px; }
+.axn-np-mla { margin-left: auto; }
+.axn-np-desc { font-size: 12.5px; color: #4a5568; line-height: 1.6; }
+.axn-np-title-sm { margin: 0; font-size: 16px; }
+.axn-np-icon-huge { font-size: 22px; color: #1d6ff2; flex-shrink: 0; }
+.axn-np-icon-med { font-size: 20px; color: #1d6ff2; }
+.axn-np-icon-med-mt { font-size: 20px; color: #1d6ff2; margin-top: 2px; }
+.axn-np-icon-gray { color: #a0a8b8; }
+.axn-np-text-sm { font-size: 12px; flex-shrink: 0; }
+.axn-np-k-title { font-size: 13px; font-weight: 600; }
+.axn-np-k-notice { font-size: 12px; color: #d48806; margin-top: 2px; }
+.axn-np-full-span { grid-column: 1 / -1; }

@@ -3,7 +3,7 @@
  * 导出与打印必须使用用户选定的版本快照 + 该版本保存时的事实值。
  */
 import type { DocumentRevision } from '@/domain/types';
-import { flattenRuns } from './contentRuns';
+import { flattenRuns } from './contentRuns.js';
 import { templateByCode } from '@/seed/scenario';
 
 export interface RenderedSection {

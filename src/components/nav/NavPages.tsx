@@ -23,21 +23,21 @@ import { useConversationStore } from '@/store/conversationStore';
 import { knowledgeChunks } from '@/seed/scenario';
 
 const MOCK_TAG = (
-  <Tag color="orange" style={{ fontSize: 12 }}>
+  <Tag color="orange" className="axn-np-fs12">
     模拟数据
   </Tag>
 );
 
 function PageHeader({ title, sub, extra }: { title: string; sub: string; extra?: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '14px 18px 4px', flexWrap: 'wrap' }}>
-      <Typography.Title level={5} style={{ margin: 0, fontSize: 16 }}>
+    <div className="axn-np-header">
+      <Typography.Title level={5} className="axn-np-title-sm">
         {title}
       </Typography.Title>
-      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+      <Typography.Text type="secondary" className="axn-np-fs12">
         {sub}
       </Typography.Text>
-      <div style={{ marginLeft: 'auto' }}>{extra}</div>
+      <div className="axn-np-mla">{extra}</div>
     </div>
   );
 }
@@ -111,25 +111,25 @@ export function ProjectsPage() {
   };
 
   return (
-    <div style={{ padding: '6px 18px 18px' }} data-testid="projects-page">
+    <div className="axn-np-section" data-testid="projects-page">
       <PageHeader title="应急项目" sub="项目为业务组织维度；进入工作台后继续在智能助理中操作" extra={MOCK_TAG} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10, maxWidth: 860 }}>
+      <div className="axn-np-col">
         {PROJECTS.map((p) => (
           <Card key={p.projectId} size="small" styles={{ body: { display: 'flex', alignItems: 'center', gap: 14 } }}>
-            <FundProjectionScreenOutlined style={{ fontSize: 22, color: '#1d6ff2', flexShrink: 0 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Typography.Text strong style={{ fontSize: 14 }}>
+            <FundProjectionScreenOutlined className="axn-np-icon-huge" />
+            <div className="axn-np-flex-1">
+              <div className="axn-np-flex-row">
+                <Typography.Text strong className="axn-np-fs14">
                   {p.name}
                 </Typography.Text>
                 <Tag color={p.status === '进行中' ? 'processing' : p.status === '筹备中' ? 'default' : 'success'}>
                   {p.status}
                 </Tag>
               </div>
-              <div style={{ fontSize: 12, color: '#8a94a6', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div className="axn-np-meta-nowrap">
                 {p.desc}
               </div>
-              <div style={{ fontSize: 12, color: '#a0a8b8', marginTop: 2 }}>
+              <div className="axn-np-meta2">
                 更新 {p.updatedAt} · 负责人 {p.owner} · 关联会话「{p.conversationTitle}」
               </div>
             </div>
@@ -205,37 +205,37 @@ const AGENTS: AgentCard[] = [
 
 export function AgentsPage() {
   return (
-    <div style={{ padding: '6px 18px 18px' }} data-testid="agents-page">
+    <div className="axn-np-section" data-testid="agents-page">
       <PageHeader
         title="智能体与 Skill"
         sub="能力展示页；智能助理已默认协同以上能力，无需手动选择即可直接工作"
         extra={MOCK_TAG}
       />
       <Alert
-        style={{ margin: '8px 0 12px', maxWidth: 860 }}
+        className="axn-np-margin-input"
         type="info"
         showIcon
-        message="以下智能体能力已内置于智能助理工作流（模拟实现），此处仅展示能力说明，不作为使用前置条件。"
+        title="以下智能体能力已内置于智能助理工作流（模拟实现），此处仅展示能力说明，不作为使用前置条件。"
       />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 12, maxWidth: 1100 }}>
+      <div className="axn-np-grid">
         {AGENTS.map((a) => (
           <Card key={a.agentId} size="small" title={<Space size={8}>{a.icon}<span>{a.name}</span></Space>} extra={<Tag color={a.status === '规划中' ? 'default' : 'geekblue'}>{a.status}</Tag>}>
-            <div style={{ fontSize: 12.5, color: '#4a5568', lineHeight: 1.6 }}>{a.desc}</div>
-            <div style={{ marginTop: 10, fontSize: 12 }}>
-              <div style={{ color: '#8a94a6', marginBottom: 4 }}>典型任务</div>
+            <div className="axn-np-desc">{a.desc}</div>
+            <div className="axn-np-mt10 axn-np-fs12">
+              <div className="axn-np-label">典型任务</div>
               <Space size={4} wrap>
                 {a.tasks.map((t) => (
-                  <Tag key={t} style={{ fontSize: 12 }}>
+                  <Tag key={t} className="axn-np-fs12">
                     {t}
                   </Tag>
                 ))}
               </Space>
             </div>
-            <div style={{ marginTop: 8, fontSize: 12 }}>
-              <div style={{ color: '#8a94a6', marginBottom: 4 }}>示例 Skill</div>
+            <div className="axn-np-mt8 axn-np-fs12">
+              <div className="axn-np-label">示例 Skill</div>
               <Space size={4} wrap>
                 {a.skills.map((s) => (
-                  <Tag key={s} color="blue" style={{ fontSize: 12 }}>
+                  <Tag key={s} color="blue" className="axn-np-fs12">
                     {s}
                   </Tag>
                 ))}
@@ -267,23 +267,23 @@ const SCHEDULES: ScheduleRow[] = [
 
 export function SchedulesPage() {
   return (
-    <div style={{ padding: '6px 18px 18px' }} data-testid="schedules-page">
+    <div className="axn-np-section" data-testid="schedules-page">
       <PageHeader title="定时任务" sub="模拟环境中的定时任务，不执行真实调度" extra={MOCK_TAG} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10, maxWidth: 860 }}>
+      <div className="axn-np-col">
         {SCHEDULES.map((s) => (
           <Card key={s.scheduleId} size="small" styles={{ body: { display: 'flex', alignItems: 'center', gap: 14 } }}>
-            <ClockCircleOutlined style={{ fontSize: 20, color: '#1d6ff2' }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <ClockCircleOutlined className="axn-np-icon-med" />
+            <div className="axn-np-flex-1">
               <Space size={8}>
-                <Typography.Text strong style={{ fontSize: 13.5 }}>
+                <Typography.Text strong className="axn-np-fs13">
                   {s.name}
                 </Typography.Text>
                 <Tag>{s.cron}</Tag>
                 <Tag color={s.status === '已暂停' ? 'default' : 'success'}>{s.status}</Tag>
               </Space>
-              <div style={{ fontSize: 12, color: '#8a94a6', marginTop: 2 }}>{s.desc}</div>
+              <div className="axn-np-meta">{s.desc}</div>
             </div>
-            <Typography.Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>
+            <Typography.Text type="secondary" className="axn-np-text-sm">
               上次 {s.lastRun}
             </Typography.Text>
           </Card>
@@ -322,7 +322,7 @@ export function KnowledgePage() {
   );
 
   return (
-    <div style={{ padding: '6px 18px 18px' }} data-testid="knowledge-page">
+    <div className="axn-np-section" data-testid="knowledge-page">
       <PageHeader
         title="知识库"
         sub="六大知识库视图；详情引用本种子知识包"
@@ -331,9 +331,9 @@ export function KnowledgePage() {
             <Input
               allowClear
               size="small"
-              prefix={<SearchOutlined style={{ color: '#a0a8b8' }} />}
+              prefix={<SearchOutlined className="axn-np-icon-gray" />}
               placeholder="搜索知识库"
-              style={{ width: 220 }}
+              className="axn-np-search"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               data-testid="knowledge-search"
@@ -342,7 +342,7 @@ export function KnowledgePage() {
           </Space>
         }
       />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12, marginTop: 10, maxWidth: 1100 }}>
+      <div className="axn-np-grid-wide">
         {filteredLibs.map((lib) => (
           <Card
             key={lib.libraryId}
@@ -351,20 +351,20 @@ export function KnowledgePage() {
             onClick={() => setDetail(lib)}
             styles={{ body: { display: 'flex', gap: 12, alignItems: 'flex-start' } }}
           >
-            <div style={{ fontSize: 20, color: '#1d6ff2', marginTop: 2 }}>{lib.icon}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Typography.Text strong style={{ fontSize: 13.5 }}>
+            <div className="axn-np-icon-med-mt">{lib.icon}</div>
+            <div className="axn-np-flex-1">
+              <div className="axn-np-flex-row">
+                <Typography.Text strong className="axn-np-fs13">
                   {lib.name}
                 </Typography.Text>
-                <Tag style={{ fontSize: 12 }}>{lib.count} 条</Tag>
+                <Tag className="axn-np-fs12">{lib.count} 条</Tag>
               </div>
-              <div style={{ fontSize: 12, color: '#8a94a6', marginTop: 2 }}>{lib.desc}</div>
+              <div className="axn-np-meta">{lib.desc}</div>
             </div>
           </Card>
         ))}
         {filteredLibs.length === 0 && (
-          <div style={{ gridColumn: '1 / -1' }}>
+          <div className="axn-np-full-span">
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={`未找到与「${keyword}」匹配的知识库`} />
           </div>
         )}
@@ -372,24 +372,24 @@ export function KnowledgePage() {
 
       <Drawer
         title={detail ? `${detail.name} · 详情` : ''}
-        width={480}
+        size={480}
         open={!!detail}
         onClose={() => setDetail(null)}
       >
         {detail && (
           <div>
-            <Alert type="info" showIcon message="以下条目来自本种子知识包，全部为虚构模拟数据。" style={{ marginBottom: 12 }} />
+            <Alert type="info" showIcon title="以下条目来自本种子知识包，全部为虚构模拟数据。" className="axn-np-mb12" />
             <Timeline
               items={knowledgeChunks.map((k) => ({
                 color: 'blue',
                 children: (
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{k.title}</div>
-                    <div style={{ fontSize: 12, color: '#8a94a6', marginTop: 2 }}>{k.content}</div>
-                    <div style={{ fontSize: 12, color: '#a0a8b8', marginTop: 2 }}>
+                    <div className="axn-np-k-title">{k.title}</div>
+                    <div className="axn-np-meta">{k.content}</div>
+                    <div className="axn-np-meta2">
                       {k.category} · {k.version} · {k.sourceLabel}
                     </div>
-                    <div style={{ fontSize: 12, color: '#d48806', marginTop: 2 }}>{k.notice}</div>
+                    <div className="axn-np-k-notice">{k.notice}</div>
                   </div>
                 ),
               }))}

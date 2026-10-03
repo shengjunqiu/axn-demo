@@ -47,6 +47,8 @@ export function flattenRuns(
       case 'knowledge':
         out += run.label;
         break;
+      default:
+        break;
     }
   }
   return out;

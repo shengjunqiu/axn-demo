@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { useDocumentStore } from './documentStore';
+import { useDocumentStore } from './documentStore.js';
 import { shift } from '@/seed/scenario';
 import { invalidateAllRuns } from '@/services/taskRuns';
 import {
@@ -11,7 +11,7 @@ import {
   demoMeta,
 } from '@/seed/scenario';
 import type { Actor, DemoConfig, DemoPace } from '@/domain/types';
-import { clearPersist, loadPersist, savePersist } from './persistence';
+import { clearPersist, loadPersist, savePersist } from './persistence.js';
 
 export interface ManualFactEntry {
   factId: string;
@@ -103,15 +103,24 @@ interface DemoPersist {
 const demoPersisted = loadPersist<DemoPersist>('demo');
 const persistedManualInput: unknown = demoPersisted?.manualFacts;
 const persistedManualFacts = (Array.isArray(persistedManualInput) ? persistedManualInput : []).filter(
-  (entry): entry is ManualFactEntry => !!entry && typeof entry === 'object'
+  (entry): entry is ManualFactEntry => Boolean(entry) && typeof entry === 'object'
     && ['factId', 'field', 'value', 'scopeId', 'sourceRecordId', 'actorId', 'actorName', 'performedAt', 'demoClockAt', 'sourceLabel'].every(
       key => typeof (entry as Record<string, unknown>)[key] === 'string')
     && (entry.scopeKind === 'event' || entry.scopeKind === 'shift'),
 );
 const malformedManualFacts = persistedManualInput != null && (!Array.isArray(persistedManualInput) || persistedManualFacts.length !== persistedManualInput.length);
-const duplicateManualIds = new Set(persistedManualFacts.filter((fact, index, all) =>
-  all.findIndex(other => other.factId === fact.factId) !== index).map(fact => fact.factId));
+const duplicateManualIds = new Set(persistedManualFacts.flatMap((fact, index, all) =>
+  all.findIndex(other => other.factId === fact.factId) !== index ? [fact.factId] : []));
+let storageWarningMsg: string | null;
+if (malformedManualFacts) {
+  storageWarningMsg = '部分补录缓存格式不完整，未载入；请重新补录并校核文书。';
+} else if (duplicateManualIds.size) {
+  storageWarningMsg = '检测到旧模拟数据的补录引用冲突，请重新补录相关字段并刷新文书数据；旧记录未被删除。';
+} else {
+  storageWarningMsg = null;
+}
 
+  const contextSequenceValue = demoPersisted?.contextSequence ?? (demoPersisted?.waterOverride ? 2 : 1);
 export const useDemoStore = create<DemoState>()((set, get) => ({
   actorId: demoPersisted?.actorId ?? DEFAULT_ACTOR_ID,
   currentEventId: demoPersisted?.currentEventId ?? DEFAULT_EVENT_ID,
@@ -122,8 +131,8 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
   manualFacts: persistedManualFacts,
   waterOverride: demoPersisted?.waterOverride ?? null,
   contextVersions: demoPersisted?.contextVersions ?? {},
-  contextSequence: demoPersisted?.contextSequence ?? (demoPersisted?.waterOverride ? 2 : 1),
-  storageWarning: malformedManualFacts ? '部分补录缓存格式不完整，未载入；请重新补录并校核文书。' : duplicateManualIds.size ? '检测到旧模拟数据的补录引用冲突，请重新补录相关字段并刷新文书数据；旧记录未被删除。' : null,
+  contextSequence: contextSequenceValue,
+  storageWarning: storageWarningMsg,
   globalBanner: demoMeta.globalBanner,
   sidebarCollapsed: false,
 
@@ -138,7 +147,9 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
 
   getActor: () => {
     const { actorId } = get();
-    return actorById.get(actorId) ?? actorById.get(DEFAULT_ACTOR_ID)!;
+    const actor = actorById.get(actorId) ?? actorById.get(DEFAULT_ACTOR_ID);
+    if (!actor) throw new Error('演员表未找到默认角色');
+    return actor;
   },
   setActor: (actorId) => set({ actorId }),
 
@@ -185,11 +196,15 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
     return entry;
   },
 
-  getManualFactByField: (field, scopeKind, scopeId) =>
-    [...get().manualFacts]
-      .reverse()
-      .find((m) => m.field === field && m.scopeKind === scopeKind && m.scopeId === scopeId
-        && get().manualFacts.filter(other => other.factId === m.factId).length === 1),
+  getManualFactByField: (field, scopeKind, scopeId) => {
+    const facts = get().manualFacts;
+    for (let i = facts.length - 1; i >= 0; i--) {
+      const m = facts[i];
+      if (m.field === field && m.scopeKind === scopeKind && m.scopeId === scopeId
+        && facts.filter(other => other.factId === m.factId).length === 1) return m;
+    }
+    return undefined;
+  },
 
   applyWaterFeedUpdate: () => {
     const fault = get().isWaterFeedUpdated() ? null : {

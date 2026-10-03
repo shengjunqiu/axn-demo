@@ -269,7 +269,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             onClick={toggleSidebar}
             aria-label={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
           />
-          <Text strong style={{ fontSize: 14, flex: 1, minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+          <Text strong className="axn-cp-title">
             {eventTitle}
           </Text>
         </div>
@@ -279,7 +279,6 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
       {hasMessages ? (
         <Bubble.List
           className="axn-message-list"
-          style={{ flex: 1, minHeight: 0 }}
           autoScroll
           items={items}
           role={{
@@ -324,7 +323,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             </Typography.Paragraph>
 
             <div className="axn-home-block" data-testid="home-chat-recommend">
-              <Text type="secondary" style={{ fontSize: 13 }}>为你推荐</Text>
+              <Text type="secondary" className="axn-tc-fs13">为你推荐</Text>
               <ul className="axn-question-list">
                 {WELCOME_QUESTIONS.map((q) => (
                   <li key={q}>
@@ -341,7 +340,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
               </ul>
             </div>
 
-            <Text type="secondary" style={{ fontSize: 12 }}>
+            <Text type="secondary" className="axn-tc-fs12">
               也可直接输入指令，或在下方输入区使用快捷任务。
             </Text>
           </div>
@@ -356,7 +355,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             showIcon
             title={pending.prompt}
             description={
-              <Space.Compact style={{ width: '100%', marginTop: 6 }}>
+              <Space.Compact className="axn-cp-compact">
                 <Input
                   value={clarifyValue}
                   onChange={(e) => setClarifyValue(e.target.value)}
@@ -374,8 +373,8 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
       )}
 
       {/* 快捷任务 chips：位于输入框上方 */}
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '0 16px', width: '100%', boxSizing: 'border-box' }}>
-        <div className="axn-chips" style={{ maxWidth: 880, margin: '0 0 8px', padding: '0 8px', width: '100%', boxSizing: 'border-box' }}>
+      <div className="axn-cp-chips-wrap">
+        <div className="axn-chips">
         {PRIMARY_TASKS.map(({ label, agentName, agentId }) => (
           <Button
             key={label}
@@ -427,11 +426,11 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
       {/* 圆角一体化输入区：关联灾情在输入框上方 */}
       <div className="axn-composer">
         <div className="axn-composer-shell">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <div className="axn-cp-select-row">
             <Tooltip title="关联后使用该事件的业务资料，对话消息保持独立">
               <Select
                 size="small"
-                style={{ minWidth: 100, fontSize: 12 }}
+                className="axn-cp-select"
                 value={linkValue}
                 onChange={handleLinkChange}
                 options={linkOptions}

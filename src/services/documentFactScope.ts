@@ -1,5 +1,5 @@
 import type { DocumentDraft } from '@/domain/types';
-import { type FactQueryScope } from './factLookup';
+import { type FactQueryScope } from './factLookup.js';
 
 type DocumentScope = Pick<DocumentDraft, 'scopeKind' | 'eventId' | 'shiftId'>;
 

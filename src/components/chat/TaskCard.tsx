@@ -53,15 +53,15 @@ const STATUS_META: Record<TaskStatus, { label: string; color: string }> = {
 function StepIcon({ status }: { status: StepStatus }) {
   switch (status) {
     case 'completed':
-      return <CheckCircleFilled style={{ color: '#52c41a' }} />;
+      return <CheckCircleFilled className="axn-tc-green" />;
     case 'running':
-      return <LoadingOutlined spin style={{ color: '#1d6ff2' }} />;
+      return <LoadingOutlined spin className="axn-tc-blue" />;
     case 'failed':
-      return <CloseCircleFilled style={{ color: '#ff4d4f' }} />;
+      return <CloseCircleFilled className="axn-tc-red" />;
     case 'cancelled':
-      return <MinusCircleFilled style={{ color: '#bfbfbf' }} />;
+      return <MinusCircleFilled className="axn-tc-muted" />;
     default:
-      return <ClockCircleOutlined style={{ color: '#bfbfbf' }} />;
+      return <ClockCircleOutlined className="axn-tc-muted" />;
   }
 }
 
@@ -89,12 +89,12 @@ function SummaryBlock({ payload }: { payload: SummaryArtifact }) {
           <span className="axn-artifact-value">
             {factValueText(row.factId, row.displayOverride)}
             {row.emphasize === 'suggested' && (
-              <Tag color="blue" style={{ marginLeft: 6 }}>
+              <Tag color="blue" className="axn-tc-ml6">
                 建议值
               </Tag>
             )}
             {row.emphasize === 'pending' && isPending(row.factId) && (
-              <Tag color="orange" style={{ marginLeft: 6 }}>
+              <Tag color="orange" className="axn-tc-ml6">
                 待确认
               </Tag>
             )}
@@ -105,13 +105,13 @@ function SummaryBlock({ payload }: { payload: SummaryArtifact }) {
         <Alert
           type="warning"
           showIcon
-          style={{ marginTop: 8 }}
+          className="axn-tc-mt8"
           title={`待确认字段：${pendingKeys.map(id => payload.rows.find(row => row.factId === id)?.label ?? '待补充信息').join('、')}`}
           description="以上字段暂无可靠来源，需人工补录后才会进入正式产物（模拟）。"
         />
       )}
       {payload.sourceUnavailable && (
-        <Alert type="info" showIcon style={{ marginTop: 8 }} title={payload.sourceUnavailable} />
+        <Alert type="info" showIcon className="axn-tc-mt8" title={payload.sourceUnavailable} />
       )}
       <div className="axn-artifact-foot">数据时间：{payload.dataTime} · 模拟数据</div>
     </div>
@@ -158,7 +158,7 @@ function ResourceBlock({ payload, onOpenDrawer }: { payload: ResourceResultArtif
         );
       })}
       {payload.note && <div className="axn-artifact-foot">{payload.note}</div>}
-      <Button size="small" type="primary" ghost onClick={() => onOpenDrawer('resource')} style={{ marginTop: 8 }}>
+      <Button size="small" type="primary" ghost onClick={() => onOpenDrawer('resource')} className="axn-tc-mt8">
         查看资源与态势
       </Button>
     </div>
@@ -183,7 +183,7 @@ function KnowledgeBlock({ payload, onOpenDrawer }: { payload: KnowledgeArtifact;
           </div>
         ))
       )}
-      <Button size="small" type="primary" ghost onClick={() => onOpenDrawer('knowledge')} style={{ marginTop: 8 }}>
+      <Button size="small" type="primary" ghost onClick={() => onOpenDrawer('knowledge')} className="axn-tc-mt8">
         查看建议与知识
       </Button>
     </div>
@@ -198,49 +198,49 @@ function QaKnowledgeBlock({ payload }: { payload: QaKnowledgeArtifact }) {
         <span className="axn-artifact-label">{payload.category}</span>
         <span className="axn-artifact-value">知识问答（模拟数据）</span>
       </div>
-      <p style={{ margin: '8px 0 4px', fontWeight: 600, lineHeight: 1.6 }}>{payload.summary}</p>
+      <p className="axn-tc-heading">{payload.summary}</p>
       {payload.keyActions && (
-        <div style={{ marginBottom: 4 }}>
-          <Text strong style={{ fontSize: 12 }}>建议动作</Text>
-          <div style={{ fontSize: 12, lineHeight: 1.6 }}>{payload.keyActions}</div>
+        <div className="axn-tc-mb4">
+          <Text strong className="axn-tc-fs12">建议动作</Text>
+          <div className="axn-tc-fs12-lh16">{payload.keyActions}</div>
         </div>
       )}
       {payload.doNot && (
-        <div style={{ marginBottom: 4 }}>
-          <Text strong style={{ fontSize: 12 }}>禁忌提醒</Text>
-          <div style={{ fontSize: 12, lineHeight: 1.6 }}>{payload.doNot}</div>
+        <div className="axn-tc-mb4">
+          <Text strong className="axn-tc-fs12">禁忌提醒</Text>
+          <div className="axn-tc-fs12-lh16">{payload.doNot}</div>
         </div>
       )}
       {payload.supportAndReporting && (
-        <div style={{ marginBottom: 4 }}>
-          <Text strong style={{ fontSize: 12 }}>协同上报</Text>
-          <div style={{ fontSize: 12, lineHeight: 1.6 }}>{payload.supportAndReporting}</div>
+        <div className="axn-tc-mb4">
+          <Text strong className="axn-tc-fs12">协同上报</Text>
+          <div className="axn-tc-fs12-lh16">{payload.supportAndReporting}</div>
         </div>
       )}
       {payload.liveDataNeeded.length > 0 && (
-        <div style={{ margin: '6px 0' }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>需结合现场实时数据：</Text>
+        <div className="axn-tc-m-6-0">
+          <Text type="secondary" className="axn-tc-fs12">需结合现场实时数据：</Text>
           {payload.liveDataNeeded.map((d) => (
-            <Tag key={d} style={{ marginInlineEnd: 4, fontSize: 12 }}>{d}</Tag>
+            <Tag key={d} className="axn-tc-tag-sm">{d}</Tag>
           ))}
         </div>
       )}
-      <div style={{ margin: '6px 0', fontSize: 12 }}>
+      <div className="axn-tc-m-6-0 axn-tc-fs12">
         <Text type="secondary">置信度 {Math.round(payload.confidence * 100)}% · {qaStatusLabel(payload.answerStatus)}</Text>
       </div>
-      <div style={{ borderTop: '1px dashed #d9dfe8', paddingTop: 6, marginTop: 6 }}>
-        <Text strong style={{ fontSize: 12 }}>来源（模拟应用文档）</Text>
+      <div className="axn-tc-divider">
+        <Text strong className="axn-tc-fs12">来源（模拟应用文档）</Text>
         {payload.sources.map((s) => (
-          <div key={`${s.docId}-${s.section}`} className="axn-qa-source" style={{ margin: '6px 0', fontSize: 12, lineHeight: 1.6 }}>
+          <div key={`${s.docId}-${s.section}`} className="axn-qa-source axn-tc-body">
             <div>
-              <Tag color="blue" style={{ fontSize: 12, marginInlineEnd: 4 }}>模拟</Tag>
+              <Tag color="blue" className="axn-tc-tag-sm">模拟</Tag>
               <Text strong>《{s.title}》</Text>
               <Text type="secondary"> {s.section}</Text>
             </div>
-            <div style={{ color: '#666' }}>“{s.excerpt}”</div>
+            <div className="axn-tc-gray">“{s.excerpt}”</div>
           </div>
         ))}
-        <Text type="secondary" style={{ fontSize: 12 }}>
+        <Text type="secondary" className="axn-tc-fs12">
           模拟数据，非正式技术规范；现场处置以现场指挥体系、现行法规标准与专业技术人员判断为准。
         </Text>
       </div>
@@ -259,7 +259,7 @@ function ProposalBlock({ payload, onOpenDrawer }: { payload: ProposalArtifact; o
         </span>
       </div>
       {proposal?.sections.map(section => <div className="axn-resource-result" key={section.id}><Text strong>{section.title}</Text><Text>{section.text}</Text></div>)}
-      <Button size="small" type="primary" ghost onClick={() => onOpenDrawer('knowledge')} style={{ marginTop: 8 }}>
+      <Button size="small" type="primary" ghost onClick={() => onOpenDrawer('knowledge')} className="axn-tc-mt8">
         查看建议与知识
       </Button>
     </div>
@@ -287,13 +287,13 @@ function DocumentBlock({ payload, sessionId }: { payload: DocumentLinkArtifact; 
         <Alert
           type="warning"
           showIcon
-          style={{ marginTop: 8 }}
+          className="axn-tc-mt8"
           title={`缺少必填字段：${payload.missingFields.join('、')}`}
           description="请在对话中按提示补录（补录内容确认后生成模拟来源记录）。"
         />
       )}
       {payload.state === 'draft_created' && draft && (
-        <Button size="small" type="primary" ghost onClick={openDraft} style={{ marginTop: 8 }} data-testid="task-open-draft">
+        <Button size="small" type="primary" ghost onClick={openDraft} className="axn-tc-mt8" data-testid="task-open-draft">
           预览/打开真实草稿
         </Button>
       )}
@@ -317,7 +317,7 @@ function ArtifactBlock({ payload, onOpenDrawer, sessionId }: { payload: TaskArti
       return <DocumentBlock payload={payload} sessionId={sessionId} />;
     case 'clarification':
       return (
-        <Alert type="info" showIcon message="需要补充信息" description={payload.prompt} style={{ marginTop: 8 }} />
+        <Alert type="info" showIcon title="需要补充信息" description={payload.prompt} className="axn-tc-mt8" />
       );
     case 'error': {
       const err: ErrorArtifact = payload;
@@ -325,7 +325,7 @@ function ArtifactBlock({ payload, onOpenDrawer, sessionId }: { payload: TaskArti
         <Alert
           type="error"
           showIcon
-          style={{ marginTop: 8 }}
+          className="axn-tc-mt8"
           title={`${err.message}（${err.errorCode}）`}
           description={err.hint}
         />
@@ -344,7 +344,7 @@ export default function TaskCard({ task, onOpenDrawer }: TaskCardProps) {
     <div className={`axn-task-card axn-task-card--${task.status}`}>
       <div className="axn-task-head">
         <Space size={6} wrap>
-          <Text strong style={{ fontSize: 13 }}>
+          <Text strong className="axn-tc-fs13">
             {task.displayTitle}
           </Text>
           <Tag color={meta.color}>{meta.label}</Tag>
@@ -390,7 +390,7 @@ export default function TaskCard({ task, onOpenDrawer }: TaskCardProps) {
 
       {task.textAnswer && (
         <div className="axn-task-answer">
-          <Text style={{ whiteSpace: 'pre-wrap', fontSize: 13 }}>{task.textAnswer}</Text>
+          <Text className="axn-tc-pre">{task.textAnswer}</Text>
         </div>
       )}
 
@@ -402,10 +402,10 @@ export default function TaskCard({ task, onOpenDrawer }: TaskCardProps) {
         <Alert
           type="error"
           showIcon
-          style={{ marginTop: 8 }}
+          className="axn-tc-mt8"
           title={`${task.error.message}（${task.error.errorCode}）`}
           description={
-            <Space direction="vertical" size={4}>
+            <Space orientation="vertical" size={4}>
               <span>{task.error.hint}</span>
               <Button size="small" type="primary" onClick={() => void retryTask(task.taskId)}>
                 重试

@@ -19,11 +19,12 @@ import {
 } from '@/seed/scenario';
 import { RESCUE_EVALUATION_MOCK } from '@/seed/rescueEvaluation';
 import { computeDerived } from '@/seed/derived';
+import { type FixtureFact, type FixtureTeam, type FixtureIncident, type FixtureKnowledge } from '@/seed/scenario';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
-import { isActiveRun } from '../taskRuns';
+import { isActiveRun } from '../taskRuns.js';
 import { useDocumentStore } from '@/store/documentStore';
-import { resourceAllowed, factDisplay, latestWaterLevelFactId, resolveFact } from '../factLookup';
+import { resourceAllowed, factDisplay, latestWaterLevelFactId, resolveFact } from '../factLookup.js';
 import {
   CONTROL_STATUS_LABEL,
   createDailyDocument,
@@ -31,8 +32,8 @@ import {
   fieldLabel,
   missingBriefFields,
   missingDailyFields,
-} from '../documentFactory';
-import { getQaItem, matchQa, qaStatusLabel } from '../qaKnowledge';
+} from '../documentFactory.js';
+import { getQaItem, matchQa, qaStatusLabel } from '../qaKnowledge.js';
 
 export class TaskFault extends Error {
   constructor(
@@ -130,11 +131,16 @@ export function recognize(rawText: string, ctx: { lastResourceResultIds: string[
   if (/(最近|距离最短|距离最近|按距离排序)/.test(text)) {
     return { intent: 'resource_sort_distance', params: {}, displayTitle: '按距离排序' };
   }
+  let removeTarget: string | null | undefined;
   const ordinal = text.match(/(?:移除|去掉|剔除|移出|删除)第([一二三123])支/);
-  const ordinalIndex = ordinal ? '一二三'.indexOf(ordinal[1]) : -1;
-  const removeTarget = ordinal
-    ? ctx.candidateResourceIds[ordinalIndex >= 0 ? ordinalIndex : Number(ordinal[1]) - 1]
-    : teamByName(text, [...teamById.keys()]);
+  if (ordinal) {
+    const index = '一二三'.indexOf(ordinal[1]);
+    removeTarget = index >= 0
+      ? ctx.candidateResourceIds[index]
+      : ctx.candidateResourceIds[Number(ordinal[1]) - 1];
+  } else {
+    removeTarget = teamByName(text, [...teamById.keys()]);
+  }
   if (removeTarget && /(移除|去掉|剔除|移出|删除)/.test(text)) {
     return { intent: 'candidate_remove', params: { resourceId: removeTarget }, displayTitle: '移除候选力量' };
   }
@@ -279,7 +285,9 @@ async function* runIntent(req: Ctx, signal: AbortSignal): AsyncIterable<TaskEven
 }
 
 async function* runEvaluation(req: Ctx, signal: AbortSignal, paceMs: number): AsyncIterable<TaskEvent> {
-  const incident = incidentById.get(req.eventId)!;
+  const evaluationIncident = incidentById.get(req.eventId);
+  if (!evaluationIncident) throw new Error(`event ${req.eventId} not found`);
+  const incident = evaluationIncident;
   const scope = { kind: 'event' as const, eventId: req.eventId };
   const sample = RESCUE_EVALUATION_MOCK[req.eventId];
   yield { type: 'step_started', stepId: 'e1', name: '汇总灾情与救援反馈', inputSummary: '事件事实 + 模拟作业记录' };
@@ -302,7 +310,9 @@ async function* runEvaluation(req: Ctx, signal: AbortSignal, paceMs: number): As
 }
 
 async function* runSummary(req: Ctx, signal: AbortSignal, paceMs: number): AsyncIterable<TaskEvent> {
-  const incident = incidentById.get(req.eventId)!;
+  const incidentIn = incidentById.get(req.eventId);
+  if (!incidentIn) throw new Error(`event ${req.eventId} not found`);
+  const incident = incidentIn;
   const refs = incident.factRefs;
   const scope = { kind: 'event' as const, eventId: req.eventId };
   const waterFactId = latestWaterLevelFactId(req.eventId);
@@ -332,7 +342,7 @@ async function* runSummary(req: Ctx, signal: AbortSignal, paceMs: number): Async
       factId: refs.confirmedResponseLevel,
       displayOverride: `${factDisplay(refs.confirmedResponseLevel, scope)}（${resolveFact(refs.confirmedResponseLevel, scope)?.verification === 'confirmed' ? '已确认' : '待核实'}）`,
     },
-  ].filter((row) => !!resolveFact(row.factId, scope)) as typeof rows;
+  ].filter((row) => resolveFact(row.factId, scope)) as typeof rows;
 
   yield { type: 'step_started', stepId: 's1', name: '读取事件上下文', inputSummary: `事件 ${req.eventId}` };
   await sleep(paceMs, signal);
@@ -357,7 +367,7 @@ async function* runSummary(req: Ctx, signal: AbortSignal, paceMs: number): Async
   yield { type: 'step_started', stepId: 's3', name: '生成灾情摘要卡片' };
   await sleep(paceMs, signal);
   assertActive(req);
-  const pendingKeys = rows.filter((r) => r.emphasize === 'pending').map((r) => r.factId);
+  const pendingKeys = rows.flatMap((r) => r.emphasize === 'pending' ? [r.factId] : []);
   yield {
     type: 'step_completed',
     stepId: 's3',
@@ -473,8 +483,8 @@ async function* runResourceSort(req: Ctx, signal: AbortSignal, paceMs: number, b
   assertActive(req);
   const teams = req.context.lastResourceResultIds.filter((id) => teamById.has(id) && resourceAllowed(id, req.eventId));
   const sorted = [...teams].sort((a, b) => {
-    const fa = factById.get(teamById.get(a)!.factRefs[by === 'eta' ? 'etaMinutes' : 'distanceKm'])!;
-    const fb = factById.get(teamById.get(b)!.factRefs[by === 'eta' ? 'etaMinutes' : 'distanceKm'])!;
+    const fa = factById.get((teamById.get(a) as FixtureTeam).factRefs[by === 'eta' ? 'etaMinutes' : 'distanceKm']) as FixtureFact;
+    const fb = factById.get((teamById.get(b) as FixtureTeam).factRefs[by === 'eta' ? 'etaMinutes' : 'distanceKm']) as FixtureFact;
     return Number(fa.value) - Number(fb.value);
   });
   // 排序结果同时成为后续指代使用的唯一有序集合，仓库保持在队伍之后。
@@ -483,7 +493,7 @@ async function* runResourceSort(req: Ctx, signal: AbortSignal, paceMs: number, b
   ], by);
   const lines = sorted
     .map((id, i) => {
-      const t = teamById.get(id)!;
+      const t = teamById.get(id) as FixtureTeam;
       const name = String(factById.get(t.factRefs.name)?.value ?? id);
       const eta = factById.get(t.factRefs.etaMinutes)?.value;
       const km = factById.get(t.factRefs.distanceKm)?.value;
@@ -495,8 +505,8 @@ async function* runResourceSort(req: Ctx, signal: AbortSignal, paceMs: number, b
     stepId: 's2',
     outputSummary: '排序完成',
     sourceRefs: sorted.flatMap((id) => [
-      teamById.get(id)!.factRefs.etaMinutes,
-      teamById.get(id)!.factRefs.distanceKm,
+      (teamById.get(id) as FixtureTeam).factRefs.etaMinutes,
+      (teamById.get(id) as FixtureTeam).factRefs.distanceKm,
     ]),
   };
   yield { type: 'text_delta', text: `${by === 'eta' ? '按预计到达时间' : '按距离'}排序结果：\n${lines}\n\n可说“选择前两支队伍预置候选”。` };
@@ -523,7 +533,7 @@ async function* runCandidateAdd(req: Ctx, signal: AbortSignal, paceMs: number): 
   yield { type: 'step_started', stepId: 'c1', name: '解析待加入队伍', inputSummary: targets.join('、') };
   await sleep(paceMs, signal);
   assertActive(req);
-  yield { type: 'step_completed', stepId: 'c1', outputSummary: `${targets.length} 支队伍`, sourceRefs: targets.map((id) => teamById.get(id)!.factRefs.name) };
+  yield { type: 'step_completed', stepId: 'c1', outputSummary: `${targets.length} 支队伍`, sourceRefs: targets.map((id) => (teamById.get(id) as FixtureTeam).factRefs.name) };
 
   yield { type: 'step_started', stepId: 'c2', name: '写入候选清单（拟预置）', inputSummary: '候选 ≠ 已调派' };
   await sleep(paceMs, signal);
@@ -541,7 +551,7 @@ async function* runCandidateAdd(req: Ctx, signal: AbortSignal, paceMs: number): 
     type: 'step_completed',
     stepId: 'c2',
     outputSummary: `候选 ${teamCount.value} 支队伍`,
-    sourceRefs: merged.flatMap((id) => Object.values(teamById.get(id)!.factRefs)),
+    sourceRefs: merged.flatMap((id) => Object.values((teamById.get(id) as FixtureTeam).factRefs)),
     artifact: {
       payload: {
         kind: 'summary',
@@ -576,7 +586,7 @@ async function* runCandidateRemove(req: Ctx, signal: AbortSignal, paceMs: number
   yield { type: 'step_started', stepId: 'c1', name: '定位候选队伍', inputSummary: target };
   await sleep(paceMs, signal);
   assertActive(req);
-  yield { type: 'step_completed', stepId: 'c1', outputSummary: String(factById.get(teamById.get(target)!.factRefs.name)?.value ?? target) };
+  yield { type: 'step_completed', stepId: 'c1', outputSummary: String(factById.get((teamById.get(target) as FixtureTeam).factRefs.name)?.value ?? target) };
   yield { type: 'step_started', stepId: 'c2', name: '从候选清单移除' };
   await sleep(paceMs, signal);
   assertActive(req);
@@ -596,7 +606,7 @@ async function* runCandidateRemove(req: Ctx, signal: AbortSignal, paceMs: number
 }
 
 async function* runKnowledge(req: Ctx, signal: AbortSignal, paceMs: number): AsyncIterable<TaskEvent> {
-  const chunk = knowledgeById.get('kb-demo-status-terms') ?? knowledgeById.values().next().value!;
+  const chunk = knowledgeById.get('kb-demo-status-terms') ?? knowledgeById.values().next().value as FixtureKnowledge;
   yield { type: 'step_started', stepId: 'k1', name: '检索知识包', inputSummary: chunk.title };
   await sleep(paceMs, signal);
   assertActive(req);
@@ -678,8 +688,8 @@ async function* runProposal(req: Ctx, signal: AbortSignal, paceMs: number): Asyn
   assertActive(req);
   const session = useSessionStore.getState().sessions[req.sessionId];
   const initialCandidates = session.candidateResourceIds;
-  const incident = incidentById.get(req.eventId)!;
-  const factRefs = [incident.factRefs.casualty, incident.factRefs.impactScope, incident.situationFactRefs.suggestedResponseLevel].filter((id) => !!resolveFact(id, { kind: 'event', eventId: req.eventId }));
+  const incident = incidentById.get(req.eventId) as FixtureIncident;
+  const factRefs = [incident.factRefs.casualty, incident.factRefs.impactScope, incident.situationFactRefs.suggestedResponseLevel].filter((id) => resolveFact(id, { kind: 'event', eventId: req.eventId }));
   yield {
     type: 'step_completed',
     stepId: 'p1',
@@ -824,7 +834,7 @@ function injectMissingSource(documentId: string, req: Ctx): void {
   assertActive(req);
   const draft = useDocumentStore.getState().getDraft(documentId);
   if (!draft) return;
-  const content = JSON.parse(JSON.stringify(draft.working.content)) as typeof draft.working.content;
+  const content = structuredClone(draft.working.content) as typeof draft.working.content;
   for (const section of content.sections) {
     for (const p of section.paragraphs) {
       p.runs = p.runs.map((r) => (r.type === 'fact' && r.factId === latestWaterLevelFactId(req.eventId) ? { ...r, factId: 'fact-missing-waterLevel-demo' } : r));

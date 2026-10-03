@@ -3,7 +3,7 @@
  * 只依赖种子与运行时输入，不写死模拟期望值（expectedChecks 仅用于测试断言）。
  */
 import type { FactValue } from '@/domain/types';
-import { factById, factNumber, shift, teamById, DEMO_CLOCK, incidentById } from './scenario';
+import { factById, factNumber, shift, teamById, DEMO_CLOCK, incidentById } from './scenario.js';
 
 export type DerivedKey =
   | 'candidate_team_count'
@@ -44,7 +44,7 @@ export function computeDerived(
       unit: '支',
       formula: 'COUNT(DISTINCT candidateResourceIds)',
       inputSummary: ids.length ? ids.join('、') : '无候选力量',
-      inputFactIds: ids.map(id => teamById.get(id)!.factRefs.name),
+      inputFactIds: ids.map(id => teamById.get(id)?.factRefs.name ?? ''),
     };
   }
   if (key === 'candidate_people_count' || key === 'candidate_excavator_count') {
@@ -55,7 +55,8 @@ export function computeDerived(
     const inputFactIds: string[] = [];
     const names: string[] = [];
     for (const id of ids) {
-      const team = teamById.get(id)!;
+      const team = teamById.get(id);
+      if (!team) continue;
       const factId = team.factRefs[field];
       const v = frozen ? Number(valueOf(factId)) : factNumber(factId);
       inputFactIds.push(factId);
@@ -88,7 +89,7 @@ export function computeDerived(
       unit: '起',
       formula: 'COUNT(DISTINCT eventId)',
       inputSummary: `班次内接报事件：${inShift.join('、') || '无'}`,
-      inputFactIds: eventIds.map(id => incidentById.get(id)!.factRefs.occurredAt),
+      inputFactIds: eventIds.map(id => String(incidentById.get(id)?.factRefs.occurredAt ?? '')),
     };
   }
   if (key === 'daily_ongoing_count' || key === 'daily_controlled_count') {
@@ -111,7 +112,10 @@ export function computeDerived(
       unit: '起',
       formula: `COUNT(controlStatus == ${target})`,
       inputSummary: matched.length ? matched.join('、') : '无',
-      inputFactIds: eventIds.flatMap(id => [incidentById.get(id)!.factRefs.occurredAt, incidentById.get(id)!.factRefs.controlStatus]),
+      inputFactIds: eventIds.flatMap(id => {
+        const incident = incidentById.get(id);
+        return incident ? [incident.factRefs.occurredAt, incident.factRefs.controlStatus] : [];
+      }),
     };
   }
   throw new Error(`未实现的派生事实：${key}`);

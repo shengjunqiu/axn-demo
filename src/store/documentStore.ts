@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 import type { AuditEvent, DocumentContent, DocumentDraft, DocumentRevision, SourceSnapshot, ValidationReport } from '@/domain/types';
-import { useDemoStore } from './demoStore';
+import { useDemoStore } from './demoStore.js';
 import { shift } from '@/seed/scenario';
-import { clearPersist, loadPersist, savePersist } from './persistence';
+import { clearPersist, loadPersist, savePersist } from './persistence.js';
 import { formatFactValue } from '@/services/factLookup';
 import { collectRunDerivedKeys, collectRunFactIds } from '@/services/contentRuns';
 
-const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const clone = <T,>(value: T): T => structuredClone(value);
 
 /** Deep freeze: prevents external mutation of stored reports (test-gated guarantee). */
 function deepFreeze<T>(value: T): T {

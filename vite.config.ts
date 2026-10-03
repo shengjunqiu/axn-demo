@@ -19,6 +19,18 @@ export default defineConfig({
   build: {
     sourcemap: false,
     chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-antd': ['antd', '@ant-design/icons'],
+        },
+      },
+    },
+  },
+  css: { devSourcemap: false },
+  optimizeDeps: {
+    include: ['antd', '@ant-design/icons', '@ant-design/icons/MessageOutlined'],
   },
   test: {
     environment: 'jsdom',

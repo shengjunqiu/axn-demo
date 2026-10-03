@@ -12,9 +12,9 @@ import type {
   TaskStatus,
 } from '@/domain/types';
 import { DEFAULT_EVENT_ID, DEFAULT_SESSION_ID, factById, incidentById } from '@/seed/scenario';
-import { useDemoStore } from './demoStore';
-import { useDocumentStore } from './documentStore';
-import { clearPersist, loadPersist, savePersist } from './persistence';
+import { useDemoStore } from './demoStore.js';
+import { useDocumentStore } from './documentStore.js';
+import { clearPersist, loadPersist, savePersist } from './persistence.js';
 
 let seqCounter = 100;
 function nextSeq(): number {
@@ -420,6 +420,8 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
           next.error = null;
           next.finishedAt = new Date().toISOString();
           break;
+        default:
+          break;
       }
       return { tasks: { ...s.tasks, [taskId]: next } };
     });
@@ -429,10 +431,15 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
     set((s) => {
       const task = s.tasks[taskId];
       if (!task) return s;
+      let steps = task.steps;
+      if (status === 'cancelled') {
+        steps = task.steps.map(st => st.status === 'running' ? { ...st, status: 'cancelled' as const } : st);
+      }
+      const finishedAt = status === 'cancelled' ? new Date().toISOString() : task.finishedAt;
       return {
         tasks: {
           ...s.tasks,
-          [taskId]: { ...task, status, steps: status === 'cancelled' ? task.steps.map(st => st.status === 'running' ? { ...st, status: 'cancelled' as const } : st) : task.steps, finishedAt: status === 'cancelled' ? new Date().toISOString() : task.finishedAt },
+          [taskId]: { ...task, status, steps, finishedAt },
         },
       };
     });
@@ -517,7 +524,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
       if (proposalId) {
         const proposal = s.proposals[proposalId];
         if (!proposal || proposal.eventId !== session.eventId ||
-          [...proposal.candidateIds].sort().join('|') !== [...session.candidateResourceIds].sort().join('|')) return s;
+          [...proposal.candidateIds].sort((a, b) => a.localeCompare(b)).join('|') !== [...session.candidateResourceIds].sort((a, b) => a.localeCompare(b)).join('|')) return s;
       }
       const prev = session.selectedProposalId;
       if (prev && s.proposals[prev]) {

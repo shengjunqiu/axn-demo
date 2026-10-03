@@ -13,7 +13,7 @@ import {
   teamById,
   warehouseById,
 } from '@/seed/scenario';
-import { currentContextVersion, resolveFact, resolveSourceRecord, latestClockFactId, resourceAllowed, shiftEventIds, type FactQueryScope } from './factLookup';
+import { currentContextVersion, resolveFact, resolveSourceRecord, latestClockFactId, resourceAllowed, shiftEventIds, type FactQueryScope } from './factLookup.js';
 import { computeDerived, type DerivedKey } from '@/seed/derived';
 
 let snapshotCounter = 0;
@@ -40,7 +40,7 @@ export function selectedProposalForSession(sessionId: string, eventId: string) {
   const proposal = session?.selectedProposalId ? store.proposals[session.selectedProposalId] : undefined;
   if (!session || session.eventId !== eventId || !proposal || proposal.eventId !== eventId
     || proposal.version !== session.selectedProposalVersion
-    || [...proposal.candidateIds].sort().join('|') !== [...session.candidateResourceIds].sort().join('|')) return null;
+    || [...proposal.candidateIds].sort((a, b) => a.localeCompare(b)).join('|') !== [...session.candidateResourceIds].sort((a, b) => a.localeCompare(b)).join('|')) return null;
   return proposal;
 }
 
@@ -50,7 +50,7 @@ export function buildSnapshot(input: SnapshotInput): SourceSnapshot {
     ? { kind: 'event', eventId: input.eventId ?? '' }
     : { kind: 'shift', shiftId: input.shiftId ?? '' };
   const candidates = session?.eventId === input.eventId && input.scopeKind === 'event'
-    ? (session?.candidateResourceIds ?? []).filter((id) => resourceAllowed(id, input.eventId!)) : [];
+    ? (session?.candidateResourceIds ?? []).filter((id) => resourceAllowed(id, input.eventId as string)) : [];;
   const facts: SourceSnapshot['facts'] = {};
   const sources: SourceSnapshot['sources'] = {};
   const factIds = new Set<string>(input.extraFactIds ?? []);
@@ -71,7 +71,7 @@ export function buildSnapshot(input: SnapshotInput): SourceSnapshot {
   if (input.scopeKind === 'shift' && input.shiftId) {
     for (const factId of Object.values(shift.factRefs)) factIds.add(factId);
     for (const id of shiftEventIds(input.shiftId)) {
-      for (const factId of Object.values(incidentById.get(id)!.factRefs)) factIds.add(factId);
+      for (const factId of Object.values(incidentById.get(id)?.factRefs ?? {})) factIds.add(factId);
     }
     // 审查 minor-8：班次域只收本班次 scope 的人工补录事实，不收全量（防跨事件泄入）。
     const demo = useDemoStore.getState();
@@ -172,5 +172,5 @@ export function buildSnapshot(input: SnapshotInput): SourceSnapshot {
     label: input.label,
   };
 
-  return JSON.parse(JSON.stringify(snapshot)) as SourceSnapshot;
+  return structuredClone(snapshot) as SourceSnapshot;
 }

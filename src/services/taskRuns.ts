@@ -22,7 +22,7 @@ export function isActiveRun(taskId: string, attemptId: string): boolean {
   if (!run || run.attemptId !== attemptId || run.controller.signal.aborted) return false;
   const state = useSessionStore.getState();
   const task = state.tasks[taskId];
-  return !!task && !['succeeded', 'failed', 'cancelled'].includes(task.status) && task.attemptId === attemptId && task.sessionId === run.sessionId && task.eventId === run.eventId
+  return Boolean(task) && !['succeeded', 'failed', 'cancelled'].includes(task.status) && task.attemptId === attemptId && task.sessionId === run.sessionId && task.eventId === run.eventId
     && state.sessions[run.sessionId]?.eventId === run.eventId
     && useDemoStore.getState().currentEventId === run.eventId;
 }

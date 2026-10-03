@@ -19,7 +19,7 @@ export function loadPersist<T>(key: string): T | null {
     if (parsed.__schema !== SCHEMA_VERSION) return null;
     return parsed.data as T;
   } catch (error) {
-    console.warn(`[anneng-demo] 持久化读取失败（${key}），按空状态处理。`, error);
+    console.error(`[anneng-demo] 持久化读取失败（${key}），按空状态处理。`, error);
     return null;
   }
 }
@@ -29,7 +29,7 @@ export function savePersist(key: string, data: unknown): void {
     window.localStorage.setItem(`${NAMESPACE}:${key}`, JSON.stringify({ __schema: SCHEMA_VERSION, data }));
   } catch (error) {
     // 配额或隐私模式：模拟环境降级为不持久化，不阻断主线。
-    console.warn(`[anneng-demo] 持久化写入失败（${key}），本次刷新前状态仅保留在内存。`, error);
+    console.error(`[anneng-demo] 持久化写入失败（${key}），本次刷新前状态仅保留在内存。`, error);
   }
 }
 
@@ -37,7 +37,7 @@ export function clearPersist(key: string): void {
   try {
     window.localStorage.removeItem(`${NAMESPACE}:${key}`);
   } catch (error) {
-    console.warn(`[anneng-demo] 持久化清理失败（${key}）。`, error);
+    console.error(`[anneng-demo] 持久化清理失败（${key}）。`, error);
   }
 }
 

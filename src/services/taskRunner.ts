@@ -4,9 +4,9 @@
 import type { TaskEvent } from '@/domain/types';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
-import { mockProvider, recognize, TaskFault } from './mock/provider';
+import { mockProvider, recognize, TaskFault } from './mock/provider.js';
 
-import { registerRun, isActiveRun, finishRun, invalidateRun } from './taskRuns';
+import { registerRun, isActiveRun, finishRun, invalidateRun } from './taskRuns.js';
 
 function sleepZero(): Promise<void> {
   return new Promise((r) => setTimeout(r, 0));

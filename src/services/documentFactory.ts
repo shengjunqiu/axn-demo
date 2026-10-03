@@ -22,10 +22,10 @@ import {
 } from '@/seed/scenario';
 import { DERIVED_META, type DerivedKey } from '@/seed/derived';
 import { useDemoStore } from '@/store/demoStore';
-import { collectRunFactIds as collectFactIdsPure, collectRunDerivedKeys } from './contentRuns';
+import { collectRunFactIds as collectFactIdsPure, collectRunDerivedKeys } from './contentRuns.js';
 import { useSessionStore } from '@/store/sessionStore';
-import { resolveFact, latestWaterLevelFactId, resourceAllowed, shiftEventIds, latestClockFactId } from './factLookup';
-import { buildSnapshot, selectedProposalForSession } from './snapshot';
+import { resolveFact, latestWaterLevelFactId, resourceAllowed, shiftEventIds, latestClockFactId, type FactQueryScope } from './factLookup.js';
+import { buildSnapshot, selectedProposalForSession } from './snapshot.js';
 import { computeContentHash, useDocumentStore } from '@/store/documentStore';
 
 let docCounter = 0;
@@ -70,7 +70,10 @@ export interface CreateDocumentResult {
 function manualFactIdOrNull(field: string, scopeKind: 'event' | 'shift', scopeId: string): string | null {
   const entry = useDemoStore.getState().getManualFactByField(field, scopeKind, scopeId);
   if (!entry) return null;
-  return resolveFact(entry.factId, scopeKind === 'event' ? { kind: 'event', eventId: scopeId } : { kind: 'shift', shiftId: scopeId }) ? entry.factId : null;
+  const scope: FactQueryScope = scopeKind === 'event'
+    ? { kind: 'event', eventId: scopeId }
+    : { kind: 'shift', shiftId: scopeId };
+  return resolveFact(entry.factId, scope) ? entry.factId : null;
 }
 
 export function missingBriefFields(eventId: string): string[] {
@@ -108,7 +111,9 @@ export function fieldLabel(field: string): string {
 }
 
 function composeBriefContent(eventId: string, sessionId: string): DocumentContent {
-  const incident = incidentById.get(eventId)!;
+  const incidentIn = incidentById.get(eventId);
+  if (!incidentIn) throw new Error(`incident ${eventId} not found`);
+  const incident = incidentIn;
   const refs = incident.factRefs;
   // 审查 M-9：按任务/来源会话取候选，不读当前 UI 会话（防事件切换后跨会话污染）。
   const session = useSessionStore.getState().sessions[sessionId];
@@ -117,6 +122,7 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
   const proposal = selectedProposalForSession(sessionId, eventId);
   const reportingUnitFactId = manualFactIdOrNull('reportingUnit', 'event', eventId);
   const title = String(factById.get(refs.title)?.value ?? eventId);
+  const latestId = latestWaterLevelFactId(eventId);
 
   const sections: DocumentSection[] = [
     {
@@ -136,13 +142,13 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
           textRun('；'),
           factRun(refs.incidentDescription),
         ]),
-        para('basic-3', 'fact-line', latestWaterLevelFactId(eventId) ? [
+        para('basic-3', 'fact-line', latestId ? [
           textRun('水情监测：'),
           factRun('fact-obs-water-001-stationName', '（模拟测站）'),
           textRun('最新水位 '),
-          factRun(latestWaterLevelFactId(eventId)!),
+          factRun(latestId),
           textRun('（'),
-          factRun(latestWaterLevelFactId(eventId)!.replace('waterLevel', 'observedAt')),
+          factRun(latestId.replace('waterLevel', 'observedAt')),
           textRun(' 观测）。'),
         ] : [textRun('当前事件无水情监测依据。')]),
       ],
@@ -186,27 +192,24 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
     {
       id: 'forces',
       heading: '四、力量情况',
-      paragraphs: [
-        para(
-          'forces-1',
-          candidates.length ? 'fact-line' : 'narrative',
-          candidates.length
-            ? [
-                textRun('拟预置候选队伍：'),
-                ...candidates.flatMap((id, index) => [
-                  ...(index ? [textRun('、')] : []), factRun(teamById.get(id)!.factRefs.name),
-                ]),
-                textRun('；合计 '),
-                derivedRun('candidate_team_count', ' 支'),
-                textRun('，合计人员 '),
-                derivedRun('candidate_people_count', ' 人'),
-                textRun('、挖掘机 '),
-                derivedRun('candidate_excavator_count', ' 台'),
-                textRun('（以上为候选，尚未形成调派命令）。'),
-              ]
-            : [textRun('候选力量待确认。')],
-        ),
-      ],
+      paragraphs: (() => {
+        const forcesRole: 'fact-line' | 'narrative' = candidates.length ? 'fact-line' : 'narrative';
+        const delimit = (index: number) => index ? [textRun('、')] : [];
+        const forceRuns: InlineRun[] = candidates.length
+          ? [
+              textRun('拟预置候选队伍：'),
+              ...candidates.flatMap((id, index) => [...delimit(index), factRun(teamById.get(id)?.factRefs.name ?? '')]),
+              textRun('；合计 '),
+              derivedRun('candidate_team_count', ' 支'),
+              textRun('，合计人员 '),
+              derivedRun('candidate_people_count', ' 人'),
+              textRun('、挖掘机 '),
+              derivedRun('candidate_excavator_count', ' 台'),
+              textRun('（以上为候选，尚未形成调派命令）。'),
+            ]
+          : [textRun('候选力量待确认。')];
+        return [para('forces-1', forcesRole, forceRuns)];
+      })(),
     },
     {
       id: 'next',
@@ -239,13 +242,13 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
     },
   ];
   if (proposal) {
-    const next = sections.find((section) => section.id === 'next')!;
+    const next = sections.find((section) => section.id === 'next') as DocumentSection;
     next.paragraphs.push(
       para('proposal-version', 'reference', [textRun(`已采纳建议：${proposal.title}（版本 ${proposal.version}，模拟、待专业审核）。`)]),
       ...proposal.sections.map((section) => para(`proposal-${section.id}`, 'narrative', [textRun(`${section.title}：${section.text}`)])),
       ...proposal.riskNotes.map((note, index) => para(`proposal-risk-${index}`, 'narrative', [textRun(`建议风险提示：${note}`)])),
     );
-    sections.find((section) => section.id === 'appendix')!.paragraphs.push(
+    (sections.find((section) => section.id === 'appendix') as DocumentSection).paragraphs.push(
       ...proposal.knowledgeRefs.flatMap((chunkId) => {
         const chunk = knowledgeById.get(chunkId);
         return chunk ? [para(`knowledge-${chunkId}`, 'reference', [{
@@ -275,7 +278,8 @@ function composeDailyContent(sessionId: string): DocumentContent {
   const eventIds = shiftEventIds(shift.shiftId);
 
   const keyEvents: DocumentParagraph[] = eventIds.map((eid, i) => {
-    const inc = incidentById.get(eid)!;
+    const inc = incidentById.get(eid);
+    if (!inc) return para(`daily-key-${i}`, 'fact-line', [textRun(`事件 ${eid} 未找到`)]);
     return para(`daily-key-${i}`, 'fact-line', [
       textRun(`${String(factById.get(inc.factRefs.title)?.value ?? eid)}：`),
       factRun(inc.factRefs.controlStatus),
@@ -327,9 +331,9 @@ function composeDailyContent(sessionId: string): DocumentContent {
       paragraphs: [
         para('monitor-1', 'fact-line', [
           textRun('清河段模拟测站最新水位 '),
-          factRun(latestWaterLevelFactId(shiftEventIds(shift.shiftId).find((id) => latestWaterLevelFactId(id)) ?? '')!),
+          factRun(latestWaterLevelFactId(shiftEventIds(shift.shiftId).find((id) => latestWaterLevelFactId(id)) ?? '') ?? ''),
           textRun('（'),
-          factRun(latestWaterLevelFactId(shiftEventIds(shift.shiftId).find((id) => latestWaterLevelFactId(id)) ?? '')!.replace('waterLevel', 'observedAt')),
+          factRun((latestWaterLevelFactId(shiftEventIds(shift.shiftId).find((id) => latestWaterLevelFactId(id)) ?? '') ?? '').replace('waterLevel', 'observedAt')),
           textRun(' 观测）；水情趋势详见工作台监测摘要。'),
         ]),
       ],
@@ -338,7 +342,8 @@ function composeDailyContent(sessionId: string): DocumentContent {
       id: 'progress',
       heading: '五、处置进展',
       paragraphs: eventIds.map((eid, i) => {
-        const inc = incidentById.get(eid)!;
+        const inc = incidentById.get(eid);
+        if (!inc) return para(`daily-progress-${i}`, 'fact-line', [textRun(`事件 ${eid} 未找到`)]);
         return para(`daily-progress-${i}`, 'fact-line', [
           textRun(`${String(factById.get(inc.factRefs.title)?.value ?? eid)}：`),
           factRun(inc.factRefs.incidentDescription),
@@ -516,7 +521,7 @@ export function createDailyDocument(sessionId: string): CreateDocumentResult {
   return { ok: true, documentId, missingFields: [], state: 'draft_created' };
 }
 
-export { collectRunFactIds } from './contentRuns';
+export { collectRunFactIds } from './contentRuns.js';
 
 export function derivedMetaLabel(key: DerivedKey): string {
   return DERIVED_META[key].label;
@@ -542,8 +547,9 @@ export function refreshDraftSnapshot(input: { documentId: string; actorName: str
   const draft = store.drafts[documentId];
   if (!draft) throw new Error(`文书不存在：${documentId}`);
   if (draft.lifecycle === 'signed' || draft.lifecycle === 'archived') throw new Error('已签发文书不可原地刷新，请先创建修订');
-  const content = JSON.parse(JSON.stringify(draft.working.content)) as DocumentContent;
-  const fresh = draft.scopeKind === 'event' ? composeBriefContent(draft.eventId!, draft.originSessionId) : composeDailyContent(draft.originSessionId);
+  const content = structuredClone(draft.working.content) as DocumentContent;
+  const eventId = draft.eventId ?? '';
+  const fresh = draft.scopeKind === 'event' ? composeBriefContent(eventId, draft.originSessionId) : composeDailyContent(draft.originSessionId);
   const waterId = latestWaterLevelFactId(draft.eventId ?? shiftEventIds(draft.shiftId ?? '').find(id => latestWaterLevelFactId(id)) ?? '');
   for (const section of content.sections) {
     section.paragraphs = section.paragraphs.filter(p => !p.id.startsWith('proposal-') && !p.id.startsWith('knowledge-'));
@@ -605,5 +611,7 @@ export function createRevisionDraftFromSigned(input: {
   const store = useDocumentStore.getState();
   store.beginRevision(input.documentId, `签发后修订（${input.actorName}）`);
   store.updateWorkingContent(input.documentId, input.content);
-  return store.getDraft(input.documentId)!;
+  const draft = store.getDraft(input.documentId);
+  if (!draft) throw new Error(`draft not found: ${input.documentId}`);
+  return draft;
 }

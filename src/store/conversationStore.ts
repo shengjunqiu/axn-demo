@@ -12,9 +12,9 @@
  */
 import { create } from 'zustand';
 import type { Conversation, ConversationSettings, NavPage } from '@/domain/types';
-import { clearPersist, loadPersist, savePersist } from './persistence';
-import { useDemoStore } from './demoStore';
-import { useSessionStore } from './sessionStore';
+import { clearPersist, loadPersist, savePersist } from './persistence.js';
+import { useDemoStore } from './demoStore.js';
+import { useSessionStore } from './sessionStore.js';
 import { DEMO_CLOCK } from '@/seed/scenario';
 
 interface ConversationPersist {

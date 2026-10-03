@@ -244,6 +244,8 @@ export interface ScenarioFixture {
   };
 }
 
+// SAFETY: rawScenario is the imported JSON fixture, guaranteed to match the ScenarioFixture shape
+// at build time via the typed import and the static seed generation that produces it.
 export const scenario = rawScenario as unknown as ScenarioFixture;
 
 export const demoMeta = scenario.meta;

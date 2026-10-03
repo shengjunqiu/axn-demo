@@ -14,7 +14,7 @@ import {
 import type { ISectionOptions, ParagraphChild } from 'docx';
 import { useDocumentStore } from '@/store/documentStore';
 import { useDemoStore } from '@/store/demoStore';
-import { renderRevision } from './docRender';
+import { renderRevision } from './docRender.js';
 
 const MOCK_FONT = 'SimSun';
 

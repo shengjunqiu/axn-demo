@@ -29,9 +29,3 @@ export const themeConfig: ThemeConfig = {
     Table: { cellPaddingBlockSM: 6, cellPaddingInlineSM: 8 },
   },
 };
-
-export const AI_AVATAR_STYLE = {
-  backgroundColor: '#e8f0fe',
-  color: '#1d5fd2',
-  fontWeight: 600,
-} as const;

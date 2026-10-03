@@ -1,6 +1,6 @@
 import { useDocumentStore } from '@/store/documentStore';
 import { useDemoStore } from '@/store/demoStore';
-import { validateContent } from './validation';
+import { validateContent } from './validation.js';
 
 /** Persist the exact current content/snapshot before binding a validation report. */
 export function saveCurrentRevision(documentId: string, changeNote = '保存当前工作副本') {

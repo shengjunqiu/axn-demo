@@ -10,12 +10,12 @@ import type {
   ValidationIssue,
   ValidationReport,
 } from '@/domain/types';
-import { CONTROL_STATUS_LABEL } from './documentFactory';
+import { CONTROL_STATUS_LABEL } from './documentFactory.js';
 import { incidentById, templateByCode, shift } from '@/seed/scenario';
-import { formatFactValue, permits } from './factLookup';
+import { formatFactValue, permits } from './factLookup.js';
 import { computeContentHash, useDocumentStore } from '@/store/documentStore';
 import { computeDerived, type DerivedKey } from '@/seed/derived';
-import { currentContextVersion } from './factLookup';
+import { currentContextVersion } from './factLookup.js';
 
 export const RULESET_VERSION = '1.0.0-demo';
 
@@ -78,6 +78,8 @@ export function flattenContent(content: DocumentContent, snapshot?: SourceSnapsh
           case 'knowledge':
             text += run.label;
             knowledgeBindings.push({ chunkId: run.chunkId });
+            break;
+          default:
             break;
         }
       }
@@ -148,8 +150,12 @@ export function validateContent(input: ValidateInput): Omit<ValidationReport, 'r
   for (const field of templateByCode.get(content.templateCode)?.requiredFields ?? []) {
     if (!field.required) continue;
     const key = field.field === 'statisticsCutoff' ? 'currentTime' : field.field;
-    const expectedId = field.binding.startsWith('incident.factRefs.') ? incidentById.get(snapshot.eventId ?? '')?.factRefs[key]
-      : field.binding.startsWith('shift.factRefs.') ? shift.factRefs[key] : undefined;
+    let expectedId: string | undefined;
+    if (field.binding.startsWith('incident.factRefs.')) {
+      expectedId = incidentById.get(snapshot.eventId ?? '')?.factRefs[key];
+    } else if (field.binding.startsWith('shift.factRefs.')) {
+      expectedId = shift.factRefs[key];
+    }
     const f = Object.values(snapshot.facts).find(f => (expectedId ? f.factId === expectedId : f.sourceFieldKey === key)
       && bound.has(f.factId) && f.scope && permits(f.scope, scope) && (f.value != null && String(f.value).trim() !== '' || field.allowPending && f.verification === 'pending'));
     if (!f) issues.push(issue('R-001', 'block', `必填字段 ${field.field} 缺少有效正文绑定。`, null, null, null, '补录并在正文绑定该字段', null, field.field));
@@ -274,7 +280,7 @@ export function validateContent(input: ValidateInput): Omit<ValidationReport, 'r
   // 仅扫描叙述段中的自由文本；其他 fact/derived 引用不能给自由文本数字背书。
   for (const section of content.sections) for (const p of section.paragraphs) {
     if (p.role === 'reference') continue;
-    const text = p.runs.filter(r => r.type === 'text').map(r => r.text).join('');
+    const text = p.runs.flatMap(r => r.type === 'text' ? [r.text] : []).join('');
     if (/\d+(?:\.\d+)?|[零〇一二两三四五六七八九十百千万亿]+(?:点[零一二三四五六七八九]+)?\s*(?:人|台|辆|支|米|公里|户|处|起|名|个|套|小时|分钟|%|％)|[零〇一二两三四五六七八九千万亿]+(?:点\d+)?元/.test(text)) {
       issues.push(issue('R-010', 'block', '叙述包含未结构化绑定的数值；同段其他引用不构成该数值的来源。', section.id, p.id, text.slice(0, 60), '改用事实或派生值芯片', null));
     }
@@ -305,7 +311,7 @@ export function applySuggestion(
   paragraphId: string,
   suggestionText: string,
 ): DocumentContent {
-  const next = JSON.parse(JSON.stringify(content)) as DocumentContent;
+  const next = structuredClone(content) as DocumentContent;
   for (const section of next.sections) {
     for (const p of section.paragraphs) {
       if (p.id !== paragraphId) continue;

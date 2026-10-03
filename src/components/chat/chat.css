@@ -5,7 +5,7 @@
 .axn-chat-head-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .axn-chat-head .ant-select-selector { border-radius: 6px; }
 .axn-chat-avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: var(--chat-tint); color: var(--chat-primary); font-size: 13px; font-weight: 600; flex-shrink: 0; }
-.axn-message-list { padding: 24px max(24px, calc((100% - 880px) / 2)); scrollbar-width: thin; scrollbar-color: var(--chat-line) transparent; background: #fff; }
+.axn-message-list { padding: 24px max(24px, calc((100% - 880px) / 2)); scrollbar-width: thin; scrollbar-color: var(--chat-line) transparent; background: #fff; flex: 1; min-height: 0; }
 .axn-message-list .ant-bubble-content { overflow-wrap: anywhere; }
 .axn-chat-page .ant-tag { border-radius: 5px; font-size: 12px; line-height: 18px; padding-inline: 6px; margin-inline-end: 0; }
 .axn-chat-page .ant-btn-sm { font-size: 12px; border-radius: 6px; box-shadow: none; }
@@ -30,7 +30,7 @@
 .axn-question-item:hover:not(:disabled) { background: var(--chat-tint); border-color: color-mix(in srgb, var(--chat-primary) 24%, var(--chat-line)); color: var(--chat-primary); }
 .axn-question-item:disabled { color: var(--chat-muted); cursor: not-allowed; opacity: .6; }
 .axn-question-item:focus-visible { outline: 2px solid var(--chat-primary); outline-offset: 2px; }
-.axn-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 0; border: 0; background: transparent; flex: 0 0 auto; min-width: 0; }
+.axn-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 8px; border: 0; background: transparent; flex: 0 0 auto; min-width: 0; max-width: 880px; margin: 0 0 8px; width: 100%; box-sizing: border-box; }
 .axn-more-tasks { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
 .axn-more-tasks .ant-btn { justify-content: flex-start; font-size: 13px; }
 .axn-assistant--split .axn-composer { padding: 10px 12px 12px; }
@@ -125,3 +125,33 @@
 .axn-summary-round .ant-typography + .ant-typography { margin: 8px 0 0; }
 .axn-summary-input { display: grid; gap: 12px; margin-top: 10px; }
 .axn-summary-input > .ant-btn { justify-self: start; }
+
+/* TaskCard 通用工具类：边距/分隔线 */
+.axn-tc-mt8 { margin-top: 8px; }
+.axn-tc-mb4 { margin-bottom: 4px; }
+.axn-tc-ml6 { margin-left: 6px; }
+.axn-tc-m-6-0 { margin: 6px 0; }
+.axn-tc-heading { margin: 8px 0 4px; font-weight: 600; line-height: 1.6; }
+.axn-tc-divider { border-top: 1px dashed #d9dfe8; padding-top: 6px; margin-top: 6px; }
+
+/* TaskCard 字体 */
+.axn-tc-fs12 { font-size: 12px; }
+.axn-tc-fs13 { font-size: 13px; }
+.axn-tc-pre { white-space: pre-wrap; font-size: 13px; }
+.axn-tc-fs12-lh16 { font-size: 12px; line-height: 1.6; }
+.axn-tc-body { margin: 6px 0; font-size: 12px; line-height: 1.6; }
+.axn-tc-tag-sm { margin-inline-end: 4px; font-size: 12px; }
+
+/* TaskCard 图标颜色 */
+.axn-tc-green { color: #52c41a; }
+.axn-tc-blue { color: #1d6ff2; }
+.axn-tc-red { color: #ff4d4f; }
+.axn-tc-muted { color: #bfbfbf; }
+.axn-tc-gray { color: #666; }
+
+/* ChatPanel 工具类 */
+.axn-cp-title { font-size: 14px; flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.axn-cp-compact { width: 100%; margin-top: 6px; }
+.axn-cp-chips-wrap { display: flex; justify-content: center; padding: 0 16px; width: 100%; box-sizing: border-box; }
+.axn-cp-select-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.axn-cp-select { min-width: 100px; font-size: 12px; }

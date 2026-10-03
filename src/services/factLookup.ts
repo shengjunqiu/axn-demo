@@ -34,10 +34,18 @@ export function shiftEventIds(shiftId: string): string[] {
 }
 
 export function permits(owner: FixtureScope, query: FactQueryScope): boolean {
-  const events = query.kind === 'event' ? (incidentById.has(query.eventId) ? [query.eventId] : []) : shiftEventIds(query.shiftId);
+  let events: string[];
+  if (query.kind === 'event') {
+    events = incidentById.has(query.eventId) ? [query.eventId] : [];
+  } else {
+    events = shiftEventIds(query.shiftId);
+  }
   if (!events.length) return false;
   if (owner.kind === 'demo_configuration') return true;
-  if (owner.kind === 'event') return !!owner.eventId && events.includes(owner.eventId);
+  if (owner.kind === 'event') {
+    if (!owner.eventId) return false;
+    return events.includes(owner.eventId);
+  }
   if (owner.kind === 'shift') return query.kind === 'shift' && owner.shiftId === query.shiftId && (!owner.orgId || owner.orgId === shift.orgId);
   return events.some((id) => incidentById.get(id)?.orgId === owner.orgId && owner.allowedEventIds?.includes(id));
 }
@@ -46,7 +54,7 @@ export function resourceAllowed(resourceId: string, eventId: string): boolean {
   const resource = teamById.get(resourceId) ?? warehouseById.get(resourceId);
   if (!resource) return false;
   if ('distanceAnchorEventId' in resource && resource.distanceAnchorEventId !== eventId) return false;
-  return Object.values(resource.factRefs).every((id) => !!resolveFact(id, { kind: 'event', eventId }));
+  return Object.values(resource.factRefs).every((id) => Boolean(resolveFact(id, { kind: 'event', eventId })));
 }
 
 export function resolveFact(factId: string, scope: FactQueryScope = { kind: 'event', eventId: useDemoStore.getState().currentEventId }): ResolvedFact | null {
@@ -60,8 +68,10 @@ export function resolveFact(factId: string, scope: FactQueryScope = { kind: 'eve
       ? permits({ kind: 'event', eventId: manual.scopeId }, scope)
       : scope.kind === 'shift' && scope.shiftId === manual.scopeId && shiftEventIds(scope.shiftId).length > 0;
     if (!allowed || (manual.scopeKind === 'event' && manual.eventId && manual.eventId !== manual.scopeId)) return null;
+    const event = incidentById.get(manual.scopeId);
+    const orgId = event?.orgId ?? shift.orgId;
     return {
-      scope: manual.scopeKind === 'event' ? { kind: 'event', eventId: manual.scopeId, orgId: incidentById.get(manual.scopeId)!.orgId } : { kind: 'shift', shiftId: manual.scopeId, orgId: shift.orgId, allowedEventIds: shiftEventIds(manual.scopeId) },
+      scope: manual.scopeKind === 'event' ? { kind: 'event', eventId: manual.scopeId, orgId } : { kind: 'shift', shiftId: manual.scopeId, orgId: shift.orgId, allowedEventIds: shiftEventIds(manual.scopeId) },
       factId: manual.factId,
       value: manual.value,
       unit: null,
@@ -122,7 +132,14 @@ const ENUM_LABELS: Record<string, Record<string, string>> = {
 
 /** 枚举事实值 → 中文标签（供快照冻结链路复用，避免导出/打印出现裸枚举值）。 */
 export function formatFactValue(value: FactValue, unit: string | null, sourceFieldKey: string): string {
-  const raw = Array.isArray(value) ? value.join('、') : value == null ? '（来源缺失）' : String(value);
+  let raw: string;
+  if (Array.isArray(value)) {
+    raw = value.join('、');
+  } else if (value == null) {
+    raw = '（来源缺失）';
+  } else {
+    raw = String(value);
+  }
   const enumMap = ENUM_LABELS[sourceFieldKey];
   const label = enumMap?.[raw];
   const text = label ?? raw;
@@ -159,10 +176,14 @@ function dynamicSources(): SourceRecord[] {
   const result: SourceRecord[] = [];
   if (demo.waterOverride) {
     const wo = demo.waterOverride;
-    const seed = sourceById.get('src-obs-water-005-v1') ?? sourceById.get(factById.get('fact-obs-water-005-waterLevel')!.sourceRecordId)!;
+    const wlFact = factById.get('fact-obs-water-005-waterLevel');
+    const seedSourceId = wlFact?.sourceRecordId ?? '';
+    const seed = sourceById.get('src-obs-water-005-v1') ?? sourceById.get(seedSourceId);
+    if (!seed) throw new Error('seed data missing: obs-water-005');
     result.push({ ...seed, scope: seed.scope as FactScope, sourceRecordId: 'src-obs-water-006-v2', objectId: 'obs-water-006',
       sourceVersion: 2, capturedAt: wo.capturedAt, fields: { ...seed.fields, waterLevel: wo.waterLevel, observedAt: wo.observedAt } });
-    const clock = sourceById.get('src-clock-001-v1')!;
+    const clock = sourceById.get('src-clock-001-v1');
+    if (!clock) throw new Error('seed data missing: src-clock-001-v1');
     result.push({ ...clock, scope: clock.scope as FactScope, sourceRecordId: 'src-clock-002-v2', objectId: 'clock-demo-002', sourceVersion: 2,
       capturedAt: wo.capturedAt, fields: { currentTime: demo.demoClock } });
   }
@@ -182,5 +203,5 @@ export function resolveSourceRecord(sourceRecordId: string, scope: FactQueryScop
       fields: { [manual.field]: manual.value, actorName: manual.actorName, actorId: manual.actorId, performedAt: manual.performedAt, demoClockAt: manual.demoClockAt } } : null;
   }
   const source = dynamicSources().find(s => s.sourceRecordId === sourceRecordId) ?? sourceById.get(sourceRecordId);
-  return source && permits(source.scope, scope) ? JSON.parse(JSON.stringify(source)) as SourceRecord : null;
+  return source && permits(source.scope, scope) ? structuredClone(source) as SourceRecord : null;
 }

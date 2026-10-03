@@ -13,9 +13,9 @@
  * 全部为模拟环境的 UI 状态。
  */
 import { create } from 'zustand';
-import { useConversationStore } from './conversationStore';
-import { useDemoStore } from './demoStore';
-import { useSessionStore } from './sessionStore';
+import { useConversationStore } from './conversationStore.js';
+import { useDemoStore } from './demoStore.js';
+import { useSessionStore } from './sessionStore.js';
 
 export type WorkspaceSelection =
   | { kind: 'mock'; id: string }
@@ -70,7 +70,7 @@ export const useWorkspaceStore = create<WorkspaceState>()((set, get) => ({
   selectionOf: (scope) => get().scopes[scope]?.selection ?? null,
   isOpen: (scope) => {
     const scopeState = get().scopes[scope];
-    return !!scopeState && (scopeState.generating || scopeState.selection !== null);
+    return Boolean(scopeState) && (scopeState.generating || scopeState.selection !== null);
   },
 
   autoOpen: (scope, token, intent) =>
