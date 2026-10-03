@@ -521,21 +521,8 @@ export function createDailyDocument(sessionId: string): CreateDocumentResult {
   return { ok: true, documentId, missingFields: [], state: 'draft_created' };
 }
 
-export { collectRunFactIds } from './contentRuns.js';
-
 export function derivedMetaLabel(key: DerivedKey): string {
   return DERIVED_META[key].label;
-}
-
-export function knowledgeNotice(): string {
-  return knowledgeById.values().next().value?.notice ?? '';
-}
-
-export function factPendingLabel(factId: string): string | null {
-  const f = resolveFact(factId);
-  if (!f) return null;
-  if (f.verification === 'pending') return '待核实';
-  return null;
 }
 
 export type { TemplateCode };
