@@ -17,6 +17,7 @@ export default defineConfig({
     strictPort: true,
   },
   build: {
+    target: 'es2022',
     sourcemap: false,
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
@@ -33,6 +34,7 @@ export default defineConfig({
     include: ['antd', '@ant-design/icons', '@ant-design/icons/MessageOutlined'],
   },
   test: {
+    pool: 'vmThreads',
     environment: 'jsdom',
     globals: true,
     include: ['src/**/*.test.{ts,tsx}'],
