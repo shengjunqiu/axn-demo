@@ -90,7 +90,7 @@ function IssueItem({ issue, locate, onAdopt }: IssueItemProps) {
         );
       })()}
       {issue.suggestionText && (
-        <div style={{ marginTop: 6 }}>
+        <div style={{ marginTop: 8 }}>
           <Tooltip title={issue.paragraphId ? '按建议改写该段落，随后需显式重新校核' : '该问题未定位到具体段落，无法自动采用'}>
             <Button size="small" disabled={!issue.paragraphId} onClick={() => onAdopt(issue)}>
               采用建议
@@ -118,8 +118,8 @@ function IssueList({
 }) {
   if (items.length === 0) return null;
   return (
-    <div style={{ marginTop: 10 }}>
-      <Typography.Title level={5} style={{ marginBottom: 6 }}>
+    <div style={{ marginTop: 12 }}>
+      <Typography.Title level={5} style={{ marginBottom: 8 }}>
         {title}（{items.length}）
       </Typography.Title>
       {items.map((issue, index) => (
@@ -245,7 +245,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
         <div className="doc-validation-scroll">
           {hashMismatch && (
             <Alert
-              style={{ marginTop: 10 }}
+              style={{ marginTop: 12 }}
               type="warning"
               showIcon
               message="校核结果已过期"
@@ -254,7 +254,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
           )}
           {!hashMismatch && blocks.length === 0 && warnings.length === 0 && (
             <Alert
-              style={{ marginTop: 10 }}
+              style={{ marginTop: 12 }}
               type="success"
               showIcon
               message="校核通过"
@@ -263,7 +263,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
           )}
           {!hashMismatch && blocks.length === 0 && warnings.length > 0 && (
             <Alert
-              style={{ marginTop: 10 }}
+              style={{ marginTop: 12 }}
               type="warning"
               showIcon
               title={`校核通过，但有 ${warnings.length} 条提示`}
@@ -272,7 +272,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
           )}
           {blocks.length > 0 && (
             <Alert
-              style={{ marginTop: 10 }}
+              style={{ marginTop: 12 }}
               type="error"
               showIcon
               title={`存在 ${blocks.length} 条阻断级问题`}
@@ -282,7 +282,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
           <IssueList title="阻断级（阻断签发）" items={blocks} locate={locate} onAdopt={handleAdopt} />
           <IssueList title="提示级" items={warnings} locate={locate} onAdopt={handleAdopt} />
           <IssueList title="说明" items={infos} locate={locate} onAdopt={handleAdopt} />
-          <div style={{ marginTop: 10, fontSize: 12, color: '#888' }}>
+          <div style={{ marginTop: 12, fontSize: 12, color: '#888' }}>
             校核内容指纹：<Typography.Text code>{report.contentHash}</Typography.Text>
             {hashMismatch && (
               <>

@@ -59,7 +59,7 @@ export function ConversationSettingsPanel() {
     { key: 'demoMode', label: '模拟模式', desc: '显示环境横幅与模拟数据标识（始终为模拟环境）' },
   ];
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, paddingTop: 4 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 4 }}>
       {items.map((item) => {
         const patch: Partial<ConversationSettings> = {};
         return (

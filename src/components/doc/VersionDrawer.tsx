@@ -228,7 +228,7 @@ export default function VersionDrawer({ documentId, open, onClose }: VersionDraw
             <div
               key={rev.revisionId}
               className="doc-card"
-              style={{ marginBottom: 10, borderColor: rev.signedRecord ? '#b7eb8f' : undefined }}
+              style={{ marginBottom: 12, borderColor: rev.signedRecord ? '#b7eb8f' : undefined }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                 <Space size={8} wrap>
@@ -262,7 +262,7 @@ export default function VersionDrawer({ documentId, open, onClose }: VersionDraw
           ))}
 
           {revisions.length >= 2 && (
-            <div className="doc-card" style={{ marginTop: 14 }}>
+            <div className="doc-card" style={{ marginTop: 16 }}>
               <Typography.Title level={5} style={{ marginTop: 0 }}>
                 版本差异对比
               </Typography.Title>
@@ -293,7 +293,7 @@ export default function VersionDrawer({ documentId, open, onClose }: VersionDraw
               )}
               {baseRev && targetRev && baseRev.revisionId !== targetRev.revisionId && (
                 <>
-                  <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
                     {baseRev.displayVersion} → {targetRev.displayVersion}：绿色为新增内容、红色为删除内容（行级简化对比，模拟）。
                   </div>
                   <DiffView rows={diffRows} />
