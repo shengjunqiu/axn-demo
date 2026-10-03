@@ -259,7 +259,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
 
   return (
     <div className="axn-chat-page" style={{ '--chat-primary': token.colorPrimary, '--chat-tint': token.colorPrimaryBg, '--chat-line': token.colorBorderSecondary, '--chat-muted': token.colorTextSecondary, '--chat-text': token.colorText, '--chat-surface': token.colorBgContainer, '--chat-soft': token.colorFillAlter, '--chat-success': token.colorSuccess, '--chat-error': token.colorError } as React.CSSProperties}>
-      {/* 会话头：左侧收起侧边栏 + 标题 + 关联灾情 */}
+          {/* 会话头：左侧收起侧边栏 + 标题 */}
       <div className="axn-chat-head">
         <div className="axn-chat-head-row">
           <Button
@@ -272,23 +272,6 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
           <Text strong style={{ fontSize: 14, flex: 1, minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
             {eventTitle}
           </Text>
-
-        </div>
-        <div className="axn-chat-head-row">
-          <Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>
-            关联灾情
-          </Text>
-          <Tooltip title="关联后使用该事件的业务资料，对话消息保持独立">
-            <Select
-              size="small"
-              style={{ flex: 1, minWidth: 0 }}
-              value={linkValue}
-              onChange={handleLinkChange}
-              options={linkOptions}
-              data-testid="chat-link-incident"
-              aria-label="关联灾情"
-            />
-          </Tooltip>
         </div>
       </div>
 
@@ -449,6 +432,22 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             onCancel={() => {
               if (runningTask) cancelTask(runningTask.taskId);
             }}
+            suffix={(_, { components: { SendButton } }) => (
+              <>
+                <Tooltip title="关联后使用该事件的业务资料，对话消息保持独立">
+                  <Select
+                    size="small"
+                    style={{ minWidth: 100, fontSize: 12 }}
+                    value={linkValue}
+                    onChange={handleLinkChange}
+                    options={linkOptions}
+                    aria-label="关联灾情"
+                    data-testid="chat-link-incident"
+                  />
+                </Tooltip>
+                <SendButton />
+              </>
+            )}
             placeholder={
               session ? '向安小能发送指令，Enter 发送' : '会话初始化中…'
             }
