@@ -1,6 +1,6 @@
 import { clickQuickTask } from './helpers/quickTasks';
 /**
- * UI 改版 E2E：参考图外壳（260px 侧栏 + 宽敞主区）、首页常用工作任务、
+ * UI 改版 E2E：参考图外壳（260px 侧栏 + 宽敞主区）、首页知识库引导问题、
  * 文书库与文书工作区（打开/关闭/重开/独立库）、待补充工作总结刷新恢复、
  * 迟到的跨会话完成隔离、未保存编辑保护、窄视口文书独占主区。
  * 截图输出到 artifacts/ui-polish/。
@@ -34,9 +34,9 @@ for (const { width, height, name } of DESKTOPS) {
     expect(sidebarWidth).toBeGreaterThanOrEqual(240);
     expect(sidebarWidth).toBeLessThanOrEqual(280);
 
-    // 首页：常用工作任务卡 + 一体化输入区
-    await expect(page.getByTestId('home-work-recommend')).toBeVisible();
-    await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
+    // 首页：知识库引导问题 + 一体化输入区
+    await expect(page.getByTestId('home-chat-recommend')).toBeVisible();
+    await expect(page.getByTestId('home-chat-recommend').locator('.axn-question-item')).toHaveCount(4);
     const inner = await page.locator('.axn-home-inner').boundingBox();
     expect(inner?.width ?? 0).toBeGreaterThanOrEqual(780);
     expect(inner?.width ?? 0).toBeLessThanOrEqual(920);
@@ -61,16 +61,21 @@ for (const { width, height, name } of DESKTOPS) {
   });
 }
 
-test('新建任务与新建对话都显示常用工作任务', async ({ page }) => {
+test('新建任务与新建对话都显示知识库引导问题', async ({ page }) => {
   await page.goto('/');
+  const questions = page.getByTestId('home-chat-recommend').locator('.axn-question-item');
   // 新建任务
   await page.getByTestId('new-task-btn').click();
   await expect(page.locator('.axn-gs-conversation.is-active')).toContainText('新的应急对话');
-  await expect(page.getByTestId('home-work-recommend')).toBeVisible();
+  await expect(questions).toHaveCount(4);
+  await expect(questions.first()).toBeVisible();
   // 新建应急对话
   await page.getByTestId('new-conversation-btn').click();
-  await expect(page.getByTestId('home-work-recommend')).toBeVisible();
+  await expect(questions).toHaveCount(4);
+  // 问题取自知识库原文，点击后应命中对应答案
+  await questions.first().click();
   await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
+  await expect(page.locator('.axn-task-card').last()).toContainText('建议动作', { timeout: 30000 });
 });
 
 test('文书库打开 → 工作区显示 → 关闭回宽对话 → 同份重开不重新生成', async ({ page }) => {
@@ -230,13 +235,13 @@ test('精简分屏保留未发送输入，关闭后恢复首页', async ({ page 
   await page.goto('/');
   await openFirstSample(page);
   await expect(page.getByTestId('split-chat-empty')).toBeVisible();
-  await expect(page.getByTestId('home-work-recommend')).toHaveCount(0);
+  await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
   await expect(page.getByTestId('document-toolbar')).toContainText('防汛值守日报');
   await expect(page.getByTestId('document-toolbar')).toContainText('2026年9月28日');
   const input = page.getByPlaceholder(/向安小能发送指令/);
   await input.fill('尚未发送的补充资料');
   await page.getByTestId('workspace-close-btn').click();
-  await expect(page.getByTestId('home-work-recommend')).toBeVisible();
+  await expect(page.getByTestId('home-chat-recommend')).toBeVisible();
   await expect(input).toHaveValue('尚未发送的补充资料');
   await expect(page.getByTestId('document-workspace')).toHaveCount(0);
 });

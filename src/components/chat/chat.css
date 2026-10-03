@@ -13,7 +13,7 @@
 .axn-chat-page .ant-alert-message, .axn-chat-page .ant-alert-title { font-size: 12px; font-weight: 500; }
 .axn-chat-page .ant-alert-description { font-size: 12px; color: var(--chat-muted); }
 
-/* 首页：宽敞居中欢迎 + 常用工作任务卡。 */
+/* 首页：宽敞居中欢迎 + 知识库引导问题。 */
 .axn-home { display: flex; flex-direction: column; align-items: center; }
 .axn-chat-empty-compact { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 40px 24px; text-align: center; color: var(--chat-muted); }
 .axn-chat-empty-compact > .anticon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 16px; color: var(--chat-muted); background: var(--chat-soft); font-size: 22px; }
@@ -24,12 +24,12 @@
 .axn-home-title.ant-typography { font-size: clamp(28px, 2.7vw, 38px); color: #17191d; margin: 0 0 12px; letter-spacing: -.8px; }
 .axn-home-copy.ant-typography { margin: 0 0 18px; font-size: 13px; line-height: 1.9; color: var(--chat-muted); }
 .axn-home-block { display: flex; flex-direction: column; gap: 4px; }
-.axn-task-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin: 12px 0 18px; }
-.axn-task-card-btn { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding: 13px 14px; border: 1px solid var(--chat-line); border-radius: 12px; background: var(--chat-surface); cursor: pointer; font: inherit; text-align: left; transition: border-color .16s, background .16s; }
-.axn-task-card-btn:hover:not(:disabled) { border-color: color-mix(in srgb, var(--chat-primary) 30%, var(--chat-line)); background: var(--chat-tint); }
-.axn-task-card-btn:disabled { opacity: .55; cursor: not-allowed; }
-.axn-task-card-btn-label { font-size: 13px; font-weight: 600; color: var(--chat-text); }
-.axn-task-card-btn-agent { font-size: 11px; color: var(--chat-muted); }
+.axn-question-list { list-style: none; margin: 10px 0 18px; padding: 0; display: grid; gap: 7px; max-width: 740px; }
+.axn-question-item { display: block; position: relative; width: 100%; text-align: left; border: 1px solid var(--chat-line); background: var(--chat-soft); color: var(--chat-text); border-radius: 8px; padding: 9px 24px 9px 11px; font: inherit; font-size: 12px; line-height: 1.7; cursor: pointer; transition: border-color .15s, background .15s; }
+.axn-question-item::after { content: '›'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--chat-muted); }
+.axn-question-item:hover:not(:disabled) { background: var(--chat-tint); border-color: color-mix(in srgb, var(--chat-primary) 24%, var(--chat-line)); color: var(--chat-primary); }
+.axn-question-item:disabled { color: var(--chat-muted); cursor: not-allowed; opacity: .6; }
+.axn-question-item:focus-visible { outline: 2px solid var(--chat-primary); outline-offset: 2px; }
 .axn-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 0; border: 0; background: transparent; flex: 1; min-width: 0; }
 .axn-more-tasks { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
 .axn-more-tasks .ant-btn { justify-content: flex-start; font-size: 13px; }
@@ -117,7 +117,7 @@
 .axn-document-workflow-footer { padding-top: 12px; border-top: 1px solid var(--chat-line); width: 100%; }
 .axn-document-workflow-footer .ant-typography { font-size: 12px; }
 .axn-document-workflow-footer .anticon { color: var(--chat-success); }
-@media (prefers-reduced-motion: reduce) { .is-running .axn-agent-summon-avatar::after { animation: none; } .axn-chip { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .is-running .axn-agent-summon-avatar::after { animation: none; } .axn-question-item, .axn-chip { transition: none; } }
 
 .axn-summary-collection { display: grid; gap: 12px; margin: 14px 0; }
 .axn-summary-round { padding: 12px 14px; border: 1px solid var(--ant-color-border-secondary, #e8edf3); border-radius: 10px; background: var(--ant-color-fill-quaternary, #fafbfd); }
