@@ -1,3 +1,4 @@
+import { clickQuickTask } from './helpers/quickTasks';
 import { expect, test } from '@playwright/test';
 
 for (const entry of ['分类按钮', '对话输入', '快捷操作']) {
@@ -7,7 +8,7 @@ for (const entry of ['分类按钮', '对话输入', '快捷操作']) {
       await page.locator('.axn-gs-nav-item', { hasText: '文书库' }).first().click();
       await page.getByTestId('document-library').getByRole('button', { name: '生成工作总结', exact: true }).click();
     } else if (entry === '快捷操作') {
-      await page.locator('.axn-chips').getByRole('button', { name: '生成工作总结', exact: true }).click();
+      await clickQuickTask(page, '生成工作总结');
     } else {
       await page.getByPlaceholder(/向安小能发送指令/).fill('请生成工作总结');
       await page.keyboard.press('Enter');

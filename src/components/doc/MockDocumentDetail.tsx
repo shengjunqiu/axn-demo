@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Input, Tag, message } from 'antd';
-import { CheckCircleOutlined, FileTextOutlined, CalendarOutlined } from '@ant-design/icons';
+import { Input, message } from 'antd';
+import { FileTextOutlined } from '@ant-design/icons';
 import { DOCUMENT_CATEGORIES, type MockDocument } from '@/seed/mockDocuments';
 import DocumentDetailToolbar from './DocumentDetailToolbar';
 
 /** 模拟文书右栏详情：在线编辑直接在右栏进行，保存只写回当前会话作用域的模拟文书库。 */
-export default function MockDocumentDetail({ document, onClose, onSave, onDirtyChange }: {
+export default function MockDocumentDetail({ document, onClose, onOpenLibrary, onSave, onDirtyChange }: {
   document: MockDocument; onClose: () => void; onSave: (document: MockDocument) => void;
   onDirtyChange?: (dirty: boolean) => void;
+  onOpenLibrary?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [working, setWorking] = useState(document);
@@ -29,15 +30,10 @@ export default function MockDocumentDetail({ document, onClose, onSave, onDirtyC
   // 取消编辑保留本次编辑内容（再次进入编辑可继续），放弃修改才真正丢弃。
   const discard = () => { setWorking(document); setEditing(false); onDirtyChange?.(false); message.info('已放弃未保存修改'); };
   return <div className="doc-detail-view">
-    <DocumentDetailToolbar title={document.title} editing={editing} dirty={dirty} onBack={onClose}
+    <DocumentDetailToolbar title={document.title} subtitle={`${category} · ${document.date} · ${editing ? '编辑中 · 保存后生效' : '当前会话版本'}`} editing={editing} dirty={dirty} onBack={onClose} onOpenLibrary={onOpenLibrary}
       onEdit={() => setEditing(true)} onSave={save} onCancel={() => setEditing(false)} onDiscard={discard} />
     {editing && dirty && <div className="doc-dirty-note" data-testid="mock-dirty-note">有未保存修改 · 「取消编辑」保留内容，「放弃修改」丢弃，保存后写入当前会话文书库</div>}
     <div className="doc-detail-scroll">
-      <div className="doc-document-summary">
-        <div><Tag color="blue" bordered={false}>{category}</Tag><Tag bordered={false}>模拟文书</Tag></div>
-        <h3>{document.title}</h3>
-        <div className="doc-document-meta"><span><CalendarOutlined /> {document.date}</span><span><CheckCircleOutlined /> {editing ? '正在编辑 · 保存后生效' : '当前会话版本'}</span></div>
-      </div>
       {editing && <div className="doc-edit-notice">编辑标题与正文，完成后点击“保存修改”。</div>}
       <article className={`axn-redhead-paper ${editing ? 'doc-paper-editing' : ''}`} data-testid="mock-redhead-document">
         <div className="axn-redhead-org">应急管理</div>
@@ -49,7 +45,7 @@ export default function MockDocumentDetail({ document, onClose, onSave, onDirtyC
           {editing ? <><Input className="doc-edit-heading" aria-label={`第${index + 1}节标题`} value={heading} onChange={event => sectionChange(index, 0, event.target.value)} /><Input.TextArea aria-label={`第${index + 1}节正文`} autoSize={{ minRows: 3 }} value={body} onChange={event => sectionChange(index, 1, event.target.value)} /></> : <><h3>{heading}</h3><p>{body}</p></>}
         </section>)}</div>
         <div className="doc-document-signature"><p>应急管理</p><p>{document.date}</p></div>
-        <div className="axn-redhead-foot"><span>报送：有关单位（模拟）</span><span>模拟样稿 · 仅供演示</span></div>
+        <div className="axn-redhead-foot"><span>报送：有关单位（模拟）</span><span>模拟样稿 · 仅供评估</span></div>
       </article>
       <div className="doc-reading-footer"><FileTextOutlined /> {category} · 红头格式<span>{displayed.sections.reduce((count, section) => count + section.join('').length, displayed.title.length)} 字</span></div>
     </div>

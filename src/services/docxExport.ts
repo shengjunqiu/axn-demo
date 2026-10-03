@@ -110,7 +110,7 @@ export async function exportRevision(revisionId: string): Promise<void> {
   ];
 
   const docFile = new Document({
-    creator: '安小能演示（模拟）',
+    creator: '安小能（模拟）',
     title: rendered.title,
     description: rendered.mockNotice,
     sections: [

@@ -1,7 +1,7 @@
 /**
  * 本地 SVG 态势示意图（T-008）：河道 / 事件点 / 救援队伍 / 物资仓库 / 水位站。
  * 几何数据来自种子 schematicMap 与各实体 schematicPosition，名称取自种子事实；
- * 图上位置不用于计算距离或 ETA（演示示意，非真实地图）。
+ * 图上位置不用于计算距离或 ETA（示意，非真实地图）。
  */
 import { Alert, Space, Tag, Typography } from 'antd';
 import type { MouseEvent as ReactMouseEvent } from 'react';

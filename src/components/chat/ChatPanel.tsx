@@ -1,24 +1,23 @@
 import { generateWorkSummary, submitWorkSummaryImprovement } from '@/services/workSummaryWorkflow';
 /**
- * 安小能对话工作流（UI 改版）：会话头（标题 + 对话/工作 pill 切换 + 关联灾情）+
- * 消息流（Bubble.List）+ 圆角一体化输入区（快捷任务 chips 收纳进输入框内）+ 补录表单。
- * - 对话模式：首页建议为已接入知识库的问答问题；
- * - 工作模式：首页建议为 AGENT_QUICK_TASKS 任务卡（此时不再重复渲染同名单行 chips）。
+ * 安小能对话工作流（UI 改版）：会话头（标题 + 关联灾情）+ 消息流（Bubble.List）
+ * + 圆角一体化输入区（快捷任务 chips 收纳进输入框内）+ 补录表单。
+ * 首页建议为 AGENT_QUICK_TASKS 任务卡；输入区常驻 3 个常用任务 chips，其余收进「更多任务」浮层。
  * 会话跟随演示事件切换（ensureSessionForConversation）；消息与任务状态全部订阅 sessionStore，不本地复制。
  * 本界面为模拟数据演示（规则意图识别，不接真实大模型）。
  */
 import { useEffect, useMemo, useState } from 'react';
-import { App as AntdApp, Alert, Button, Input, Segmented, Select, Space, Tag, Tooltip, Typography, theme } from 'antd';
+import { DownOutlined, MessageOutlined } from '@ant-design/icons';
+import { Alert, App as AntdApp, Button, Input, Popover, Select, Space, Tag, Tooltip, Typography, theme } from 'antd';
 import { Bubble, Sender } from '@ant-design/x';
 import type { BubbleItemType } from '@ant-design/x';
 import { useConversationStore } from '@/store/conversationStore';
 import { useDemoStore } from '@/store/demoStore';
 import { useMockDocumentStore } from '@/store/mockDocumentStore';
 import { useSessionStore } from '@/store/sessionStore';
-import { useActiveScope, useWorkspaceStore, type WorkMode } from '@/store/workspaceStore';
+import { useActiveScope, useWorkspaceStore } from '@/store/workspaceStore';
 import { sendMessage, cancelTask } from '@/services/taskRunner';
 import { AGENT_QUICK_TASKS } from '@/seed/agentQuickTasks';
-import { getQaItem } from '@/services/qaKnowledge';
 import { factText, incidentById, incidents } from '@/seed/scenario';
 import { eventDisplayName } from '@/services/factLookup';
 import TaskCard from './TaskCard';
@@ -30,21 +29,17 @@ const { Text } = Typography;
 
 export interface ChatPanelProps {
   onOpenDrawer: (target: 'resource' | 'knowledge') => void;
+  compact?: boolean;
 }
-
-/** 从 qa.json 已接入的知识库读取原问题，保证点击后命中对应答案。 */
-const WELCOME_QUESTIONS = [38, 43, 16, 67]
-  .map(id => getQaItem(id)?.question)
-  .filter((question): question is string => !!question);
 
 const AVATAR = <div className="axn-chat-avatar">安</div>;
 
-const MODE_OPTIONS: { label: string; value: WorkMode }[] = [
-  { label: '对话', value: 'chat' },
-  { label: '工作', value: 'work' },
-];
+// 输入区常驻 3 个常用任务，其余收进「更多任务」浮层（任务全集见 seed/agentQuickTasks）
+const PRIMARY_LABELS = ['生成灾情摘要', '查询周边救援资源', '生成应急要情'];
+const PRIMARY_TASKS = AGENT_QUICK_TASKS.filter(({ label }) => PRIMARY_LABELS.includes(label));
+const MORE_TASKS = AGENT_QUICK_TASKS.filter(({ label }) => !PRIMARY_LABELS.includes(label));
 
-export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
+export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelProps) {
   const { token } = theme.useToken();
   const { modal } = AntdApp.useApp();
   const currentEventId = useDemoStore((s) => s.currentEventId);
@@ -55,12 +50,19 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
   const session = useSessionStore((s) => s.sessions[s.sessionByConversation[activeConversationId ?? ''] ?? '']);
   const tasks = useSessionStore((s) => s.tasks);
   const scope = useActiveScope();
-  const modes = useWorkspaceStore((s) => s.modes);
-  const setMode = useWorkspaceStore((s) => s.setMode);
-  const mode: WorkMode = modes[scope] ?? 'chat';
 
   const [input, setInput] = useState('');
   const [clarifyValue, setClarifyValue] = useState('');
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  // 「更多任务」浮层：切换范围时收起，打开时支持 Esc 关闭
+  useEffect(() => { setMoreOpen(false); }, [scope]);
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setMoreOpen(false); };
+    window.addEventListener('keydown', onEscape);
+    return () => window.removeEventListener('keydown', onEscape);
+  }, [moreOpen]);
 
   // 事件切换/重置后确保会话存在并跟随当前事件
   useEffect(() => {
@@ -255,9 +257,7 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
           <Text strong style={{ fontSize: 14, flex: 1, minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
             {eventTitle}
           </Text>
-          {hasMessages && <span className="axn-chat-mode" aria-label="切换对话与工作模式" data-testid="chat-mode-switch">
-            <Segmented size="small" options={MODE_OPTIONS} value={mode} onChange={(value) => setMode(scope, value as WorkMode)} />
-          </span>}
+
         </div>
         <div className="axn-chat-head-row">
           <Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>
@@ -308,61 +308,44 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
             },
           }}
         />
+      ) : compact ? (
+        <div className="axn-chat-empty-compact" data-testid="split-chat-empty">
+          <MessageOutlined />
+          <Typography.Title level={5}>围绕这份文书继续讨论</Typography.Title>
+          <Typography.Text type="secondary">可以补充资料、发起任务，或在右侧编辑文书。</Typography.Text>
+        </div>
       ) : (
-        <div className="chat-scroll axn-home" data-mode={mode}>
+        <div className="chat-scroll axn-home">
           <div className="axn-home-inner">
             <div className="axn-home-hero">
               <Typography.Title level={1} className="axn-home-title">有什么我能帮你的吗？</Typography.Title>
               <Text className="axn-home-greeting" type="secondary">您好，我是安小能（演示）</Text>
-              <span className="axn-chat-mode axn-home-mode" aria-label="切换对话与工作模式" data-testid="chat-mode-switch">
-                <Segmented options={MODE_OPTIONS} value={mode} onChange={(value) => setMode(scope, value as WorkMode)} />
-              </span>
             </div>
             <Typography.Paragraph className="axn-home-copy">
               梳理灾情、查询救援资源、生成工作文书。把信息整理交给安小能。
             </Typography.Paragraph>
 
-            {mode === 'chat' ? (
-              <div className="axn-home-block" data-testid="home-chat-recommend">
-                <Text type="secondary" style={{ fontSize: 13 }}>为你推荐</Text>
-                <ul className="axn-question-list">
-                  {WELCOME_QUESTIONS.map((q) => (
-                    <li key={q}>
-                      <button
-                        type="button"
-                        className="axn-question-item"
-                        disabled={!session || busy}
-                        onClick={() => { void handleQuickTask(q); }}
-                      >
-                        {q}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+            <div className="axn-home-block" data-testid="home-work-recommend">
+              <Text type="secondary" style={{ fontSize: 13 }}>常用工作任务</Text>
+              <div className="axn-task-cards">
+                {AGENT_QUICK_TASKS.map(({ label, agentName, agentId }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    className="axn-task-card-btn"
+                    data-agent-id={agentId}
+                    disabled={!session || busy}
+                    onClick={() => { void handleQuickTask(label); }}
+                  >
+                    <span className="axn-task-card-btn-label">{label}</span>
+                    <span className="axn-task-card-btn-agent">{agentName}</span>
+                  </button>
+                ))}
               </div>
-            ) : (
-              <div className="axn-home-block" data-testid="home-work-recommend">
-                <Text type="secondary" style={{ fontSize: 13 }}>常用工作任务</Text>
-                <div className="axn-task-cards">
-                  {AGENT_QUICK_TASKS.map(({ label, agentName, agentId }) => (
-                    <button
-                      key={label}
-                      type="button"
-                      className="axn-task-card-btn"
-                      data-agent-id={agentId}
-                      disabled={!session || busy}
-                      onClick={() => { void handleQuickTask(label); }}
-                    >
-                      <span className="axn-task-card-btn-label">{label}</span>
-                      <span className="axn-task-card-btn-agent">{agentName}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            </div>
 
             <Text type="secondary" style={{ fontSize: 12 }}>
-              {mode === 'chat' ? '也可直接输入指令，或切换到「工作」模式按任务发起。' : '也可直接输入指令，或在下方输入区使用快捷任务。'}
+              也可直接输入指令，或在下方输入区使用快捷任务。
             </Text>
           </div>
         </div>
@@ -397,20 +380,53 @@ export default function ChatPanel({ onOpenDrawer }: ChatPanelProps) {
       <div className="axn-composer">
         <div className="axn-composer-shell">
           <div className="axn-chips">
-              {AGENT_QUICK_TASKS.map(({ label, agentName, agentId }) => (
-                <Button
-                  key={label}
-                  size="small"
-                  className="axn-chip"
-                  title={agentName}
-                  data-agent-id={agentId}
-                  disabled={!session || busy}
-                  onClick={() => { void handleQuickTask(label); }}
-                >
-                  {label}
-                </Button>
-              ))}
-            </div>
+            {PRIMARY_TASKS.map(({ label, agentName, agentId }) => (
+              <Button
+                key={label}
+                size="small"
+                className="axn-chip"
+                title={agentName}
+                data-agent-id={agentId}
+                disabled={!session || busy}
+                onClick={() => { void handleQuickTask(label); }}
+              >
+                {label}
+              </Button>
+            ))}
+            <Popover
+              trigger="click"
+              placement="topRight"
+              open={moreOpen}
+              onOpenChange={setMoreOpen}
+              getPopupContainer={(trigger) => trigger.parentElement ?? document.body}
+              content={
+                <div className="axn-more-tasks" role="group" aria-label="更多快捷任务" data-testid="quick-task-menu">
+                  {MORE_TASKS.map(({ label, agentName, agentId }) => (
+                    <Button
+                      key={label}
+                      type="text"
+                      title={agentName}
+                      data-agent-id={agentId}
+                      disabled={!session || busy}
+                      onClick={() => { setMoreOpen(false); void handleQuickTask(label); }}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+              }
+            >
+              <Button
+                size="small"
+                className="axn-chip"
+                aria-label="更多任务"
+                aria-expanded={moreOpen}
+                disabled={!session || busy}
+              >
+                更多任务 <DownOutlined />
+              </Button>
+            </Popover>
+          </div>
           <Sender
             value={input}
             onChange={(v) => setInput(v)}

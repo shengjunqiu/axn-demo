@@ -202,7 +202,7 @@ export default function VersionDrawer({ documentId, open, onClose }: VersionDraw
       onClose={onClose}
       destroyOnHidden
     >
-      {!draft && <Empty description="文书不存在或演示数据已重置（模拟）" />}
+      {!draft && <Empty description="文书不存在或模拟数据已重置" />}
 
       {draft && (
         <>

@@ -1,5 +1,5 @@
 /**
- * 安小能 Demo 领域类型 —— 单一事实来源（主控维护，冻结契约）。
+ * 安小能领域类型 —— 单一事实来源（主控维护，冻结契约）。
  * 所有业务时间使用带 +08:00 的 ISO 字符串；用户实际操作时间另存 performedAt。
  * 全部数据均为模拟数据（dataMode: 'mock'）。
  */
@@ -47,7 +47,7 @@ export interface SourceRecord {
   fields: Record<string, FactValue>;
 }
 
-/** 人工补录（演示）产生的记录：聊天原文不直接作为来源，确认后生成 manual source + fact。 */
+/** 人工补录（模拟）产生的记录：聊天原文不直接作为来源，确认后生成 manual source + fact。 */
 export interface ManualInputRecord {
   recordId: string;
   field: string;
@@ -568,7 +568,7 @@ export interface AuditEvent {
   detail: string | null;
 }
 
-// ===== 演示控制 =====
+// ===== 模拟控制 =====
 
 export type DemoPace = 'normal' | 'fast';
 

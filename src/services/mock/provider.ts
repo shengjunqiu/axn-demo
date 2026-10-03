@@ -290,7 +290,7 @@ async function* runEvaluation(req: Ctx, signal: AbortSignal, paceMs: number): As
   await sleep(paceMs, signal);
   assertActive(req);
   const metrics = sample
-    ? `目标完成：${sample.objective} ${sample.completed}/${sample.target}${sample.unit}，完成率 ${Math.round(sample.completed / sample.target * 100)}%。\n响应时效：模拟首次响应 ${sample.responseMinutes} 分钟，目标 ${sample.targetMinutes} 分钟，达到目标。\n力量投入：模拟作业记录为 ${sample.personnel} 人、${sample.equipment} 台设备（独立演示记录，不代表候选力量已调派）。`
+    ? `目标完成：${sample.objective} ${sample.completed}/${sample.target}${sample.unit}，完成率 ${Math.round(sample.completed / sample.target * 100)}%。\n响应时效：模拟首次响应 ${sample.responseMinutes} 分钟，目标 ${sample.targetMinutes} 分钟，达到目标。\n力量投入：模拟作业记录为 ${sample.personnel} 人、${sample.equipment} 台设备（独立模拟记录，不代表候选力量已调派）。`
     : '当前事件尚无模拟救援作业记录，目标完成率、响应时效和投入效能待补充现场反馈后评估。';
   yield { type: 'step_completed', stepId: 'e2', outputSummary: sample ? `${sample.objective}完成率 ${Math.round(sample.completed / sample.target * 100)}%，响应时效达到模拟目标` : '缺少作业记录，保留待评估项' };
   yield { type: 'step_started', stepId: 'e3', name: '形成救援效果评估与改进建议' };
@@ -378,8 +378,8 @@ async function* runSummary(req: Ctx, signal: AbortSignal, paceMs: number): Async
   yield {
     type: 'text_delta',
     text: waterFactId
-      ? '已按模拟数据源汇总当前灾情，影响范围与人员伤亡情况详见下方摘要。建议响应等级来自上游态势服务（尚未确认），全部数据为演示模拟数据。'
-      : '已汇总当前事件事实。当前事件无水情监测及上游态势建议依据；未确认字段保持待核实。全部数据为演示模拟数据。',
+      ? '已按模拟数据源汇总当前灾情，影响范围与人员伤亡情况详见下方摘要。建议响应等级来自上游态势服务（尚未确认），全部数据为模拟数据。'
+      : '已汇总当前事件事实。当前事件无水情监测及上游态势建议依据；未确认字段保持待核实。全部数据为模拟数据。',
   };
   yield { type: 'completed', summary: '灾情摘要已生成' };
 }
@@ -597,7 +597,7 @@ async function* runCandidateRemove(req: Ctx, signal: AbortSignal, paceMs: number
 
 async function* runKnowledge(req: Ctx, signal: AbortSignal, paceMs: number): AsyncIterable<TaskEvent> {
   const chunk = knowledgeById.get('kb-demo-status-terms') ?? knowledgeById.values().next().value!;
-  yield { type: 'step_started', stepId: 'k1', name: '检索演示知识包', inputSummary: chunk.title };
+  yield { type: 'step_started', stepId: 'k1', name: '检索知识包', inputSummary: chunk.title };
   await sleep(paceMs, signal);
   assertActive(req);
   yield {
@@ -686,7 +686,7 @@ async function* runProposal(req: Ctx, signal: AbortSignal, paceMs: number): Asyn
     outputSummary: `候选 ${initialCandidates.length} 支；生成前将复核最新候选`,
     sourceRefs: factRefs,
   };
-  yield { type: 'step_started', stepId: 'p2', name: '匹配演示知识包', inputSummary: '要素清单 / 案例 / 术语' };
+  yield { type: 'step_started', stepId: 'p2', name: '匹配知识包', inputSummary: '要素清单 / 案例 / 术语' };
   await sleep(paceMs, signal);
   assertActive(req);
   yield { type: 'step_completed', stepId: 'p2', outputSummary: `命中 ${knowledgeById.size} 个知识条目（模拟）`, sourceRefs: [...knowledgeById.keys()] };
@@ -770,8 +770,8 @@ async function* runDocBrief(req: Ctx, signal: AbortSignal, paceMs: number): Asyn
       clarification: {
         clarificationId: `clarify-${Date.now().toString(36)}`,
         field: need,
-        prompt: `生成应急要情前需要补录“${fieldLabel(need)}”。请直接回复，例如：报送单位是演示集团应急指挥中心。`,
-        exampleHint: '报送单位是演示集团应急指挥中心',
+        prompt: `生成应急要情前需要补录“${fieldLabel(need)}”。请直接回复，例如：报送单位是集团应急指挥中心。`,
+        exampleHint: '报送单位是集团应急指挥中心',
         scopeKind: 'event',
         scopeId: req.eventId,
       },
@@ -903,7 +903,7 @@ async function* runFillField(
 ): AsyncIterable<TaskEvent> {
   const value = String(req.params.value ?? '').trim();
   if (!value) {
-    yield { type: 'text_delta', text: `请提供“${fieldLabel(field)}”的具体内容，例如：${field === 'reportingUnit' ? '报送单位是演示集团应急指挥中心' : '交接事项是继续跟踪清河段险情'}。` };
+    yield { type: 'text_delta', text: `请提供“${fieldLabel(field)}”的具体内容，例如：${field === 'reportingUnit' ? '报送单位是集团应急指挥中心' : '交接事项是继续跟踪清河段险情'}。` };
     yield { type: 'completed', summary: '等待输入' };
     return;
   }
@@ -939,7 +939,7 @@ async function* runFillField(
   assertActive(req);
   const session = useSessionStore.getState().sessions[req.sessionId];
   const activeDocId = session?.activeDocumentId;
-  let bindNote = `已绑定${scopeKind === 'event' ? '主事件' : '演示班次'}；原聊天消息不作为来源，仅确认后的补录记录生效。`;
+  let bindNote = `已绑定${scopeKind === 'event' ? '主事件' : '当前班次'}；原聊天消息不作为来源，仅确认后的补录记录生效。`;
   if (activeDocId) {
     const draft = useDocumentStore.getState().getDraft(activeDocId);
     if (draft && draft.lifecycle === 'draft') {
@@ -970,7 +970,7 @@ async function* runUnknown(req: Ctx, signal: AbortSignal, paceMs: number): Async
   yield { type: 'step_completed', stepId: 'u1', outputSummary: '转入兜底应答' };
   yield {
     type: 'text_delta',
-    text: '这个问题超出了当前演示能力（规则模拟，不接真实大模型）。我可以：\n· 汇总灾情摘要\n· 查询周边救援资源，并支持“谁最快能到”等追问\n· 选择/移除候选力量、形成处置建议\n· 生成应急要情 / 值班日报并进入编辑校核\n您可以试试上面的示例。',
+    text: '这个问题超出了当前能力范围（规则模拟，不接真实大模型）。我可以：\n· 汇总灾情摘要\n· 查询周边救援资源，并支持“谁最快能到”等追问\n· 选择/移除候选力量、形成处置建议\n· 生成应急要情 / 值班日报并进入编辑校核\n您可以试试上面的示例。',
   };
   yield { type: 'completed', summary: '兜底应答' };
 }

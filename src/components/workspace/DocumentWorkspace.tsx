@@ -5,8 +5,7 @@
  * 全部数据为模拟数据。
  */
 import { useCallback, useEffect, useRef } from 'react';
-import { App as AntdApp, Button, Space, Tag } from 'antd';
-import { CloseOutlined, FolderOpenOutlined } from '@ant-design/icons';
+import { App as AntdApp } from 'antd';
 import { useConversationStore } from '@/store/conversationStore';
 import { useMockDocumentStore } from '@/store/mockDocumentStore';
 import { useSessionStore } from '@/store/sessionStore';
@@ -64,22 +63,8 @@ export default function DocumentWorkspace() {
 
   return (
     <div className="doc-workspace" data-testid="document-workspace-shell">
-      <div className="doc-workspace-toolbar">
-        <Space size={8}>
-          <Tag bordered={false}>文书工作区</Tag>
-          <Tag bordered={false}>模拟演示</Tag>
-        </Space>
-        <Space size={8}>
-          <Button size="small" icon={<FolderOpenOutlined />} onClick={openLibrary} data-testid="workspace-library-btn">
-            文书库
-          </Button>
-          <Button size="small" type="primary" icon={<CloseOutlined />} onClick={requestClose} data-testid="workspace-close-btn">
-            关闭文书
-          </Button>
-        </Space>
-      </div>
       <div className="doc-workspace-body">
-        <DocCenterPanel view="workspace" />
+        <DocCenterPanel view="workspace" onClose={requestClose} onOpenLibrary={openLibrary} />
       </div>
     </div>
   );

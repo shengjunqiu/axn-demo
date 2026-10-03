@@ -89,7 +89,7 @@ export default function SourceDrawer({ factId, documentId, open, onClose }: Sour
               type="warning"
               showIcon
               message="该数据处于待核实状态"
-              description="签发前请通过电话或其他渠道人工复核（演示边界说明）。"
+              description="签发前请通过电话或其他渠道人工复核（边界说明）。"
             />
           )}
           <Descriptions
@@ -143,7 +143,7 @@ export default function SourceDrawer({ factId, documentId, open, onClose }: Sour
           )}
 
           <Typography.Paragraph type="secondary" style={{ marginTop: 16, fontSize: 12 }}>
-            模拟数据声明：本抽屉展示的来源链路均为演示种子数据（dataMode: mock），不代表真实系统记录。
+            模拟数据声明：本抽屉展示的来源链路均为种子模拟数据（dataMode: mock），不代表真实系统记录。
           </Typography.Paragraph>
         </Spin>
       )}

@@ -78,6 +78,8 @@ interface DemoState {
   getManualFactByField: (field: string, scopeKind: 'event' | 'shift', scopeId: string) => ManualFactEntry | undefined;
   applyWaterFeedUpdate: () => void;
   isWaterFeedUpdated: () => boolean;
+  sidebarCollapsed: boolean;
+  toggleSidebar: () => void;
   setStorageWarning: (msg: string | null) => void;
   reset: () => void;
 }
@@ -121,8 +123,9 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
   waterOverride: demoPersisted?.waterOverride ?? null,
   contextVersions: demoPersisted?.contextVersions ?? {},
   contextSequence: demoPersisted?.contextSequence ?? (demoPersisted?.waterOverride ? 2 : 1),
-  storageWarning: malformedManualFacts ? '部分补录缓存格式不完整，未载入；请重新补录并校核文书。' : duplicateManualIds.size ? '检测到旧演示数据的补录引用冲突，请重新补录相关字段并刷新文书数据；旧记录未被删除。' : null,
+  storageWarning: malformedManualFacts ? '部分补录缓存格式不完整，未载入；请重新补录并校核文书。' : duplicateManualIds.size ? '检测到旧模拟数据的补录引用冲突，请重新补录相关字段并刷新文书数据；旧记录未被删除。' : null,
   globalBanner: demoMeta.globalBanner,
+  sidebarCollapsed: false,
 
   getContextVersion: (kind, id) => get().contextVersions[`${kind}:${id}`] ?? (get().waterOverride && (id === 'evt-demo-001' || kind === 'shift') ? 2 : 1),
   touchContext: (kind, id) => {
@@ -159,6 +162,7 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
   },
 
   setGuideStep: (index) => set({ guideStepIndex: index }),
+  toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
 
   addManualFact: (input) => {
     const actor = get().getActor();

@@ -74,7 +74,7 @@ function rehydrate(): SessionPersist {
         status: 'failed',
         error: {
           errorCode: 'TASK_INTERRUPTED',
-          message: '演示刷新导致任务中断',
+          message: '页面刷新导致任务中断',
           hint: '任务未完成，可点击重试重新执行（模拟环境）。',
         },
         steps: task.steps.map((st) => (st.status === 'running' ? { ...st, status: 'failed' as const } : st)),
@@ -99,7 +99,7 @@ function rehydrate(): SessionPersist {
                 sessionId,
                 role: 'system' as const,
                 kind: 'system' as const,
-                text: `演示已刷新：${n} 个进行中的任务已中断，可在任务卡中重试。`,
+                text: `页面已刷新：${n} 个进行中的任务已中断，可在任务卡中重试。`,
                 taskId: null,
                 createdAt: new Date().toISOString(),
                 performedAt: new Date().toISOString(),
@@ -118,7 +118,7 @@ function rehydrate(): SessionPersist {
   };
 }
 
-/** 会话→session 映射种子：消息按会话隔离（关联灾情不共享历史消息）；主种子会话继承演示消息。 */
+/** 会话→session 映射种子：消息按会话隔离（关联灾情不共享历史消息）；主种子会话继承模拟消息。 */
 const SEED_SESSION_BY_CONVERSATION: Record<string, string> = {
   'conv-seed-nandi': DEFAULT_SESSION_ID,
 };

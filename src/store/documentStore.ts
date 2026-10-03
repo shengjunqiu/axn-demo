@@ -198,7 +198,7 @@ export const useDocumentStore = create<DocumentState>()((set, get) => ({
     const actor = useDemoStore.getState().getActor();
     if (actor.actorId !== actorId || actor.name !== name) throw new Error('签发身份与当前角色不一致');
     const signedRecord = { signedByActorId: actorId, signedByActorName: name, performedAt: new Date().toISOString(), demoClockAt: useDemoStore.getState().demoClock,
-      contentHash: revision.contentHash, isSimulated: true as const, note: '本机演示状态变化，不代表真实审批效力' };
+      contentHash: revision.contentHash, isSimulated: true as const, note: '本机模拟状态变化，不代表真实审批效力' };
     set(s => ({ revisions: { ...s.revisions, [id]: { ...revision, locked: true, signedRecord } }, drafts: { ...s.drafts, [revision.documentId]: { ...s.drafts[revision.documentId], lifecycle: 'signed' } } }));
     get().addAudit({ action: '模拟签发', actor: name, objectId: revision.documentId, version: revision.displayVersion, performedAt: signedRecord.performedAt, demoClockAt: signedRecord.demoClockAt, detail: `锁定版本、来源和校核 ${revision.contentHash}` });
   },

@@ -1,3 +1,4 @@
+import { clickQuickTask } from './helpers/quickTasks';
 /**
  * 文书智能体 E2E（UI 改版适配）：
  * 独立「文书库」页负责分类浏览 / 生成 / 样稿打开；样稿与草稿的阅读详情在助理页右侧「文书工作区」呈现，
@@ -71,7 +72,7 @@ test('聊天文书快捷操作无需补录即可生成右侧模拟红头文书',
   await page.goto('/');
   const panel = page.locator('.doc-center');
   for (const [name, title] of [['值班日报', '防汛值守日报'], ['应急要情', '重点河段险情处置要情']]) {
-    await page.locator('.axn-chips').getByRole('button', { name: `生成${name}`, exact: true }).click();
+    await clickQuickTask(page, `生成${name}`);
     const workflow = page.getByTestId('document-generation-card').last();
     await expect(workflow).toContainText('正在整理已收集的文书要素');
     await expect(workflow).toContainText('编制单位');

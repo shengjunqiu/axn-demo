@@ -78,7 +78,7 @@ describe('recognize 意图识别', () => {
 });
 
 describe('qaStatusLabel', () => {
-  it('演示状态翻译为界面提示（不包装成真实模型能力）', () => {
+  it('模拟状态翻译为界面提示（不包装成真实模型能力）', () => {
     expect(qaStatusLabel('demo_general_guidance_needs_live_data')).toContain('需结合现场实时数据');
     expect(qaStatusLabel('other')).toBe('模拟示例答案');
   });

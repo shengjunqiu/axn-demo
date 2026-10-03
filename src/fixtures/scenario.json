@@ -3,14 +3,14 @@
     "schemaVersion": 1,
     "fixtureVersion": "0.1.0",
     "createdAt": "2026-09-28",
-    "title": "安小能客户演示虚构种子数据",
+    "title": "安小能虚构种子数据",
     "dataMode": "mock",
     "dataScope": "drill",
     "scenarioMode": "emergency",
     "demoClock": "2026-09-28T21:10:00+08:00",
     "timeZone": "Asia/Shanghai",
-    "notice": "全部为虚构演示数据；不是客户真实数据、法规、灾情或救援指令。",
-    "globalBanner": "演示环境 · 模拟数据 · 非真实救援指令",
+    "notice": "全部为虚构模拟数据；不是客户真实数据、法规、灾情或救援指令。",
+    "globalBanner": "模拟数据 · 非真实救援指令",
     "storageNamespace": "anneng-demo:v1",
     "defaultEventId": "evt-demo-001",
     "defaultSessionId": "session-demo-001",
@@ -21,14 +21,14 @@
   "actors": [
     {
       "actorId": "actor-demo-duty",
-      "name": "演示值班员",
+      "name": "值班员",
       "role": "duty",
       "orgId": "org-demo-001",
       "isSimulated": true
     },
     {
       "actorId": "actor-demo-commander",
-      "name": "演示指挥员",
+      "name": "指挥员",
       "role": "commander",
       "orgId": "org-demo-001",
       "isSimulated": true
@@ -124,7 +124,7 @@
     "handOverNotesFactId": null,
     "reportingUnitFactId": null,
     "statisticsCutoffUses": "meta.demoClock",
-    "label": "演示班次；统计截至演示时钟，不是完整日终数据",
+    "label": "当前班次；统计截至模拟时钟，不是完整日终数据",
     "scope": {
       "kind": "shift",
       "shiftId": "shift-demo-001",
@@ -381,7 +381,7 @@
       "isSimulated": true,
       "label": "救援资源台账服务（模拟）",
       "fields": {
-        "name": "演示一号工程救援队",
+        "name": "一号工程应急救援队",
         "peopleCount": 36,
         "excavatorCount": 4,
         "distanceKm": 46,
@@ -411,7 +411,7 @@
       "isSimulated": true,
       "label": "救援资源台账服务（模拟）",
       "fields": {
-        "name": "演示二号应急救援队",
+        "name": "二号应急救援队",
         "peopleCount": 28,
         "excavatorCount": 3,
         "distanceKm": 72,
@@ -441,7 +441,7 @@
       "isSimulated": true,
       "label": "救援资源台账服务（模拟）",
       "fields": {
-        "name": "演示三号抢险支队",
+        "name": "三号抢险支队",
         "peopleCount": 24,
         "excavatorCount": 2,
         "distanceKm": 108,
@@ -470,7 +470,7 @@
       "isSimulated": true,
       "label": "物资仓储台账服务（模拟）",
       "fields": {
-        "name": "演示北岸物资库",
+        "name": "北岸物资库",
         "materialName": "编织袋",
         "stockQuantity": 24000
       }
@@ -493,7 +493,7 @@
       "isSimulated": true,
       "label": "物资仓储台账服务（模拟）",
       "fields": {
-        "name": "演示南岸物资库",
+        "name": "南岸物资库",
         "materialName": "编织袋",
         "stockQuantity": 16000
       }
@@ -514,7 +514,7 @@
       "isSimulated": true,
       "label": "水文监测服务（模拟）",
       "fields": {
-        "stationName": "演示清河水文站",
+        "stationName": "清河水文站",
         "observedAt": "2026-09-28T19:05:00+08:00",
         "waterLevel": 41.7
       }
@@ -535,7 +535,7 @@
       "isSimulated": true,
       "label": "水文监测服务（模拟）",
       "fields": {
-        "stationName": "演示清河水文站",
+        "stationName": "清河水文站",
         "observedAt": "2026-09-28T19:35:00+08:00",
         "waterLevel": 41.9
       }
@@ -556,7 +556,7 @@
       "isSimulated": true,
       "label": "水文监测服务（模拟）",
       "fields": {
-        "stationName": "演示清河水文站",
+        "stationName": "清河水文站",
         "observedAt": "2026-09-28T20:05:00+08:00",
         "waterLevel": 42.1
       }
@@ -577,7 +577,7 @@
       "isSimulated": true,
       "label": "水文监测服务（模拟）",
       "fields": {
-        "stationName": "演示清河水文站",
+        "stationName": "清河水文站",
         "observedAt": "2026-09-28T20:35:00+08:00",
         "waterLevel": 42.22
       }
@@ -598,14 +598,14 @@
       "isSimulated": true,
       "label": "水文监测服务（模拟）",
       "fields": {
-        "stationName": "演示清河水文站",
+        "stationName": "清河水文站",
         "observedAt": "2026-09-28T21:05:00+08:00",
         "waterLevel": 42.3
       }
     },
     {
       "sourceRecordId": "src-shift-001-v1",
-      "sourceSystem": "演示配置服务",
+      "sourceSystem": "配置服务",
       "sourceTable": "duty_shift",
       "objectId": "shift-demo-001",
       "sourceVersion": 1,
@@ -621,7 +621,7 @@
       },
       "dataMode": "mock",
       "isSimulated": true,
-      "label": "演示配置服务（模拟）",
+      "label": "配置服务（模拟）",
       "fields": {
         "shiftId": "shift-demo-001",
         "startsAt": "2026-09-28T16:00:00+08:00",
@@ -630,7 +630,7 @@
     },
     {
       "sourceRecordId": "src-clock-001-v1",
-      "sourceSystem": "演示配置服务",
+      "sourceSystem": "配置服务",
       "sourceTable": "demo_clock",
       "objectId": "clock-demo-001",
       "sourceVersion": 1,
@@ -640,7 +640,7 @@
       },
       "dataMode": "mock",
       "isSimulated": true,
-      "label": "演示配置服务（模拟）",
+      "label": "配置服务（模拟）",
       "fields": {
         "currentTime": "2026-09-28T21:10:00+08:00"
       }
@@ -1027,7 +1027,7 @@
     },
     {
       "factId": "fact-team-001-name",
-      "value": "演示一号工程救援队",
+      "value": "一号工程应急救援队",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.resource_team.name.team-001",
@@ -1170,7 +1170,7 @@
     },
     {
       "factId": "fact-team-002-name",
-      "value": "演示二号应急救援队",
+      "value": "二号应急救援队",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.resource_team.name.team-002",
@@ -1313,7 +1313,7 @@
     },
     {
       "factId": "fact-team-003-name",
-      "value": "演示三号抢险支队",
+      "value": "三号抢险支队",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.resource_team.name.team-003",
@@ -1455,7 +1455,7 @@
     },
     {
       "factId": "fact-warehouse-001-name",
-      "value": "演示北岸物资库",
+      "value": "北岸物资库",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.warehouse.name.warehouse-001",
@@ -1515,7 +1515,7 @@
     },
     {
       "factId": "fact-warehouse-002-name",
-      "value": "演示南岸物资库",
+      "value": "南岸物资库",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.warehouse.name.warehouse-002",
@@ -1575,7 +1575,7 @@
     },
     {
       "factId": "fact-obs-water-001-stationName",
-      "value": "演示清河水文站",
+      "value": "清河水文站",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.water_observation.stationName.obs-water-001",
@@ -1629,7 +1629,7 @@
     },
     {
       "factId": "fact-obs-water-002-stationName",
-      "value": "演示清河水文站",
+      "value": "清河水文站",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.water_observation.stationName.obs-water-002",
@@ -1683,7 +1683,7 @@
     },
     {
       "factId": "fact-obs-water-003-stationName",
-      "value": "演示清河水文站",
+      "value": "清河水文站",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.water_observation.stationName.obs-water-003",
@@ -1737,7 +1737,7 @@
     },
     {
       "factId": "fact-obs-water-004-stationName",
-      "value": "演示清河水文站",
+      "value": "清河水文站",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.water_observation.stationName.obs-water-004",
@@ -1791,7 +1791,7 @@
     },
     {
       "factId": "fact-obs-water-005-stationName",
-      "value": "演示清河水文站",
+      "value": "清河水文站",
       "unit": null,
       "valueType": "string",
       "sourceFieldId": "mock.water_observation.stationName.obs-water-005",
@@ -1929,18 +1929,18 @@
   "knowledgeChunks": [
     {
       "chunkId": "kb-demo-report-elements",
-      "title": "演示文书要素清单",
-      "category": "演示模板知识",
+      "title": "文书要素清单",
+      "category": "模板知识",
       "version": "1.0.0-demo",
       "isMock": true,
       "effectiveStatus": "demo_only",
       "sourceLabel": "本原型虚构知识包",
       "content": "文书示例包含事件基本情况、当前影响、响应与处置进展、力量情况、下一步工作和报送信息。未知信息应标注待核实，候选力量不得表述为已调派。",
-      "notice": "仅用于演示知识引用交互，不是真实规范、法规或已审核单位模板。"
+      "notice": "仅用于知识引用交互，不是真实规范、法规或已审核单位模板。"
     },
     {
       "chunkId": "kb-demo-coordination-case",
-      "title": "演示案例：信息核实与力量预置",
+      "title": "案例：信息核实与力量预置",
       "category": "虚构案例",
       "version": "1.0.0-demo",
       "isMock": true,
@@ -1951,13 +1951,13 @@
     },
     {
       "chunkId": "kb-demo-status-terms",
-      "title": "演示术语：建议、确认与签发",
-      "category": "演示流程说明",
+      "title": "术语：建议、确认与签发",
+      "category": "流程说明",
       "version": "1.0.0-demo",
       "isMock": true,
       "effectiveStatus": "demo_only",
       "sourceLabel": "本原型虚构知识包",
-      "content": "建议是待审核意见，候选是拟使用的资源，模拟签发是本机演示状态变化。只有明确的已确认记录才能用于对应事实段落。",
+      "content": "建议是待审核意见，候选是拟使用的资源，模拟签发是本机模拟状态变化。只有明确的已确认记录才能用于对应事实段落。",
       "notice": "不代表真实业务系统权限、审批效力或指挥制度。"
     }
   ],
@@ -2143,7 +2143,7 @@
   "proposalBlueprint": {
     "blueprintId": "proposal-blueprint-demo-001",
     "isMock": true,
-    "notice": "来自上游模拟服务的建议，仅用于产品演示；具体工程措施须专业人员审核。",
+    "notice": "来自上游模拟服务的建议，仅用于产品评估；具体工程措施须专业人员审核。",
     "knowledgeRefs": [
       "kb-demo-report-elements",
       "kb-demo-coordination-case",
@@ -2182,8 +2182,8 @@
   "manualInputExamples": [
     {
       "field": "reportingUnit",
-      "exampleUtterance": "报送单位是演示集团应急指挥中心",
-      "exampleValue": "演示集团应急指挥中心",
+      "exampleUtterance": "报送单位是集团应急指挥中心",
+      "exampleValue": "集团应急指挥中心",
       "requiresConfirmation": true,
       "persistRule": "确认后新建模拟 manual source/fact，记录 actor/performedAt。绑定主事件及当前班次；不得在初始时预填。"
     },
@@ -2271,7 +2271,7 @@
       "newWaterLevel": 42.35,
       "unit": "米",
       "newFeedVersion": 2,
-      "behavior": "创建新 source/fact/observation 并移动 latestObservationId、contextVersion；保留旧样本不篡改。旧草稿标过期，旧签发版保持锁定。 同时创建新的演示时钟来源/事实并更新 meta.demoClockFactId，不修改旧文书时钟快照。"
+      "behavior": "创建新 source/fact/observation 并移动 latestObservationId、contextVersion；保留旧样本不篡改。旧草稿标过期，旧签发版保持锁定。 同时创建新的模拟时钟来源/事实并更新 meta.demoClockFactId，不修改旧文书时钟快照。"
     }
   ],
   "negativeContentExamples": [

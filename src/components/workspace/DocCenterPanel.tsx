@@ -46,7 +46,7 @@ export type DocView = 'library' | 'workspace';
 
 const SOURCE_EVENT = 'axn:open-source';
 
-// 用户指定移出文书库的两条旧演示草稿；保留底层历史记录。
+// 用户指定移出文书库的两条旧模拟草稿；保留底层历史记录。
 const HIDDEN_DEMO_DRAFT_IDS = new Set(['doc-mum9lm4u-2', 'doc-mum9lbqs-1']);
 
 const LIFECYCLE_TAG: Record<DocumentDraft['lifecycle'], { color: string; label: string }> = {
@@ -85,7 +85,7 @@ function HintButton({ hint, ...buttonProps }: React.ComponentProps<typeof Button
   );
 }
 
-export default function DocCenterPanel({ view }: { view: DocView }) {
+export default function DocCenterPanel({ view, onClose = () => window.dispatchEvent(new Event('axn:close-document')), onOpenLibrary }: { view: DocView; onClose?: () => void; onOpenLibrary?: () => void }) {
   const { token } = theme.useToken();
   const draftsMap = useDocumentStore((s) => s.drafts);
   const revisionsMap = useDocumentStore((s) => s.revisions);
@@ -106,7 +106,6 @@ export default function DocCenterPanel({ view }: { view: DocView }) {
   });
 
   const selection = useWorkspaceStore((s) => s.scopes[libraryScope]?.selection ?? null);
-  const closeWorkspace = useWorkspaceStore((s) => s.close);
 
   const [editorDocId, setEditorDocId] = useState<string | null>(null);
   const [versionDocId, setVersionDocId] = useState<string | null>(null);
@@ -407,28 +406,16 @@ export default function DocCenterPanel({ view }: { view: DocView }) {
         '--doc-radius': `${token.borderRadiusLG}px`,
       } as React.CSSProperties}
     >
-      <header className="doc-agent-header">
-        <span className="doc-agent-avatar">
-          {view === 'workspace' ? <FileTextOutlined /> : <RobotOutlined />}
-        </span>
-        <div className="doc-agent-heading">
-          {view === 'workspace' ? (
-            <>
-              <h2>文书工作区</h2>
-              <p>阅读、编辑与流转当前文书（模拟）</p>
-            </>
-          ) : (
-            <>
-              <h2>文书库</h2>
-              <p>规范成文，让每一份文书清晰有据</p>
-            </>
-          )}
-        </div>
-        <Tag className="doc-demo-badge">模拟演示</Tag>
-      </header>
+      {view === 'library' && <header className="doc-agent-header">
+        <span className="doc-agent-avatar"><RobotOutlined /></span>
+        <div className="doc-agent-heading"><h2>文书库</h2><p>规范成文，让每一份文书清晰有据</p></div>
+        <Tag className="doc-demo-badge">模拟</Tag>
+      </header>}
 
       {view === 'workspace' ? (
         generating ? (
+          <>
+          <DocumentDetailToolbar title={waitingForImprovement ? '等待补充改进计划' : pendingDocument ? '等待补充文书信息' : '正在生成文书'} onBack={onClose} onOpenLibrary={onOpenLibrary} previewExports={false} />
           <div className="doc-generation" role="status" aria-live="polite">
             {!waitingForImprovement && !pendingDocument && <Spin size="large" />}
             <Typography.Title level={4}>
@@ -444,28 +431,35 @@ export default function DocCenterPanel({ view }: { view: DocView }) {
             </Typography.Text>
             <Skeleton active paragraph={{ rows: 8 }} />
           </div>
+          </>
         ) : selectedMock ? (
           <MockDocumentDetail
             key={selectedMock.id}
             document={selectedMock}
-            onClose={() => window.dispatchEvent(new Event('axn:close-document'))}
+            onClose={onClose}
+            onOpenLibrary={onOpenLibrary}
             onSave={(document) => useMockDocumentStore.getState().update(libraryScope, document)}
             onDirtyChange={onDirtyChange}
           />
         ) : selectedDraft ? (
-          <div className="doc-center-list">
+          <>
             <DocumentDetailToolbar
               title={selectedDraft.title}
-              backLabel="返回对话"
-              onBack={() => closeWorkspace(libraryScope)}
+              subtitle={`${templateByCode.get(selectedDraft.templateCode)?.name ?? '业务草稿'} · ${LIFECYCLE_TAG[selectedDraft.lifecycle].label}`}
+              onBack={onClose}
+              onOpenLibrary={onOpenLibrary}
               onEdit={() => setEditorDocId(selectedDraft.documentId)}
               editDisabled={selectedDraft.lifecycle !== 'draft'}
               onVersions={() => setVersionDocId(selectedDraft.documentId)}
             />
-            {renderDraftActions(selectedDraft)}
-            {renderDraftPaper(selectedDraft)}
-          </div>
+            <div className="doc-center-list">
+              {renderDraftActions(selectedDraft)}
+              {renderDraftPaper(selectedDraft)}
+            </div>
+          </>
         ) : (
+          <>
+          <DocumentDetailToolbar title="文书工作区" onBack={onClose} onOpenLibrary={onOpenLibrary} previewExports={false} />
           <div className="doc-center-empty">
             <InboxOutlined />
             <Typography.Title level={5}>尚未打开文书</Typography.Title>
@@ -473,6 +467,7 @@ export default function DocCenterPanel({ view }: { view: DocView }) {
               从左侧对话预览、任务产物或「文书库」打开文书后，将在此处显示。
             </Typography.Text>
           </div>
+          </>
         )
       ) : (
         <div className="doc-center-list">

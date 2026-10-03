@@ -10,7 +10,7 @@
  *   关闭（close 不带参）会抑制“同一个完成”在无关重渲染 / 重新挂载时再次弹出，
  *   而新的完成标记或用户显式选择（点击预览 / 文书库条目）仍会正常打开。
  * - dirty 记录右栏模拟编辑的未保存状态，供关闭 / 切换前的保护确认使用。
- * 全部为演示环境的 UI 状态。
+ * 全部为模拟环境的 UI 状态。
  */
 import { create } from 'zustand';
 import { useConversationStore } from './conversationStore';

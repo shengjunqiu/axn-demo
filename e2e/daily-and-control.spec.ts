@@ -1,6 +1,6 @@
 /**
  * E2E 副线（UI 改版适配）：值班日报真实草稿全链路（补录→生成→校核→提交→签发）、
- * 值班员不能签发、事件切换隔离、演示重置、取消任务、1366x768 关键区域可见性。
+ * 值班员不能签发、取消任务、1366x768 关键区域可见性。
  * 真实草稿一律通过对话指令「生成值班日报」生成（不再用模拟分类生成冒充真实草稿）。
  */
 import { expect, test, type Page } from '@playwright/test';
@@ -36,12 +36,8 @@ async function generateDailyDraft(page: Page) {
   return dailyCard;
 }
 
-test.describe('值班日报与演示控制', () => {
-  let consoleErrors: string[] = [];
-
+test.describe('值班日报', () => {
   test.beforeEach(async ({ page }) => {
-    consoleErrors = [];
-    page.on('pageerror', (err) => consoleErrors.push(String(err)));
     await page.goto('/');
     await expect(page.getByText('安小能 · 应急智能工作台')).toBeVisible();
   });
@@ -56,7 +52,7 @@ test.describe('值班日报与演示控制', () => {
     await dailyCard.getByRole('button', { name: '提交送审' }).click();
     await expect(page.locator('.doc-card', { hasText: '值班日报' }).filter({ hasText: '待签发' }).first()).toBeVisible({ timeout: 15000 });
     await page.getByLabel('切换角色').click();
-    await page.getByTitle('演示指挥员').click();
+    await page.getByTitle('指挥员').click();
     await page.locator('.doc-card', { hasText: '值班日报' }).filter({ hasText: '待签发' }).first().getByRole('button', { name: /签\s*发/ }).click();
     await expect(page.locator('.doc-card', { hasText: '值班日报' }).filter({ hasText: '已签发' }).first()).toBeVisible({ timeout: 15000 });
     // 文书库中同样可见该已签发草稿（独立库入口不丢失业务状态）
@@ -78,35 +74,6 @@ test.describe('值班日报与演示控制', () => {
     await expect(signBtn).toBeDisabled();
     await signBtn.hover({ force: true });
     await expect(page.getByText(/指挥员/).first()).toBeVisible();
-  });
-
-  test('事件切换后会话隔离，重置演示清空状态', async ({ page }) => {
-    test.setTimeout(120000);
-    await sendChat(page, '生成灾情摘要');
-    await expect(page.locator('.axn-task-card', { hasText: '汇总灾情摘要' }).first()).toBeVisible({ timeout: 30000 });
-    // 打开演示控制 → 切换事件
-    await page.getByRole('button', { name: '演示控制' }).click();
-    const panel = page.locator('.ant-drawer', { hasText: '演示控制' });
-    await panel.getByRole('button', { name: '下穿道路积水' }).click();
-    await page.keyboard.press('Escape');
-    // 新事件会话无任务
-    await expect(page.locator('.axn-task-card')).toHaveCount(0, { timeout: 10000 });
-    await expect(page.locator('.axn-task-card')).toHaveCount(0);
-    // 回到原事件，任务仍在（互不污染）
-    await page.getByRole('button', { name: '演示控制' }).click();
-    const panel2 = page.locator('.ant-drawer', { hasText: '演示控制' });
-    await panel2.getByRole('button', { name: '清河段堤防险情' }).click();
-    await page.keyboard.press('Escape');
-    await expect(page.locator('.axn-task-card', { hasText: '汇总灾情摘要' }).first()).toBeVisible({ timeout: 10000 });
-    // 重置演示（二次确认，FR-016）→ 状态清空
-    await page.getByRole('button', { name: '演示控制' }).click();
-    const panel3 = page.locator('.ant-drawer', { hasText: '演示控制' });
-    await panel3.getByRole('button', { name: /重置演示/ }).click();
-    // Popconfirm 渲染在 body portal，不在抽屉内
-    await page.getByRole('button', { name: '确认重置' }).click();
-    await page.keyboard.press('Escape');
-    await expect(page.locator('.axn-task-card')).toHaveCount(0, { timeout: 10000 });
-    expect(consoleErrors).toEqual([]);
   });
 
   test('运行中任务可取消', async ({ page }) => {
@@ -164,29 +131,13 @@ test.describe('持久化（AC-025 / AC-026）', () => {
     await page.reload();
     await expect(page.getByText('安小能 · 应急智能工作台')).toBeVisible({ timeout: 15000 });
     // 中断提示（系统消息）
-    await expect(page.getByText(/演示已刷新/).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/页面已刷新/).first()).toBeVisible({ timeout: 15000 });
     // 重新生成 → 草稿可见（补录事实已恢复，无需再次补录）
     await page.getByPlaceholder(/向安小能发送指令/).fill('生成应急要情');
     await page.keyboard.press('Enter');
     await openLibrary(page);
     const draftCard = page.locator('.doc-card', { hasText: '应急要情' }).filter({ hasText: '草稿' }).first();
     await expect(draftCard).toBeVisible({ timeout: 30000 });
-  });
-
-  test('重置后刷新仍是空态（仅清理本命名空间）', async ({ page }) => {
-    test.setTimeout(120000);
-    await page.goto('/');
-    await expect(page.getByText('安小能 · 应急智能工作台')).toBeVisible();
-    await page.getByRole('button', { name: '演示控制' }).click();
-    const panel = page.locator('.ant-drawer', { hasText: '演示控制' });
-    await panel.getByRole('button', { name: /重置演示/ }).click();
-    await page.locator('.ant-popconfirm', { hasText: /确认重置|确定/ }).getByRole('button', { name: /确认重置|确 定/ }).click();
-    await page.keyboard.press('Escape');
-    await page.reload();
-    await expect(page.getByText('安小能 · 应急智能工作台')).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('.axn-task-card')).toHaveCount(0, { timeout: 10000 });
-    await openLibrary(page);
-    await expect(page.getByText(/尚未生成|暂无文书/).first()).toBeVisible({ timeout: 10000 });
   });
 });
 

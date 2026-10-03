@@ -108,7 +108,7 @@ export default function ResourcePanel() {
   );
 
   if (!session) {
-    return <Alert type="error" showIcon message="会话未初始化" description="请稍候或重置演示后重试（模拟数据）。" />;
+    return <Alert type="error" showIcon message="会话未初始化" description="请稍候或重置模拟环境后重试（模拟数据）。" />;
   }
 
   const sortResults = (by: SortKey) => {
@@ -264,7 +264,7 @@ export default function ResourcePanel() {
           <Text strong style={{ fontSize: 13 }}>
             候选力量
           </Text>
-          <Tooltip title="候选力量是拟使用的资源清单，不代表已下达调派命令（模拟演示边界）。">
+          <Tooltip title="候选力量是拟使用的资源清单，不代表已下达调派命令（模拟边界）。">
             <Tag color="gold">候选 ≠ 已调派</Tag>
           </Tooltip>
           {candidateIds.length === 0 && <Text type="secondary">尚未选择候选力量</Text>}

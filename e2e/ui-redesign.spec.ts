@@ -1,8 +1,9 @@
+import { clickQuickTask } from './helpers/quickTasks';
 /**
- * UI 改版 E2E：参考图外壳（260px 侧栏 + 宽敞主区）、对话/工作模式建议、
+ * UI 改版 E2E：参考图外壳（260px 侧栏 + 宽敞主区）、首页常用工作任务、
  * 文书库与文书工作区（打开/关闭/重开/独立库）、待补充工作总结刷新恢复、
  * 迟到的跨会话完成隔离、未保存编辑保护、窄视口文书独占主区。
- * 截图输出到 artifacts/ui-redesign/。
+ * 截图输出到 artifacts/ui-polish/。
  */
 import { expect, test, type Page } from '@playwright/test';
 
@@ -33,23 +34,22 @@ for (const { width, height, name } of DESKTOPS) {
     expect(sidebarWidth).toBeGreaterThanOrEqual(240);
     expect(sidebarWidth).toBeLessThanOrEqual(280);
 
-    // 首页：对话模式建议（问答问题）+ 一体化输入区
-    await expect(page.getByTestId('home-chat-recommend')).toBeVisible();
+    // 首页：常用工作任务卡 + 一体化输入区
+    await expect(page.getByTestId('home-work-recommend')).toBeVisible();
+    await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
     const inner = await page.locator('.axn-home-inner').boundingBox();
     expect(inner?.width ?? 0).toBeGreaterThanOrEqual(780);
     expect(inner?.width ?? 0).toBeLessThanOrEqual(920);
     await expect(page.locator('.axn-composer-shell .axn-chips')).toBeVisible();
-    await page.screenshot({ path: `artifacts/ui-redesign/${name}-home.png` });
-
-    // 工作模式：建议切换为智能体任务卡
-    await page.getByTestId('chat-mode-switch').getByText('工作').click();
-    await expect(page.getByTestId('home-work-recommend')).toBeVisible();
-    await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
-    await expect(page.getByTestId('chat-mode-switch').locator('.ant-segmented-thumb')).toHaveCount(0);
-    await page.screenshot({ path: `artifacts/ui-redesign/${name}-work-home.png` });
+    await page.screenshot({ path: `artifacts/ui-polish/${name}-home.png` });
 
     // 打开文书 → 分列：对话 420-500，文书区占剩余宽度
     await openFirstSample(page);
+    await expect(page.getByTestId('split-chat-empty')).toBeVisible();
+    await expect(page.locator('.axn-chat-pane .axn-home-hero')).toHaveCount(0);
+    await expect(page.getByTestId('document-toolbar')).toHaveCount(1);
+    const paperBox = await page.getByTestId('mock-redhead-document').boundingBox();
+    expect(paperBox?.y ?? Infinity).toBeLessThan(160);
     const chatBox = await page.locator('.axn-chat-pane').boundingBox();
     expect(chatBox?.width ?? 0).toBeGreaterThanOrEqual(415);
     expect(chatBox?.width ?? 0).toBeLessThanOrEqual(500);
@@ -57,20 +57,20 @@ for (const { width, height, name } of DESKTOPS) {
     expect(docBox?.width ?? 0).toBeGreaterThan(chatBox?.width ?? 0);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(1);
-    await page.screenshot({ path: `artifacts/ui-redesign/${name}-split.png` });
+    await page.screenshot({ path: `artifacts/ui-polish/${name}-split.png` });
   });
 }
 
-test('新建操作区分工作与对话模式', async ({ page }) => {
+test('新建任务与新建对话都显示常用工作任务', async ({ page }) => {
   await page.goto('/');
-  // 新建任务 = 工作模式（建议为任务卡）
+  // 新建任务
   await page.getByTestId('new-task-btn').click();
   await expect(page.locator('.axn-gs-conversation.is-active')).toContainText('新的应急对话');
   await expect(page.getByTestId('home-work-recommend')).toBeVisible();
-  // 新建应急对话 = 对话模式（建议为问答问题）
+  // 新建应急对话
   await page.getByTestId('new-conversation-btn').click();
-  await expect(page.getByTestId('home-chat-recommend')).toBeVisible();
-  await expect(page.getByTestId('home-work-recommend')).toHaveCount(0);
+  await expect(page.getByTestId('home-work-recommend')).toBeVisible();
+  await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
 });
 
 test('文书库打开 → 工作区显示 → 关闭回宽对话 → 同份重开不重新生成', async ({ page }) => {
@@ -98,7 +98,7 @@ test('文书库打开 → 工作区显示 → 关闭回宽对话 → 同份重�
 
 test('生成文书自动打开工作区；关闭后同一完成不再自动弹出；产物可显式打开', async ({ page }) => {
   await page.goto('/');
-  await page.locator('.axn-chips').getByRole('button', { name: '生成应急要情', exact: true }).click();
+  await clickQuickTask(page, '生成应急要情');
   await expect(page.getByTestId('document-workspace')).toBeVisible({ timeout: 20000 });
   await page.getByTestId('workspace-close-btn').click();
   await expect(page.getByTestId('document-workspace')).toHaveCount(0);
@@ -120,11 +120,14 @@ test('待补充的工作总结在刷新后恢复到文书工作区', async ({ pa
   await expect(page.getByText('安小能 · 应急智能工作台')).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId('document-workspace')).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId('document-workspace')).toContainText('等待补充改进计划');
+  await expect(page.getByTestId('document-toolbar')).toHaveCount(1);
+  await expect(page.getByTestId('workspace-close-btn')).toBeVisible();
+  await expect(page.getByRole('button', { name: '导出 Word', exact: true })).toHaveCount(0);
 });
 
 test('迟到的 A 会话完成不会在 B 会话打开文书', async ({ page }) => {
   await page.goto('/');
-  await page.locator('.axn-chips').getByRole('button', { name: '生成应急要情', exact: true }).click();
+  await clickQuickTask(page, '生成应急要情');
   await expect(page.getByTestId('document-workspace')).toBeVisible({ timeout: 20000 });
   await page.getByTestId('workspace-close-btn').click();
   await expect(page.getByTestId('document-workspace')).toHaveCount(0);
@@ -175,7 +178,7 @@ test('窄视口（<=1000px）文书视图独占主区且关闭控件可用', asy
   expect(box?.width ?? 0).toBeGreaterThan(600);
   expect(await page.locator('.axn-chat-pane').isVisible()).toBe(false);
   await expect(page.getByTestId('workspace-close-btn')).toBeVisible();
-  await page.screenshot({ path: 'artifacts/ui-redesign/narrow-980-document.png' });
+  await page.screenshot({ path: 'artifacts/ui-polish/narrow-980-document.png' });
   await page.getByTestId('workspace-close-btn').click();
   await expect(page.locator('.axn-chat-pane')).toBeVisible();
 });
@@ -207,7 +210,7 @@ test('未保存修改在导航、会话和关联事件切换时受到保护', as
 test('从聊天预览切换文书时取消保留编辑、确认放弃后切换', async ({ page }) => {
   await page.goto('/');
   for (const name of ['生成值班日报', '生成应急要情']) {
-    await page.locator('.axn-chips').getByRole('button', { name, exact: true }).click();
+    await clickQuickTask(page, name);
     await expect(page.getByTestId('document-generation-card').last()).toContainText('红头文书已生成', { timeout: 20000 });
   }
   await page.getByRole('button', { name: '在线编辑', exact: true }).click();
@@ -220,4 +223,44 @@ test('从聊天预览切换文书时取消保留编辑、确认放弃后切换',
   await page.getByRole('button', { name: '放弃修改并继续' }).click();
   await expect(page.getByTestId('mock-redhead-document')).toContainText('防汛值守日报（新生成）');
   await expect(title).toHaveCount(0);
+});
+
+
+test('精简分屏保留未发送输入，关闭后恢复首页', async ({ page }) => {
+  await page.goto('/');
+  await openFirstSample(page);
+  await expect(page.getByTestId('split-chat-empty')).toBeVisible();
+  await expect(page.getByTestId('home-work-recommend')).toHaveCount(0);
+  await expect(page.getByTestId('document-toolbar')).toContainText('防汛值守日报');
+  await expect(page.getByTestId('document-toolbar')).toContainText('2026年9月28日');
+  const input = page.getByPlaceholder(/向安小能发送指令/);
+  await input.fill('尚未发送的补充资料');
+  await page.getByTestId('workspace-close-btn').click();
+  await expect(page.getByTestId('home-work-recommend')).toBeVisible();
+  await expect(input).toHaveValue('尚未发送的补充资料');
+  await expect(page.getByTestId('document-workspace')).toHaveCount(0);
+});
+
+test('三个常用任务与更多任务均可操作，菜单支持键盘退出并遵守运行状态', async ({ page }) => {
+  await page.goto('/');
+  const chips = page.locator('.axn-chips');
+  await expect(chips.getByRole('button')).toHaveCount(4);
+  const more = page.getByRole('button', { name: '更多任务', exact: true });
+  await more.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('quick-task-menu')).toBeVisible();
+  for (const name of ['生成灾情摘要', '查询周边救援资源', '生成救援方案', '生成应急要情', '生成值班日报', '生成工作总结', '评估救援效果']) {
+    await expect(chips.getByRole('button', { name, exact: true })).toBeVisible();
+  }
+  await page.screenshot({ path: 'artifacts/ui-polish/more-tasks.png' });
+  await page.keyboard.press('Escape');
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByTestId('quick-task-menu')).toBeHidden();
+  await clickQuickTask(page, '生成值班日报');
+  await expect(more).toBeDisabled();
+  await expect(chips.getByRole('button', { name: '生成灾情摘要', exact: true })).toBeDisabled();
+  await expect(page.getByTestId('document-generation-card').last()).toContainText('红头文书已生成', { timeout: 20000 });
+  await expect(page.getByTestId('mock-redhead-document')).toContainText('防汛值守日报（新生成）');
+  await expect(more).toBeEnabled();
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
 });

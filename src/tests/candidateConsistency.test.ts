@@ -28,7 +28,7 @@ async function chat(text: string) {
   return task;
 }
 function document() {
-  useDemoStore.getState().addManualFact({ field: 'reportingUnit', value: '演示应急办公室', scopeKind: 'event', scopeId: session().eventId, actorId: useDemoStore.getState().actorId });
+  useDemoStore.getState().addManualFact({ field: 'reportingUnit', value: '应急办公室', scopeKind: 'event', scopeId: session().eventId, actorId: useDemoStore.getState().actorId });
   const result = createEventDocument(sid);
   expect(result.ok).toBe(true);
   return useDocumentStore.getState().drafts[result.documentId!];

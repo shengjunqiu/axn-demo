@@ -1,11 +1,11 @@
 /**
  * 应用入口（UI 改版 · 参考图外壳）：
- * 左侧 260px 中性侧栏（品牌 / 功能导航含独立文书库 / 新建 / 搜索 / 历史 / 底部角色与演示控制），
+ * 左侧 260px 中性侧栏（品牌 / 功能导航含独立文书库 / 新建 / 搜索 / 历史 / 底部角色与设置），
  * 右侧宽敞主区：助理页 = 宽对话（打开文书后为「对话 + 文书工作区」两列），文书库独立成页，
  * 其余导航页占满主内容区。原全宽业务页头移除，其承载项下移至侧栏底部。
  * 单页应用不引入 react-router；导航页与工作区可见性均为本地/UI 状态。
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Drawer } from 'antd';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
@@ -51,10 +51,13 @@ export default function AppRoot() {
     // 仅挂载时执行一次（刷新后对齐已持久化的 activeConversation 与业务上下文）
   }, []);
 
+  const sidebarCollapsed = useDemoStore((s) => s.sidebarCollapsed);
+  const sidebarStyle = useMemo(() => sidebarCollapsed ? { flex: '0 0 0', width: 0, borderRight: 'none', overflow: 'hidden' } as React.CSSProperties : undefined, [sidebarCollapsed]);
+
   return (
     <div className="axn-shell">
-      {/* 第一栏：全局导航 + 对话历史 + 底部角色/演示控制 */}
-      <aside className="axn-shell-sidebar">
+      {/* 第一栏：全局导航 + 对话历史 + 底部角色/设置 */}
+      <aside className="axn-shell-sidebar" style={sidebarStyle}>
         <GlobalSidebar />
       </aside>
 
@@ -70,7 +73,7 @@ export default function AppRoot() {
         ) : activeNav === 'assistant' ? (
           <div className={`axn-assistant${workspaceOpen ? ' axn-assistant--split' : ''}`}>
             <div className="axn-chat-pane">
-              <ChatPanel onOpenDrawer={(target: 'resource' | 'knowledge') => setPanelDrawer(target)} />
+              <ChatPanel compact={workspaceOpen} onOpenDrawer={(target: 'resource' | 'knowledge') => setPanelDrawer(target)} />
             </div>
             {workspaceOpen && (
               <div className="axn-workspace-pane">

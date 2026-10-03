@@ -25,7 +25,7 @@ async function openLibrary(page: Page) {
   await page.locator('.axn-gs-nav-item', { hasText: '文书库' }).first().click();
 }
 
-test.describe('安小能演示主线（要情全链路）', () => {
+test.describe('安小能主线（要情全链路）', () => {
   let consoleErrors: string[] = [];
   const errorStacks: string[] = [];
 
@@ -37,7 +37,7 @@ test.describe('安小能演示主线（要情全链路）', () => {
     });
     await page.goto('/');
     await expect(page.getByText('安小能 · 应急智能工作台')).toBeVisible();
-    await expect(page.getByText('演示环境 · 模拟数据', { exact: false }).first()).toBeVisible();
+    await expect(page.getByText('模拟数据', { exact: false }).first()).toBeVisible();
   });
 
   test('灾情摘要 → 资源 → 追问 → 候选 → 建议 → 要情 → 编辑校核 → 签发 → 导出打印', async ({ page }, testInfo) => {
@@ -56,8 +56,8 @@ test.describe('安小能演示主线（要情全链路）', () => {
     await waitTaskDone(page, '查询周边救援资源');
     await page.getByRole('button', { name: '查看资源与态势' }).first().click();
     await expect(page.locator('.ant-drawer', { hasText: '资源与态势（模拟）' })).toBeVisible();
-    await expect(page.locator('.ant-table, table').getByText('演示一号工程救援队').first()).toBeVisible();
-    await expect(page.locator('.ant-table, table').getByText('演示二号应急救援队').first()).toBeVisible();
+    await expect(page.locator('.ant-table, table').getByText('一号工程应急救援队').first()).toBeVisible();
+    await expect(page.locator('.ant-table, table').getByText('二号应急救援队').first()).toBeVisible();
     await expect(page.locator('svg').first()).toBeVisible(); // 本地 SVG 态势图
     await shot('02-resources');
     await page.keyboard.press('Escape'); // 关抽屉，避免遮罩挡对话输入
@@ -65,19 +65,19 @@ test.describe('安小能演示主线（要情全链路）', () => {
     // 3. 连续追问：谁最快能到
     await sendChat(page, '它们谁最快能到');
     const etaCard = await waitTaskDone(page, '按预计到达排序');
-    await expect(etaCard.getByText('演示一号工程救援队').first()).toBeVisible();
+    await expect(etaCard.getByText('一号工程应急救援队').first()).toBeVisible();
 
     // 4. 勾选前两支候选 → 汇总 2 支 / 64 人 / 7 台（重新打开资源抽屉）
     await page.getByRole('button', { name: '查看资源与态势' }).first().click();
-    await page.locator('table tr', { hasText: '演示一号工程救援队' }).first().locator('span.ant-checkbox').click();
-    await page.locator('table tr', { hasText: '演示二号应急救援队' }).first().locator('span.ant-checkbox').click();
+    await page.locator('table tr', { hasText: '一号工程应急救援队' }).first().locator('span.ant-checkbox').click();
+    await page.locator('table tr', { hasText: '二号应急救援队' }).first().locator('span.ant-checkbox').click();
     await expect(page.locator('.axn-derived-value', { hasText: '64' }).first()).toBeVisible();
     await expect(page.locator('.axn-derived-value', { hasText: '7' }).first()).toBeVisible();
     await expect(page.getByText('候选 ≠ 已调派').first()).toBeVisible();
     await shot('03-candidates');
 
     // 5. 移除二号队 → 1 支 / 36 人 / 4 台
-    await page.locator('.axn-candidate-zone .ant-tag', { hasText: '演示二号应急救援队' }).locator('.anticon-close').click();
+    await page.locator('.axn-candidate-zone .ant-tag', { hasText: '二号应急救援队' }).locator('.anticon-close').click();
     await expect(page.locator('.axn-derived-value', { hasText: '36' }).first()).toBeVisible();
     await expect(page.locator('.axn-derived-value', { hasText: '4' }).first()).toBeVisible();
     await page.keyboard.press('Escape'); // 关抽屉
@@ -119,9 +119,11 @@ test.describe('安小能演示主线（要情全链路）', () => {
     // 定位到“五、下一步工作”段落末尾（避免把矛盾句混入其他事实段，导致建议替换时波及无关绑定）
     const nextStepPara = editorDrawer.locator('.ProseMirror p', { hasText: '持续跟踪险情发展' }).first();
     await nextStepPara.click();
-    await page.keyboard.press('Control+End');
+    // 保持在可校核的叙述段内新增正文，避免跳到文末知识引用的原子节点后。
+    await page.keyboard.press('End');
     await page.keyboard.press('Enter');
     await page.keyboard.type('已确认III级响应。');
+    await expect(editorDrawer.locator('.ProseMirror p', { hasText: '已确认III级响应。' })).toBeVisible();
     await expect(editorDrawer.getByText('有未保存修改')).toBeVisible({ timeout: 10000 });
     // 若误点事实芯片打开了来源抽屉，先关闭（Esc 只关最上层）
     const sourceDrawer = page.locator('.ant-drawer', { hasText: '事实来源' }).last();
@@ -154,10 +156,10 @@ test.describe('安小能演示主线（要情全链路）', () => {
     await docCard.getByRole('button', { name: '提交送审' }).click();
     await expect(docCard.getByText('待签发')).toBeVisible({ timeout: 15000 });
     await page.getByLabel('切换角色').click();
-    await page.getByTitle('演示指挥员').click();
+    await page.getByTitle('指挥员').click();
     await docCard.getByRole('button', { name: /签\s*发/ }).click();
     await expect(docCard.getByText('已签发')).toBeVisible({ timeout: 15000 });
-    await expect(docCard.getByText('签发人 演示指挥员', { exact: false })).toBeVisible();
+    await expect(docCard.getByText('签发人 指挥员', { exact: false })).toBeVisible();
     await shot('08-signed');
 
     // 13. 版本抽屉：导出 Word（真实下载）+ 打印预览

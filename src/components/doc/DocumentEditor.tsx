@@ -694,7 +694,7 @@ export default function DocumentEditor({ documentId, open, onClose, onDirtyChang
           onDiscardReady={reportDiscard}
         />
       ) : (
-        <Empty description="文书不存在或演示数据已重置" />
+        <Empty description="文书不存在或模拟数据已重置" />
       )}
     </Drawer>
   );

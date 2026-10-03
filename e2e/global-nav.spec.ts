@@ -1,7 +1,7 @@
 /**
  * 全局导航 E2E（需求十一验收路径 1~10）。
  * 覆盖：新建会话浮层与模板、搜索过滤、收藏移除、菜单切换、删除对话、跨会话数据隔离与恢复、
- * 异步任务污染防护、刷新恢复、演示重置、折叠移除、导航页可达。
+ * 异步任务污染防护、刷新恢复、折叠移除、导航页可达。
  * 前置：playwright.config webServer = preview(4173)，需先 pnpm build。
  */
 import { expect, test } from '@playwright/test';
@@ -30,13 +30,13 @@ async function closeDrawer(page: import('@playwright/test').Page) {
 async function ensureResourceTable(page: import('@playwright/test').Page) {
   await sendInChat(page, '查询周边救援资源');
   await openResourceDrawer(page);
-  await expect(page.locator('table tr', { hasText: '演示一号工程救援队' }).first()).toBeVisible({ timeout: 30000 });
+  await expect(page.locator('table tr', { hasText: '一号工程应急救援队' }).first()).toBeVisible({ timeout: 30000 });
 }
 
 async function checkFirstCandidate(page: import('@playwright/test').Page) {
-  await page.locator('table tr', { hasText: '演示一号工程救援队' }).first().locator('span.ant-checkbox').click();
+  await page.locator('table tr', { hasText: '一号工程应急救援队' }).first().locator('span.ant-checkbox').click();
   // 候选区以 Tag 呈现所选力量；出现一号队 Tag 即候选已生效
-  await expect(page.locator('.axn-candidate-zone').getByText('演示一号工程救援队')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('.axn-candidate-zone').getByText('一号工程应急救援队')).toBeVisible({ timeout: 10000 });
   // 关闭抽屉，避免遮罩阻挡后续对话/侧栏操作
   await closeDrawer(page);
 }
@@ -131,7 +131,7 @@ test('6. 会话列表切换 A→B：B 空上下文（无候选、无任务卡）
   await page.locator('.axn-gs-conversation', { hasText: '漳河镇' }).first().click();
   await expect(page.locator('.axn-task-card')).toHaveCount(0);
   // B 无查询任务卡：显示欢迎空态（候选区在资源抽屉内，无任务卡即无查询）
-  await expect(page.getByText('您好，我是安小能（演示）')).toBeVisible();
+  await expect(page.getByText('您好，我是安小能')).toBeVisible();
 });
 
 test('7. 从 B 切回 A：候选恢复（1 支）', async ({ page }) => {
@@ -140,7 +140,7 @@ test('7. 从 B 切回 A：候选恢复（1 支）', async ({ page }) => {
   await page.locator('.axn-gs-conversation', { hasText: '漳河镇' }).first().click();
   await page.locator('.axn-gs-conversation', { hasText: '南堤' }).first().click();
   await openResourceDrawer(page);
-  await expect(page.locator('.axn-candidate-zone').getByText('演示一号工程救援队')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('.axn-candidate-zone').getByText('一号工程应急救援队')).toBeVisible({ timeout: 10000 });
 });
 
 test('8. 事件 A 任务卡 → 切 B 无污染 → 切回 A 保留', async ({ page }) => {
@@ -158,29 +158,16 @@ test('9. 刷新后 active Conversation 与业务上下文恢复（候选勾选�
   await page.reload();
   await expect(page.locator('.axn-global-sidebar')).toBeVisible({ timeout: 15000 });
   await openResourceDrawer(page);
-  await expect(page.locator('.axn-candidate-zone', { hasText: '演示一号工程救援队' })).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('.axn-candidate-zone', { hasText: '一号工程应急救援队' })).toBeVisible({ timeout: 15000 });
 });
 
-test('10. 演示重置 → 恢复种子初始状态', async ({ page }) => {
-  await ensureResourceTable(page);
-  await checkFirstCandidate(page);
-  await page.getByRole('button', { name: '演示控制' }).click();
-  await page.getByRole('button', { name: /重置演示/ }).click();
-  await page.getByRole('button', { name: '确认重置' }).click();
-  await page.waitForTimeout(1200);
-  await page.keyboard.press('Escape');
-  await expect(page.getByText('您好，我是安小能（演示）')).toBeVisible({ timeout: 10000 });
-  // 种子会话恢复
-  await expect(page.locator('.axn-gs-conversation', { hasText: '南堤' }).first()).toBeVisible();
-});
-
-test('11. 折叠功能已按标注移除（无折叠按钮，侧栏固定宽度）', async ({ page }) => {
+test('10. 折叠功能已按标注移除（无折叠按钮，侧栏固定宽度）', async ({ page }) => {
   await expect(page.locator('.axn-gs-collapse-btn')).toHaveCount(0);
   const width = await page.evaluate(() => document.querySelector('.axn-global-sidebar')?.getBoundingClientRect().width ?? 0);
   expect(width).toBeGreaterThan(200);
 });
 
-test('12. 智能体与 Skill / 定时任务 / 知识库导航页可访问，文书库导航独立成页', async ({ page }) => {
+test('11. 智能体与 Skill / 定时任务 / 知识库导航页可访问，文书库导航独立成页', async ({ page }) => {
   await openNav(page, '智能体与 Skill');
   await expect(page.getByTestId('agents-page')).toBeVisible();
   await expect(page.getByText('态势感知智能体')).toBeVisible();

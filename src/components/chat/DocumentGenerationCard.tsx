@@ -22,7 +22,7 @@ export default function DocumentGenerationCard({ message }: { message: ChatMessa
   };
   return <div className="axn-document-workflow" data-testid="document-generation-card" aria-live="polite">
     <Space wrap className="axn-document-workflow-head"><RobotOutlined /><Typography.Text strong>文书生成智能体</Typography.Text><Tag color={completed ? 'blue' : 'processing'}>{completed ? '已完成' : interrupted ? '已中断' : waiting ? '待补充' : '执行中'}</Tag></Space>
-    <Typography.Paragraph type="secondary">{message.agentRole} · 模拟演示</Typography.Paragraph>
+    <Typography.Paragraph type="secondary">{message.agentRole} · 模拟</Typography.Paragraph>
     <Steps direction="vertical" size="small" current={current} status={interrupted ? 'error' : undefined} items={[
       { title: current === 0 ? (workflow.collection ? `正在收集复盘要素 · ${workflow.collectedCount ?? 0}/${workflow.collection.length}` : '正在整理已收集的文书要素') : '文书要素已收集', description: <>
         <Typography.Text type="secondary">{workflow.collection ? '前五项为模拟资料，下一步改进由你补充' : '以下模拟用户已提供并确认的信息'}</Typography.Text>

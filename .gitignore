@@ -4,5 +4,6 @@ artifacts
 playwright-report
 test-results
 coverage
+.vitest
 *.tsbuildinfo
 .DS_Store

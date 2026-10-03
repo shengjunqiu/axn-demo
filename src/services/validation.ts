@@ -23,7 +23,7 @@ export const RULE_TITLES: Record<string, string> = {
   'R-001': '必填缺失', 'R-002': '引用缺失', 'R-003': '值与来源不一致',
   'R-004': '未核实伤亡', 'R-005': '无依据控制结论', 'R-006': '候选冒充已调派',
   'R-007': '草稿来源过期', 'R-008': '校核报告过期', 'R-009': '引用跨事件',
-  'R-010': '新增无来源数字', 'R-011': '演示标识缺失', 'R-012': '普通表述建议',
+  'R-010': '新增无来源数字', 'R-011': '模拟标识缺失', 'R-012': '普通表述建议',
 };
 
 export interface FlattenedParagraph {
@@ -283,7 +283,7 @@ export function validateContent(input: ValidateInput): Omit<ValidationReport, 'r
   if (snapshot.contextVersion !== currentContextVersion(scope)) issues.push(issue('R-007', 'block', '当前业务来源已更新，必须先显式刷新引用再校核。', null, null, String(snapshot.contextVersion), '刷新文书数据', null));
   const previous = useDocumentStore.getState().getActiveReport(documentId);
   if (previous && previous.contentHash !== computeContentHash(content) && input.checkPreviousReport !== false) issues.push(issue('R-008', 'block', '旧校核报告与当前内容指纹不一致。', null, null, previous.contentHash, '重新校核当前保存版本', null));
-  if (!/模拟|演训/.test(content.footerNote) || !/非正式|非真实|不构成|不代表|仅用于|仅供/.test(content.footerNote)) issues.push(issue('R-011', 'block', '缺少演示及非正式报送声明。', null, null, null, '恢复页脚声明并重新校核', null));
+  if (!/模拟|演训/.test(content.footerNote) || !/非正式|非真实|不构成|不代表|仅用于|仅供/.test(content.footerNote)) issues.push(issue('R-011', 'block', '缺少模拟数据及非正式报送声明。', null, null, null, '恢复页脚声明并重新校核', null));
   const handover = Object.values(snapshot.facts).find(f => f.sourceFieldKey === 'handOverNotes');
   if (handover && String(handover.value ?? '').trim().length < 8) issues.push(issue('R-012', 'warning', '交接事项过短，请补充便于接班人员理解的说明。', null, null, String(handover.value), '补充交接事项', null));
 

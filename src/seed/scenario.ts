@@ -2,7 +2,7 @@ import rawScenario from '@/fixtures/scenario.json';
 
 /**
  * scenario.json 的最小类型镜像。种子结构以 fixtures 文件为准；
- * 这里只做一次性收窄，不做运行时校验（演示原型，种子受版本管理）。
+ * 这里只做一次性收窄，不做运行时校验（模拟原型，种子受版本管理）。
  */
 export interface FixtureScope {
   kind: 'event' | 'organization' | 'shift' | 'demo_configuration';

@@ -2,7 +2,7 @@
  * 全局导航 + 对话历史管理侧栏（UI 改版）：
  * 区域：品牌（左上，保留安小能身份与模拟环境标识）/ 一级功能导航（含独立「文书库」）/
  * 新建（新建任务=工作模式、新建应急对话=对话模式）/ 搜索 / 历史会话 / 底部工具区
- * （当前事件、角色切换、演示控制、设置）。
+ * （当前事件、角色切换、设置）。
  * 改版要点：原全宽业务页头移除，其承载项下移至侧栏底部；折叠与收藏功能保持移除状态。
  * 全部数据为模拟数据。
  */
@@ -20,7 +20,7 @@ import {
   SearchOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { App as AntdApp, Badge, Button, Drawer, Empty, Input, Modal, Popconfirm, Radio, Select, theme } from 'antd';
+import { App as AntdApp, Button, Empty, Input, Modal, Popconfirm, Radio, Select, theme } from 'antd';
 import type { Conversation, ConversationSettings, NavPage } from '@/domain/types';
 import {
   GROUP_LABEL,
@@ -35,7 +35,6 @@ import { useSessionStore } from '@/store/sessionStore';
 import { useActiveScope, useWorkspaceStore, type WorkMode } from '@/store/workspaceStore';
 import { eventDisplayName } from '@/services/factLookup';
 import { actors } from '@/seed/scenario';
-import DemoControlPanel from '@/components/demo/DemoControlPanel';
 import './sidebar.css';
 
 type NavKey = NavPage;
@@ -57,7 +56,7 @@ export function ConversationSettingsPanel() {
     { key: 'openRecentOnStart', label: '默认进入最近会话', desc: '打开工作台时自动恢复上次的活跃会话' },
     { key: 'notifyTaskDone', label: '任务完成提醒', desc: '模拟任务完成时在会话列表更新状态' },
     { key: 'notifyDocReady', label: '文书生成提醒', desc: '生成文书后标记会话状态为处理中' },
-    { key: 'demoMode', label: '演示模式', desc: '显示演示横幅与模拟数据标识（始终为模拟环境）' },
+    { key: 'demoMode', label: '模拟模式', desc: '显示环境横幅与模拟数据标识（始终为模拟环境）' },
   ];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, paddingTop: 4 }}>
@@ -84,7 +83,7 @@ export function ConversationSettingsPanel() {
         );
       })}
       <div style={{ fontSize: 12, color: '#a0a8b8' }}>
-        以上均为演示环境的轻量设置（模拟数据），不连接真实通知渠道。
+        以上均为模拟环境的轻量设置（模拟数据），不连接真实通知渠道。
       </div>
     </div>
   );
@@ -110,7 +109,6 @@ export default function GlobalSidebar() {
 
   const [keyword, setKeyword] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [controlOpen, setControlOpen] = useState(false);
 
   /** 未保存编辑保护：关闭 / 切换文书、会话或导航前确认（取消保留编辑，放弃才丢弃）。 */
   const guardDirty = useCallback(
@@ -280,7 +278,7 @@ export default function GlobalSidebar() {
         )}
       </div>
 
-      {/* 6. 底部工具区：当前事件 / 角色 / 演示控制 / 设置 */}
+      {/* 6. 底部工具区：当前事件 / 角色 / 设置 */}
       <div className="axn-gs-footer">
         <div className="axn-gs-event" data-testid="header-event">
           当前事件：<strong>{session ? session.title : currentEventId}</strong>
@@ -293,25 +291,12 @@ export default function GlobalSidebar() {
             aria-label="切换角色"
             options={actors.map((a) => ({ value: a.actorId, label: `${a.name} · ${a.role === 'duty' ? '值班员' : '指挥员'}`, title: a.name }))}
           />
-          <Badge count={session?.pendingClarification ? 1 : 0} size="small" offset={[-2, 2]}>
-            <Button
-              className="axn-gs-demo-btn"
-              size="small"
-              onClick={() => setControlOpen(true)}
-            >
-              演示控制
-            </Button>
-          </Badge>
         </div>
         <button className="axn-gs-nav-item" onClick={() => setSettingsOpen(true)}>
           <SettingOutlined />
           <span>对话与通知设置</span>
         </button>
       </div>
-
-      <Drawer title="演示控制（仅演示用）" width={420} open={controlOpen} onClose={() => setControlOpen(false)}>
-        <DemoControlPanel />
-      </Drawer>
 
       <Modal
         title="对话与通知设置"

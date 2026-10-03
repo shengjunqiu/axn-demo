@@ -182,7 +182,7 @@ describe('会话切换与状态隔离（需求五/十）', () => {
     useSessionStore.getState().addCandidates(sidA, ['team-001', 'team-002']);
     useDemoStore.getState().addManualFact({
       field: 'reportingUnit',
-      value: '演示应急办公室',
+      value: '应急办公室',
       scopeKind: 'event',
       scopeId: A,
       actorId: useDemoStore.getState().actorId,

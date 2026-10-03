@@ -42,7 +42,7 @@ describe('意图识别（规则模拟，非真实模型）', () => {
   it('移除候选（需候选中存在该队）', () => {
     const c = ctx();
     c.candidateResourceIds = ['team-001'];
-    expect(recognize('把演示一号工程救援队移除出候选', c).intent).toBe('candidate_remove');
+    expect(recognize('把一号工程应急救援队移除出候选', c).intent).toBe('candidate_remove');
   });
   it('知识依据', () => {
     expect(recognize('这个建议的依据是什么', ctx()).intent).toBe('knowledge');

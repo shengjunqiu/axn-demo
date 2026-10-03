@@ -25,11 +25,11 @@
   cursor: pointer; text-align: left; transition: background .15s ease, color .15s ease, border-color .15s ease;
 }
 .axn-gs-nav-item:hover { background: var(--nav-surface); color: var(--nav-text); }
+/* 选中态与上方「新建任务」实心主色风格一致（原白底+右侧圆点改为实心主色） */
 .axn-gs-nav-item.is-active {
-  background: var(--nav-surface); color: var(--nav-text); font-weight: 600;
-  border-color: color-mix(in srgb, var(--nav-primary) 12%, var(--nav-border));
+  background: var(--nav-primary); color: #fff; font-weight: 600;
+  border-color: var(--nav-primary);
 }
-.axn-gs-nav-item.is-active::after { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--nav-primary); margin-left: auto; }
 .axn-gs-nav-item .anticon { font-size: 16px; flex: 0 0 17px; }
 .axn-gs-nav-item:focus-visible, .axn-gs-conversation:focus-visible, .axn-gs-conv-action:focus-visible { outline: 2px solid var(--nav-primary); outline-offset: 2px; }
 
@@ -70,7 +70,7 @@
 .axn-gs-conv-action:hover { background: color-mix(in srgb, var(--nav-error) 8%, var(--nav-surface)); color: var(--nav-error); }
 .axn-gs-history .ant-empty-description { font-size: 12px; line-height: 1.7; padding: 0 8px; }
 
-/* 底部工具区：当前事件 / 角色切换 / 演示控制 / 设置（原全宽页头承载项下移至此） */
+/* 底部工具区：当前事件 / 角色切换 / 设置（原全宽页头承载项下移至此） */
 .axn-gs-brand { order: 0; }
 .axn-gs-new { order: 1; border-top: 0; margin-top: 0; padding-top: 10px; }
 .axn-gs-nav { order: 2; }
@@ -85,5 +85,4 @@
 .axn-gs-footer .ant-select .ant-select-selector { border-radius: 7px; font-size: 12px; }
 .axn-gs-footer .axn-gs-nav-item { font-size: 12px; gap: 10px; height: 32px; padding-inline: 8px; }
 .axn-gs-footer .axn-gs-nav-item .anticon { font-size: 15px; }
-.axn-gs-demo-btn.ant-btn { flex-shrink: 0; font-size: 12px; border-radius: 7px; }
 @media (prefers-reduced-motion: reduce) { .axn-gs-nav-item, .axn-gs-conversation, .axn-gs-conv-actions { transition: none; } }

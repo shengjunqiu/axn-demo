@@ -8,7 +8,7 @@
  * - 一个 Event 可对应多个 Conversation；未绑事件的会话（空白对话）创建时分配专属虚拟事件 evt-blank-<id>，
  *   拥有独立空 session，不与任何业务事件共享消息。
  * - 持久化复用 persistence.ts（anneng-demo:v1:conversation），刷新后恢复历史与 active。
- * - 种子会话由 seedConversationRows 生成（全部为虚构演示数据）。
+ * - 种子会话由 seedConversationRows 生成（全部为虚构模拟数据）。
  */
 import { create } from 'zustand';
 import type { Conversation, ConversationSettings, NavPage } from '@/domain/types';
@@ -51,7 +51,7 @@ export interface ConversationSeedRow {
 }
 
 /**
- * 种子历史会话（演示数据，时间相对演示时钟 2026-09-28 21:10 展开）。
+ * 种子历史会话（模拟数据，时间相对模拟时钟 2026-09-28 21:10 展开）。
  * 分组：今天（09-28）/ 昨天（09-27）/ 更早（09-20）。
  */
 export const seedConversationRows: ConversationSeedRow[] = [
@@ -266,7 +266,7 @@ useConversationStore.subscribe((state) => {
 
 /* ========== 历史会话分组与搜索（供 GlobalSidebar 使用） ========== */
 
-/** 按演示时钟取"今天"零点（本地时区），返回 [今天0点, 昨天0点, 更早0点)。 */
+/** 按模拟时钟取"今天"零点（本地时区），返回 [今天0点, 昨天0点, 更早0点)。 */
 function dayBoundary(offsetDays: number): number {
   const base = new Date(DEMO_CLOCK);
   base.setHours(0, 0, 0, 0);

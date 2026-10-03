@@ -20,7 +20,7 @@ function makeContent(paragraphs: ReturnType<typeof para>[]): DocumentContent {
     templateCode: 'EMERGENCY_BRIEF',
     templateVersion: '1.0.0-demo',
     sections: [{ id: 'sec-test', heading: '测试小节', paragraphs }],
-    footerNote: '本内容为模拟数据，仅用于产品演示。',
+    footerNote: '本内容为模拟数据，仅用于产品评估。',
   };
 }
 
@@ -37,7 +37,7 @@ function snapshotFor() {
     ],
     label: '测试快照',
   });
-  // 校核规则测试显式构造待核实场景，不依赖演示种子的默认值。
+  // 校核规则测试显式构造待核实场景，不依赖模拟种子的默认值。
   snapshot.facts['fact-incident-001-casualty'].value = '待核实';
   snapshot.facts['fact-incident-001-casualty'].verification = 'pending';
   return snapshot;
@@ -78,7 +78,7 @@ describe('校核引擎', () => {
 
   it('R-006：reference 段不触发（知识引用“不得表述为已调派”/风险提示“尚未形成正式调派”均为合规元信息）', () => {
     const content = makeContent([
-      { id: 'k-1', role: 'reference', runs: [{ type: 'text', text: '演示文书要素清单（1.0.0-demo；本原型虚构知识包）：候选力量不得表述为已调派。 仅用于演示知识引用交互。' }] },
+      { id: 'k-1', role: 'reference', runs: [{ type: 'text', text: '文书要素清单（1.0.0-demo；本原型虚构知识包）：候选力量不得表述为已调派。 仅用于知识引用交互。' }] },
       { id: 'r-1', role: 'reference', runs: [{ type: 'text', text: '已采纳建议：险情处置工作建议（模拟 · 待审核）（版本 v1）。' }] },
       { id: 'risk-2', role: 'narrative', runs: [{ type: 'text', text: '建议风险提示：候选力量尚未形成正式调派命令。' }] },
       { id: 'neg-1', role: 'narrative', runs: [{ type: 'text', text: '已调派候选救援队伍赶赴现场。' }] },

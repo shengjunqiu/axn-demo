@@ -37,6 +37,6 @@ export function renderRevision(rev: DocumentRevision): RenderedDocument {
       ),
     })),
     footerNote: c.footerNote,
-    mockNotice: '本文件由安小能演示原型导出，全部内容为模拟数据，不构成真实救援指令或正式公文。',
+    mockNotice: '本文件由安小能导出，全部内容为模拟数据，不构成真实救援指令或正式公文。',
   };
 }

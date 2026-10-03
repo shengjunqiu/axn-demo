@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "安小能客户演示 Demo —— 从一句话到一份可核查的应急要情（模拟数据原型）",
+  "description": "安小能 —— 从一句话到一份可核查的应急要情（模拟数据原型）",
   "engines": {
     "node": ">=22.12.0"
   },

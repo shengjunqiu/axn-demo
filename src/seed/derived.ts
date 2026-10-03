@@ -1,6 +1,6 @@
 /**
  * 派生事实计算（derivedFactDefinitions 的运行时实现）。
- * 只依赖种子与运行时输入，不写死演示期望值（expectedChecks 仅用于测试断言）。
+ * 只依赖种子与运行时输入，不写死模拟期望值（expectedChecks 仅用于测试断言）。
  */
 import type { FactValue } from '@/domain/types';
 import { factById, factNumber, shift, teamById, DEMO_CLOCK, incidentById } from './scenario';

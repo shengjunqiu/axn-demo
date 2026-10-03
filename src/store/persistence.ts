@@ -1,10 +1,10 @@
 /**
- * 演示持久化（T-019 / AC-025）：仅写入本 Demo 命名空间（anneng-demo:v1:*），
+ * 模拟持久化（T-019 / AC-025）：仅写入本模拟命名空间（anneng-demo:v1:*），
  * 刷新后恢复草稿、会话与待补状态；中断任务降级为可重试失败态。
  * 不写入任何真实系统；清空时只清理本命名空间（AC-026）。
  */
 const NAMESPACE = 'anneng-demo:v1';
-const SCHEMA_VERSION = 2; // v2：种子事件标题去除“演示区域 A/B”前缀，旧持久化数据失效重建
+const SCHEMA_VERSION = 2; // v2：种子事件标题去除“区域 A/B”前缀，旧持久化数据失效重建
 
 interface PersistEnvelope {
   __schema: number;
@@ -28,7 +28,7 @@ export function savePersist(key: string, data: unknown): void {
   try {
     window.localStorage.setItem(`${NAMESPACE}:${key}`, JSON.stringify({ __schema: SCHEMA_VERSION, data }));
   } catch (error) {
-    // 配额或隐私模式：演示环境降级为不持久化，不阻断主线。
+    // 配额或隐私模式：模拟环境降级为不持久化，不阻断主线。
     console.warn(`[anneng-demo] 持久化写入失败（${key}），本次刷新前状态仅保留在内存。`, error);
   }
 }

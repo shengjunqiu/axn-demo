@@ -1,7 +1,7 @@
 /**
  * 任务执行卡（T-006）：渲染 assistant 任务消息的执行步骤、产物摘要、流式文本与操作。
  * 数据全部来自 sessionStore.tasks（zustand 订阅），本组件不复制任务状态。
- * 所有数值/文本均取自种子事实或任务产物，界面为模拟数据演示。
+ * 所有数值/文本均取自种子事实或任务产物，界面为模拟数据环境。
  */
 import { Alert, Button, Space, Tag, Tooltip, Typography } from 'antd';
 import {
@@ -241,7 +241,7 @@ function QaKnowledgeBlock({ payload }: { payload: QaKnowledgeArtifact }) {
           </div>
         ))}
         <Text type="secondary" style={{ fontSize: 11 }}>
-          演示模拟数据，非正式技术规范；现场处置以现场指挥体系、现行法规标准与专业技术人员判断为准。
+          模拟数据，非正式技术规范；现场处置以现场指挥体系、现行法规标准与专业技术人员判断为准。
         </Text>
       </div>
     </div>

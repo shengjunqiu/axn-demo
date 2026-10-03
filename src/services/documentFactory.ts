@@ -262,7 +262,7 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
     templateCode: 'EMERGENCY_BRIEF',
     templateVersion: templateByCode.get('EMERGENCY_BRIEF')?.templateVersion ?? '1.0.0-demo',
     sections,
-    footerNote: '演示环境 · 模拟数据 · 非真实救援指令',
+    footerNote: '模拟数据 · 非真实救援指令',
   };
 }
 
@@ -297,7 +297,7 @@ function composeDailyContent(sessionId: string): DocumentContent {
           factRun(shift.factRefs.endsAt),
           textRun('；统计截止：'),
           factRun(latestClockFactId()),
-          textRun('（演示时钟，非完整日终数据）。'),
+          textRun('（模拟时钟，非完整日终数据）。'),
         ]),
       ],
     },
@@ -375,7 +375,7 @@ function composeDailyContent(sessionId: string): DocumentContent {
     templateCode: 'DUTY_DAILY',
     templateVersion: templateByCode.get('DUTY_DAILY')?.templateVersion ?? '1.0.0-demo',
     sections,
-    footerNote: '演示环境 · 模拟数据 · 非真实救援指令',
+    footerNote: '模拟数据 · 非真实救援指令',
   };
 }
 

@@ -61,30 +61,30 @@ const PROJECTS: ProjectRow[] = [
     name: '清河段堤防险情处置',
     status: '进行中',
     updatedAt: '2026-09-28 10:24',
-    owner: '演示指挥员',
+    owner: '指挥员',
     conversationTitle: '南堤堤防管涌险情',
     eventId: 'evt-demo-001',
-    desc: '堤防管涌险情研判、资源预置与处置跟踪（虚构演示项目）',
+    desc: '堤防管涌险情研判、资源预置与处置跟踪（虚构模拟项目）',
   },
   {
     projectId: 'proj-demo-002',
     name: '城镇内涝防御响应',
     status: '进行中',
     updatedAt: '2026-09-28 09:56',
-    owner: '演示值班员',
+    owner: '值班员',
     conversationTitle: '漳河镇水位上涨预警',
     eventId: 'evt-demo-002',
-    desc: '下穿道路积水预警与防御调度（虚构演示项目）',
+    desc: '下穿道路积水预警与防御调度（虚构模拟项目）',
   },
   {
     projectId: 'proj-demo-003',
     name: '汛期值班保障专项',
     status: '筹备中',
     updatedAt: '2026-09-27 17:05',
-    owner: '演示值班员',
+    owner: '值班员',
     conversationTitle: '防汛资源调度',
     eventId: 'evt-demo-001',
-    desc: '值班安排、日报整理与资源状态检查（虚构演示项目）',
+    desc: '值班安排、日报整理与资源状态检查（虚构模拟项目）',
   },
 ];
 
@@ -152,7 +152,7 @@ interface AgentCard {
   desc: string;
   tasks: string[];
   skills: string[];
-  status: '已接入（模拟）' | '演示规划中';
+  status: '已接入（模拟）' | '规划中';
 }
 
 const AGENTS: AgentCard[] = [
@@ -219,7 +219,7 @@ export function AgentsPage() {
       />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 12, maxWidth: 1100 }}>
         {AGENTS.map((a) => (
-          <Card key={a.agentId} size="small" title={<Space size={8}>{a.icon}<span>{a.name}</span></Space>} extra={<Tag color={a.status === '演示规划中' ? 'default' : 'geekblue'}>{a.status}</Tag>}>
+          <Card key={a.agentId} size="small" title={<Space size={8}>{a.icon}<span>{a.name}</span></Space>} extra={<Tag color={a.status === '规划中' ? 'default' : 'geekblue'}>{a.status}</Tag>}>
             <div style={{ fontSize: 12.5, color: '#4a5568', lineHeight: 1.6 }}>{a.desc}</div>
             <div style={{ marginTop: 10, fontSize: 12 }}>
               <div style={{ color: '#8a94a6', marginBottom: 4 }}>典型任务</div>
@@ -268,7 +268,7 @@ const SCHEDULES: ScheduleRow[] = [
 export function SchedulesPage() {
   return (
     <div style={{ padding: '6px 18px 18px' }} data-testid="schedules-page">
-      <PageHeader title="定时任务" sub="演示环境的模拟定时任务，不执行真实调度" extra={MOCK_TAG} />
+      <PageHeader title="定时任务" sub="模拟环境中的定时任务，不执行真实调度" extra={MOCK_TAG} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10, maxWidth: 860 }}>
         {SCHEDULES.map((s) => (
           <Card key={s.scheduleId} size="small" styles={{ body: { display: 'flex', alignItems: 'center', gap: 14 } }}>
@@ -304,12 +304,12 @@ interface KnowledgeLibrary {
 }
 
 const LIBRARIES: KnowledgeLibrary[] = [
-  { libraryId: 'lib-plan', name: '预案库', icon: <FileProtectOutlined />, desc: '应急预案与处置流程文档（演示库）', count: 12 },
-  { libraryId: 'lib-law', name: '法规规范库', icon: <BookOutlined />, desc: '相关法规、规程与标准条目（演示库）', count: 8 },
-  { libraryId: 'lib-case', name: '历史案例库', icon: <ApartmentOutlined />, desc: '历史事件处置案例与复盘（演示库）', count: 15 },
-  { libraryId: 'lib-tactic', name: '救援技战法', icon: <ThunderboltOutlined />, desc: '典型场景技战法与操作要点（演示库）', count: 10 },
-  { libraryId: 'lib-equipment', name: '装备知识库', icon: <ToolOutlined />, desc: '救援装备参数与使用要点（演示库）', count: 22 },
-  { libraryId: 'lib-team', name: '队伍能力库', icon: <HeartOutlined />, desc: '救援队伍能力档案与擅长场景（演示库）', count: 6 },
+  { libraryId: 'lib-plan', name: '预案库', icon: <FileProtectOutlined />, desc: '应急预案与处置流程文档', count: 12 },
+  { libraryId: 'lib-law', name: '法规规范库', icon: <BookOutlined />, desc: '相关法规、规程与标准条目', count: 8 },
+  { libraryId: 'lib-case', name: '历史案例库', icon: <ApartmentOutlined />, desc: '历史事件处置案例与复盘', count: 15 },
+  { libraryId: 'lib-tactic', name: '救援技战法', icon: <ThunderboltOutlined />, desc: '典型场景技战法与操作要点', count: 10 },
+  { libraryId: 'lib-equipment', name: '装备知识库', icon: <ToolOutlined />, desc: '救援装备参数与使用要点', count: 22 },
+  { libraryId: 'lib-team', name: '队伍能力库', icon: <HeartOutlined />, desc: '救援队伍能力档案与擅长场景', count: 6 },
 ];
 
 export function KnowledgePage() {
@@ -325,7 +325,7 @@ export function KnowledgePage() {
     <div style={{ padding: '6px 18px 18px' }} data-testid="knowledge-page">
       <PageHeader
         title="知识库"
-        sub="六大知识库演示视图；详情引用本演示种子知识包"
+        sub="六大知识库视图；详情引用本种子知识包"
         extra={
           <Space>
             <Input
@@ -378,7 +378,7 @@ export function KnowledgePage() {
       >
         {detail && (
           <div>
-            <Alert type="info" showIcon message="以下条目来自本演示种子知识包，全部为虚构演示数据。" style={{ marginBottom: 12 }} />
+            <Alert type="info" showIcon message="以下条目来自本种子知识包，全部为虚构模拟数据。" style={{ marginBottom: 12 }} />
             <Timeline
               items={knowledgeChunks.map((k) => ({
                 color: 'blue',
