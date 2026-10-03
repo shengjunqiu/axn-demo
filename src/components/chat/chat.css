@@ -30,7 +30,7 @@
 .axn-question-item:hover:not(:disabled) { background: var(--chat-tint); border-color: color-mix(in srgb, var(--chat-primary) 24%, var(--chat-line)); color: var(--chat-primary); }
 .axn-question-item:disabled { color: var(--chat-muted); cursor: not-allowed; opacity: .6; }
 .axn-question-item:focus-visible { outline: 2px solid var(--chat-primary); outline-offset: 2px; }
-.axn-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 0; border: 0; background: transparent; flex: 1; min-width: 0; }
+.axn-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 0; border: 0; background: transparent; flex: 0 0 auto; min-width: 0; }
 .axn-more-tasks { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
 .axn-more-tasks .ant-btn { justify-content: flex-start; font-size: 13px; }
 .axn-assistant--split .axn-composer { padding: 10px 12px 12px; }

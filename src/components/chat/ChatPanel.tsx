@@ -374,7 +374,8 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
       )}
 
       {/* 快捷任务 chips：位于输入框上方 */}
-      <div className="axn-chips" style={{ marginBottom: 8, padding: '0 10px' }}>
+      <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+        <div className="axn-chips" style={{ marginBottom: 8 }}>
         {PRIMARY_TASKS.map(({ label, agentName, agentId }) => (
           <Button
             key={label}
@@ -421,6 +422,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             更多任务 <DownOutlined />
           </Button>
         </Popover>
+      </div>
       </div>
       {/* 圆角一体化输入区：关联灾情在输入框上方 */}
       <div className="axn-composer">
