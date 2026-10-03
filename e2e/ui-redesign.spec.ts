@@ -40,7 +40,7 @@ for (const { width, height, name } of DESKTOPS) {
     const inner = await page.locator('.axn-home-inner').boundingBox();
     expect(inner?.width ?? 0).toBeGreaterThanOrEqual(780);
     expect(inner?.width ?? 0).toBeLessThanOrEqual(920);
-    await expect(page.locator('.axn-composer-shell .axn-chips')).toBeVisible();
+    await expect(page.locator('.axn-chips')).toBeVisible();
     await page.screenshot({ path: `artifacts/ui-polish/${name}-home.png` });
 
     // 打开文书 → 分列：对话 420-500，文书区占剩余宽度

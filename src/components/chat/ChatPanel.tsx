@@ -1,7 +1,7 @@
 import { generateWorkSummary, submitWorkSummaryImprovement } from '@/services/workSummaryWorkflow';
 /**
  * 安小能对话工作流（UI 改版）：会话头（标题 + 关联灾情）+ 消息流（Bubble.List）
- * + 圆角一体化输入区（快捷任务 chips 收纳进输入框内）+ 补录表单。
+ * + 圆角一体化输入区（快捷任务 chips 位于输入框上方）+ 补录表单。
  * 首页引导问题取自已接入知识库的 qa.json；输入区常驻 3 个常用任务 chips，其余收进「更多任务」浮层。
  * 会话跟随演示事件切换（ensureSessionForConversation）；消息与任务状态全部订阅 sessionStore，不本地复制。
  * 本界面为模拟数据演示（规则意图识别，不接真实大模型）。
@@ -373,56 +373,70 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         </div>
       )}
 
-      {/* 圆角一体化输入区：快捷任务 chips 收纳在输入框内 */}
+      {/* 快捷任务 chips：位于输入框上方 */}
+      <div className="axn-chips" style={{ marginBottom: 8, padding: '0 10px' }}>
+        {PRIMARY_TASKS.map(({ label, agentName, agentId }) => (
+          <Button
+            key={label}
+            size="small"
+            className="axn-chip"
+            title={agentName}
+            data-agent-id={agentId}
+            disabled={!session || busy}
+            onClick={() => { void handleQuickTask(label); }}
+          >
+            {label}
+          </Button>
+        ))}
+        <Popover
+          trigger="click"
+          placement="topRight"
+          open={moreOpen}
+          onOpenChange={setMoreOpen}
+          getPopupContainer={(trigger) => trigger.parentElement ?? document.body}
+          content={
+            <div className="axn-more-tasks" role="group" aria-label="更多快捷任务" data-testid="quick-task-menu">
+              {MORE_TASKS.map(({ label, agentName, agentId }) => (
+                <Button
+                  key={label}
+                  type="text"
+                  title={agentName}
+                  data-agent-id={agentId}
+                  disabled={!session || busy}
+                  onClick={() => { setMoreOpen(false); void handleQuickTask(label); }}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          }
+        >
+          <Button
+            size="small"
+            className="axn-chip"
+            aria-label="更多任务"
+            aria-expanded={moreOpen}
+            disabled={!session || busy}
+          >
+            更多任务 <DownOutlined />
+          </Button>
+        </Popover>
+      </div>
+      {/* 圆角一体化输入区：关联灾情在输入框上方 */}
       <div className="axn-composer">
         <div className="axn-composer-shell">
-          <div className="axn-chips">
-            {PRIMARY_TASKS.map(({ label, agentName, agentId }) => (
-              <Button
-                key={label}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <Tooltip title="关联后使用该事件的业务资料，对话消息保持独立">
+              <Select
                 size="small"
-                className="axn-chip"
-                title={agentName}
-                data-agent-id={agentId}
-                disabled={!session || busy}
-                onClick={() => { void handleQuickTask(label); }}
-              >
-                {label}
-              </Button>
-            ))}
-            <Popover
-              trigger="click"
-              placement="topRight"
-              open={moreOpen}
-              onOpenChange={setMoreOpen}
-              getPopupContainer={(trigger) => trigger.parentElement ?? document.body}
-              content={
-                <div className="axn-more-tasks" role="group" aria-label="更多快捷任务" data-testid="quick-task-menu">
-                  {MORE_TASKS.map(({ label, agentName, agentId }) => (
-                    <Button
-                      key={label}
-                      type="text"
-                      title={agentName}
-                      data-agent-id={agentId}
-                      disabled={!session || busy}
-                      onClick={() => { setMoreOpen(false); void handleQuickTask(label); }}
-                    >
-                      {label}
-                    </Button>
-                  ))}
-                </div>
-              }
-            >
-              <Button
-                size="small"
-                className="axn-chip"
-                aria-label="更多任务"
-                aria-expanded={moreOpen}
-                disabled={!session || busy}
-              >
-                更多任务 <DownOutlined />
-              </Button>
-            </Popover>
+                style={{ minWidth: 100, fontSize: 12 }}
+                value={linkValue}
+                onChange={handleLinkChange}
+                options={linkOptions}
+                aria-label="关联灾情"
+                data-testid="chat-link-incident"
+              />
+            </Tooltip>
           </div>
           <Sender
             value={input}
@@ -435,17 +449,6 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             suffix={(_, { components: { SendButton, SpeechButton } }) => (
               <>
                 <SpeechButton />
-                <Tooltip title="关联后使用该事件的业务资料，对话消息保持独立">
-                  <Select
-                    size="small"
-                    style={{ minWidth: 100, fontSize: 12 }}
-                    value={linkValue}
-                    onChange={handleLinkChange}
-                    options={linkOptions}
-                    aria-label="关联灾情"
-                    data-testid="chat-link-incident"
-                  />
-                </Tooltip>
                 <SendButton />
               </>
             )}
