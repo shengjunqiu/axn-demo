@@ -23,7 +23,7 @@ import { useConversationStore } from '@/store/conversationStore';
 import { knowledgeChunks } from '@/seed/scenario';
 
 const MOCK_TAG = (
-  <Tag color="orange" style={{ fontSize: 11 }}>
+  <Tag color="orange" style={{ fontSize: 12 }}>
     模拟数据
   </Tag>
 );
@@ -225,7 +225,7 @@ export function AgentsPage() {
               <div style={{ color: '#8a94a6', marginBottom: 4 }}>典型任务</div>
               <Space size={4} wrap>
                 {a.tasks.map((t) => (
-                  <Tag key={t} style={{ fontSize: 11 }}>
+                  <Tag key={t} style={{ fontSize: 12 }}>
                     {t}
                   </Tag>
                 ))}
@@ -235,7 +235,7 @@ export function AgentsPage() {
               <div style={{ color: '#8a94a6', marginBottom: 4 }}>示例 Skill</div>
               <Space size={4} wrap>
                 {a.skills.map((s) => (
-                  <Tag key={s} color="blue" style={{ fontSize: 11 }}>
+                  <Tag key={s} color="blue" style={{ fontSize: 12 }}>
                     {s}
                   </Tag>
                 ))}
@@ -357,7 +357,7 @@ export function KnowledgePage() {
                 <Typography.Text strong style={{ fontSize: 13.5 }}>
                   {lib.name}
                 </Typography.Text>
-                <Tag style={{ fontSize: 11 }}>{lib.count} 条</Tag>
+                <Tag style={{ fontSize: 12 }}>{lib.count} 条</Tag>
               </div>
               <div style={{ fontSize: 12, color: '#8a94a6', marginTop: 2 }}>{lib.desc}</div>
             </div>
@@ -386,10 +386,10 @@ export function KnowledgePage() {
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>{k.title}</div>
                     <div style={{ fontSize: 12, color: '#8a94a6', marginTop: 2 }}>{k.content}</div>
-                    <div style={{ fontSize: 11, color: '#a0a8b8', marginTop: 2 }}>
+                    <div style={{ fontSize: 12, color: '#a0a8b8', marginTop: 2 }}>
                       {k.category} · {k.version} · {k.sourceLabel}
                     </div>
-                    <div style={{ fontSize: 11, color: '#d48806', marginTop: 2 }}>{k.notice}</div>
+                    <div style={{ fontSize: 12, color: '#d48806', marginTop: 2 }}>{k.notice}</div>
                   </div>
                 ),
               }))}

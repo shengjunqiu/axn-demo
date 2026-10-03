@@ -14,7 +14,7 @@ export const themeConfig: ThemeConfig = {
     colorBgLayout: '#f3f5f9',
     colorBgContainer: '#ffffff',
     borderRadius: 8,
-    fontSize: 13,
+    fontSize: 14,
     fontFamily:
       "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif",
   },

@@ -299,7 +299,7 @@ export default function ResourcePanel() {
               </div>
             </Tooltip>
           ))}
-          <Text type="secondary" style={{ fontSize: 11, alignSelf: 'center' }}>
+          <Text type="secondary" style={{ fontSize: 12, alignSelf: 'center' }}>
             由种子事实即时计算 · 模拟数据
           </Text>
         </div>

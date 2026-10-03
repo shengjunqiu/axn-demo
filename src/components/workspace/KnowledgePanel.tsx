@@ -234,7 +234,7 @@ export default function KnowledgePanel() {
                   <Paragraph style={{ marginBottom: 4, fontSize: 13, whiteSpace: 'pre-wrap' }}>
                     {chunk.content}
                   </Paragraph>
-                  <Text type="secondary" style={{ fontSize: 11 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
                     {chunk.notice}
                   </Text>
                 </Card>

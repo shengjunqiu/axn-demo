@@ -164,7 +164,7 @@ export default function SchematicMap({
         <span className="axn-legend-item">
           <span className="axn-legend-swatch" style={{ background: '#722ed1', clipPath: 'polygon(50% 0,100% 50%,50% 100%,0 50%)' }} /> 水位站
         </span>
-        <Text type="secondary" style={{ fontSize: 11 }}>
+        <Text type="secondary" style={{ fontSize: 12 }}>
           {schematicMap?.distanceRule ?? '图上位置不用于算公里数或 ETA。'}
         </Text>
       </Space>

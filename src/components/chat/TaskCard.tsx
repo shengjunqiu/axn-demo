@@ -221,7 +221,7 @@ function QaKnowledgeBlock({ payload }: { payload: QaKnowledgeArtifact }) {
         <div style={{ margin: '6px 0' }}>
           <Text type="secondary" style={{ fontSize: 12 }}>需结合现场实时数据：</Text>
           {payload.liveDataNeeded.map((d) => (
-            <Tag key={d} style={{ marginInlineEnd: 4, fontSize: 11 }}>{d}</Tag>
+            <Tag key={d} style={{ marginInlineEnd: 4, fontSize: 12 }}>{d}</Tag>
           ))}
         </div>
       )}
@@ -233,14 +233,14 @@ function QaKnowledgeBlock({ payload }: { payload: QaKnowledgeArtifact }) {
         {payload.sources.map((s) => (
           <div key={`${s.docId}-${s.section}`} className="axn-qa-source" style={{ margin: '6px 0', fontSize: 12, lineHeight: 1.6 }}>
             <div>
-              <Tag color="blue" style={{ fontSize: 11, marginInlineEnd: 4 }}>模拟</Tag>
+              <Tag color="blue" style={{ fontSize: 12, marginInlineEnd: 4 }}>模拟</Tag>
               <Text strong>《{s.title}》</Text>
               <Text type="secondary"> {s.section}</Text>
             </div>
             <div style={{ color: '#666' }}>“{s.excerpt}”</div>
           </div>
         ))}
-        <Text type="secondary" style={{ fontSize: 11 }}>
+        <Text type="secondary" style={{ fontSize: 12 }}>
           模拟数据，非正式技术规范；现场处置以现场指挥体系、现行法规标准与专业技术人员判断为准。
         </Text>
       </div>
