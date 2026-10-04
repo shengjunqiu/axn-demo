@@ -380,7 +380,10 @@ interface EditorInstanceProps {
 function EditorInstance({ draft, editable, onDirty, onEditorReady }: EditorInstanceProps) {
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ heading: false, paragraph: false }),
+      // codeBlock 必须关闭：文书内容模型没有代码块（contentToEditorJson 不产出、editorJsonToContent
+      // 对非 paragraph 块直接 continue 丢弃），一旦被 CodeBlock 的输入规则/快捷键意外生成，
+      // 用户在块内输入的内容会出现在编辑器里但不会写进草稿（静默丢内容）。
+      StarterKit.configure({ heading: false, paragraph: false, codeBlock: false }),
       DocParagraph,
       SectionTitle,
       FactChip.configure({ snapshot: draft.snapshot }),
