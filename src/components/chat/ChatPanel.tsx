@@ -189,10 +189,10 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
     if (!workspace.isDirty(scope)) { proceed(); return; }
     modal.confirm({
       title: '有未保存的文书修改',
-      content: '切换关联事件将放弃当前修改。',
-      okText: '放弃修改并继续',
+      // 切事件只解除编辑状态；草稿改动在 documentStore、模拟文书改动在 mockDocumentStore，都不会丢。
+      content: '切换事件不会丢弃修改，改动保留在本次会话（尚未保存）。',
+      okText: '继续切换',
       cancelText: '继续编辑',
-      okButtonProps: { danger: true },
       onOk: () => { workspace.setDirty(scope, false); workspace.close(scope); proceed(); },
     });
   };

@@ -435,6 +435,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
         ) : selectedMock ? (
           <MockDocumentDetail
             key={selectedMock.id}
+            scope={libraryScope}
             document={selectedMock}
             onClose={onClose}
             onOpenLibrary={onOpenLibrary}

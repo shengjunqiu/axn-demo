@@ -24,10 +24,10 @@ export default function DocumentWorkspace() {
     }
     modal.confirm({
       title: '有未保存的文书修改',
-      content: '关闭后这些修改将丢失。',
-      okText: '放弃修改并关闭',
+      // 关闭只收起工作区，不会回滚工作副本（回滚只发生在编辑器自己的「放弃修改并关闭」）。
+      content: '关闭后修改会保留在本次会话（尚未保存），可再次打开继续编辑。',
+      okText: '关闭并保留修改',
       cancelText: '继续编辑',
-      okButtonProps: { danger: true },
       onOk: () => {
         useWorkspaceStore.getState().setDirty(scope, false);
         close(scope);
@@ -47,10 +47,9 @@ export default function DocumentWorkspace() {
     }
     modal.confirm({
       title: '有未保存的文书修改',
-      content: '前往文书库前将放弃这些修改。',
-      okText: '放弃修改并前往',
+      content: '前往文书库不会丢弃修改，改动保留在本次会话（尚未保存）。',
+      okText: '继续前往',
       cancelText: '继续编辑',
-      okButtonProps: { danger: true },
       onOk: () => {
         useWorkspaceStore.getState().setDirty(scope, false);
         close(scope);

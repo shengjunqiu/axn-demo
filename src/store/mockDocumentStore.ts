@@ -3,12 +3,15 @@ import type { ChatMessage } from '@/domain/types';
 import { DOCUMENT_CATEGORIES, MOCK_DOCUMENTS, type MockDocument } from '@/seed/mockDocuments';
 
 type GenerationOptions = { collect?: () => Promise<void | false>; sections?: MockDocument['sections']; elements: NonNullable<ChatMessage['documentWorkflow']>['elements']; onStage: (stage: 'calling' | 'generating') => void };
-type Library = { documents: MockDocument[]; selected: MockDocument | null; generatingCode: string | null };
-export const EMPTY_LIBRARY: Library = { documents: MOCK_DOCUMENTS, selected: null, generatingCode: null };
+/** 编辑中的工作副本（未保存）按文档 id 存放，离开详情页也不丢；保存或放弃才清除。 */
+type Library = { documents: MockDocument[]; selected: MockDocument | null; generatingCode: string | null; working: Record<string, MockDocument> };
+export const EMPTY_LIBRARY: Library = { documents: MOCK_DOCUMENTS, selected: null, generatingCode: null, working: {} };
 interface MockDocumentState {
   libraries: Record<string, Library>;
   select: (scope: string, document: MockDocument | null) => void;
   update: (scope: string, document: MockDocument) => void;
+  setWorking: (scope: string, document: MockDocument) => void;
+  clearWorking: (scope: string, documentId: string) => void;
   generate: (scope: string, code: string, options?: GenerationOptions) => Promise<MockDocument | null>;
 }
 
@@ -20,10 +23,21 @@ export const useMockDocumentStore = create<MockDocumentState>((set, get) => ({
   } })),
   update: (scope, document) => set(state => {
     const library = state.libraries[scope] ?? EMPTY_LIBRARY;
+    const { [document.id]: _saved, ...working } = library.working;
     return { libraries: { ...state.libraries, [scope]: {
       ...library, documents: library.documents.map(item => item.id === document.id ? document : item),
-      selected: document,
+      selected: document, working,
     } } };
+  }),
+  setWorking: (scope, document) => set(state => {
+    const library = state.libraries[scope] ?? EMPTY_LIBRARY;
+    return { libraries: { ...state.libraries, [scope]: { ...library, working: { ...library.working, [document.id]: document } } } };
+  }),
+  clearWorking: (scope, documentId) => set(state => {
+    const library = state.libraries[scope];
+    if (!library?.working[documentId]) return state;
+    const { [documentId]: _discarded, ...working } = library.working;
+    return { libraries: { ...state.libraries, [scope]: { ...library, working } } };
   }),
   generate: async (scope, code, options) => {
     const category = DOCUMENT_CATEGORIES.find(item => item.code === code);
@@ -50,6 +64,7 @@ export const useMockDocumentStore = create<MockDocumentState>((set, get) => ({
       number: `${category.prefix}〔${now.getFullYear()}〕模拟草稿`, sections: options?.sections ?? category.sections,
     };
     set(state => ({ libraries: { ...state.libraries, [scope]: {
+      ...(state.libraries[scope] ?? EMPTY_LIBRARY),
       documents: [document, ...(state.libraries[scope] ?? EMPTY_LIBRARY).documents],
       selected: document, generatingCode: null,
     } } }));

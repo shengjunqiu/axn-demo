@@ -139,7 +139,7 @@ export default function GlobalSidebar() {
   const [keyword, setKeyword] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  /** 未保存编辑保护：关闭 / 切换文书、会话或导航前确认（取消保留编辑，放弃才丢弃）。 */
+  /** 未保存编辑保护：关闭 / 切换文书、会话或导航前确认（取消保留编辑；继续也不丢弃，工作副本仍在 store 里）。 */
   const guardDirty = useCallback(
     (title: string, onProceed: () => void) => {
       if (!useWorkspaceStore.getState().isDirty(scope)) {
@@ -148,10 +148,9 @@ export default function GlobalSidebar() {
       }
       modal.confirm({
         title: '有未保存的文书修改',
-        content: `当前文书正在编辑（${title}）。继续将放弃这些修改。`,
-        okText: '放弃修改并继续',
+        content: `当前文书正在编辑（${title}）。继续不会丢弃修改，改动保留在本次会话（尚未保存）。`,
+        okText: '继续',
         cancelText: '继续编辑',
-        okButtonProps: { danger: true },
         onOk: () => {
           useWorkspaceStore.getState().setDirty(scope, false);
           useWorkspaceStore.getState().close(scope);
