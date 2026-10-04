@@ -185,7 +185,7 @@ export default function GlobalSidebar() {
     );
   };
 
-  const openLibrary = () => guardDirty('切换到文书库', () => navigate('/library'));
+  const openLibrary = () => guardDirty('切换到文书库', () => navigate(NAV_PATH.library));
 
   const list = useMemo(
     () => Object.values(conversations).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
