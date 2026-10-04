@@ -3,7 +3,7 @@ import { Input, message } from 'antd';
 import {
   FileText,
 } from 'lucide-react'
-import { DOCUMENT_CATEGORIES, type MockDocument } from '@/seed/mockDocuments';
+import { DOCUMENT_CATEGORIES, sameMockDocument, type MockDocument } from '@/seed/mockDocuments';
 import { useMockDocumentStore } from '@/store/mockDocumentStore';
 import DocumentDetailToolbar from './DocumentDetailToolbar';
 
@@ -20,12 +20,12 @@ export default function MockDocumentDetail({ scope, document, onClose, onOpenLib
   const applyWorking = (next: MockDocument) => {
     const store = useMockDocumentStore.getState();
     // 改回原文即视为没有未保存修改，顺手清掉工作副本。
-    if (JSON.stringify(next) === JSON.stringify(document)) store.clearWorking(scope, document.id);
+    if (sameMockDocument(next, document)) store.clearWorking(scope, document.id);
     else store.setWorking(scope, next);
   };
   const displayed = editing ? working : document;
   const category = DOCUMENT_CATEGORIES.find(item => item.code === document.code)?.name ?? '文书';
-  const dirty = JSON.stringify(working) !== JSON.stringify(document);
+  const dirty = !sameMockDocument(working, document);
   const sectionChange = (index: number, part: 0 | 1, value: string) => applyWorking({
     ...working, sections: working.sections.map((section, i) => i === index ? (part === 0 ? [value, section[1]] : [section[0], value]) : section),
   });

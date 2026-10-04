@@ -12,7 +12,7 @@
  */
 import { create } from 'zustand';
 import type { Conversation, ConversationSettings, NavPage } from '@/domain/types';
-import { clearPersist, loadPersist, savePersist } from './persistence.js';
+import { clearPersist, loadPersist, schedulePersist } from './persistence.js';
 import { useDemoStore } from './demoStore.js';
 import { useSessionStore } from './sessionStore.js';
 import { DEMO_CLOCK } from '@/seed/scenario';
@@ -256,8 +256,9 @@ function syncBusinessContext(conversation: Conversation): void {
 }
 
 // 状态变化即持久化（与会话/文书一致：AC-025 同款机制）
+// 注意：activeNav 不参与持久化，切换导航不会触发任何序列化与写盘。
 useConversationStore.subscribe((state) => {
-  savePersist('conversation', {
+  schedulePersist('conversation', {
     conversations: state.conversations,
     activeConversationId: state.activeConversationId,
     settings: state.settings,

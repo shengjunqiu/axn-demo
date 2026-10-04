@@ -17,6 +17,8 @@ const B = 'evt-demo-002';
 const session = () => useSessionStore.getState().ensureSessionForEvent(useDemoStore.getState().currentEventId);
 const task = (id: string) => useSessionStore.getState().tasks[id];
 const settle = () => vi.runAllTimersAsync();
+/** 模拟硬刷新：pagehide 是生产环境冲刷待写入持久化的真实路径（persistence.ts）。 */
+const simulateReload = () => window.dispatchEvent(new Event('pagehide'));
 const supplement = (field: string, value: string, scopeKind: 'event' | 'shift' = 'shift') =>
   useDemoStore.getState().addManualFact({ field, value, scopeKind, scopeId: scopeKind === 'shift' ? shift.shiftId : A, actorId: useDemoStore.getState().actorId });
 
@@ -114,6 +116,8 @@ describe('D04 / run identity', () => {
     const id = await sendMessage(session(), { text: '灾情摘要' });
     release({ type: 'text_delta', text: '不得出现' });
     for (let i = 0; i < 5; i++) await Promise.resolve();
+    // 排空持久化合并窗口的定时器，使计数只反映任务运行时的定时器。
+    simulateReload();
     expect(vi.getTimerCount()).toBe(1);
     cancelTask(id);
     const stopped = task(id);
@@ -271,6 +275,7 @@ describe('D03 / hydration', () => {
 
   it.each(['non-array', 'invalid-entries'])('malformed hydration is filtered with a warning: %s', async (mode) => {
     const valid = supplement('handOverNotes', '保留有效记录');
+    simulateReload();
     const saved = JSON.parse(localStorage.getItem('anneng-demo:v1:demo')!);
     saved.data.manualFacts = mode === 'non-array' ? { broken: true } : [null, 42, {}, { ...valid, value: null }, valid];
     localStorage.setItem('anneng-demo:v1:demo', JSON.stringify(saved));
@@ -284,6 +289,7 @@ describe('D03 / hydration', () => {
   it('reload preserves distinct manual values and interrupted task can retry with new identity', async () => {
     const unit = supplement('reportingUnit', '刷新前单位');
     await sendMessage(session(), { text: '灾情摘要' });
+    simulateReload();
     // Stop the old JS runtime without rewriting its persisted queued/running task.
     const persistedSession = localStorage.getItem('anneng-demo:v1:session');
     useSessionStore.getState().resetAll();
@@ -291,6 +297,7 @@ describe('D03 / hydration', () => {
     localStorage.setItem('anneng-demo:v1:session', persistedSession!);
     // Persist the pre-refresh manual fact via the normal store persistence subscriber.
     useDemoStore.setState({ manualFacts: [unit] });
+    simulateReload();
     vi.resetModules();
     const { useDemoStore: restoredDemo } = await import('@/store/demoStore');
     const { useSessionStore: restoredSession } = await import('@/store/sessionStore');

@@ -14,7 +14,7 @@ import type {
 import { DEFAULT_EVENT_ID, DEFAULT_SESSION_ID, factById, incidentById } from '@/seed/scenario';
 import { useDemoStore } from './demoStore.js';
 import { useDocumentStore } from './documentStore.js';
-import { clearPersist, loadPersist, savePersist } from './persistence.js';
+import { clearPersist, loadPersist, schedulePersist } from './persistence.js';
 
 let seqCounter = 100;
 function nextSeq(): number {
@@ -321,6 +321,9 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
       if (!task || ['cancelled', 'failed', 'succeeded'].includes(task.status)) return s;
       if (!attemptId || task.attemptId !== attemptId || !isActiveRun(taskId, attemptId)) return s;
       const next: AgentTask = { ...task };
+      // 会话写入必须换成新对象并随 partial 一起返回：原地改 map 不会改变 s.sessions 的引用，
+      // 只订阅 s.sessions 的订阅者（如 WorkspaceSync）就看不到这条消息。
+      let sessions = s.sessions;
       switch (ev.type) {
         case 'step_started':
           next.steps = [
@@ -382,7 +385,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
               createdAt: new Date().toISOString(),
               performedAt: new Date().toISOString(),
             };
-            s.sessions[task.sessionId] = { ...session, messages: [...session.messages, summonMsg] };
+            sessions = { ...sessions, [task.sessionId]: { ...session, messages: [...session.messages, summonMsg] } };
           }
           break;
         }
@@ -400,9 +403,9 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
           {
             const session = s.sessions[task.sessionId];
             if (session) {
-              s.sessions[task.sessionId] = {
-                ...session,
-                pendingClarification: { ...ev.clarification, taskId },
+              sessions = {
+                ...sessions,
+                [task.sessionId]: { ...session, pendingClarification: { ...ev.clarification, taskId } },
               };
             }
           }
@@ -423,7 +426,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
         default:
           break;
       }
-      return { tasks: { ...s.tasks, [taskId]: next } };
+      return { tasks: { ...s.tasks, [taskId]: next }, sessions };
     });
   },
 
@@ -606,7 +609,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
 
 // 状态变化即持久化（AC-025）
 useSessionStore.subscribe((state) => {
-  savePersist('session', {
+  schedulePersist('session', {
     sessions: state.sessions,
     currentSessionId: state.currentSessionId,
     tasks: state.tasks,

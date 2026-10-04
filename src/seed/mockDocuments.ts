@@ -31,6 +31,20 @@ export type MockDocument = {
   sections: readonly (readonly [string, string])[];
 };
 
+/**
+ * MockDocument 是扁平结构，逐字段比较即可。
+ * 编辑路径原来用 `JSON.stringify(a) === JSON.stringify(b)` 判断「是否改回原文」，
+ * 每次击键都要把整篇文书序列化好几遍；这里改成常数级字段比较。
+ */
+export function sameMockDocument(a: MockDocument, b: MockDocument): boolean {
+  if (a === b) return true;
+  if (a.id !== b.id || a.code !== b.code || a.title !== b.title || a.date !== b.date || a.number !== b.number) return false;
+  if (a.sections.length !== b.sections.length) return false;
+  return a.sections.every(
+    (section, index) => section[0] === b.sections[index][0] && section[1] === b.sections[index][1],
+  );
+}
+
 export const MOCK_DOCUMENTS: MockDocument[] = DOCUMENT_CATEGORIES.flatMap(category =>
   category.topics.map((title, index) => ({
     id: `sample-${category.code}-${index}`,

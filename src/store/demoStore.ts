@@ -11,7 +11,7 @@ import {
   demoMeta,
 } from '@/seed/scenario';
 import type { Actor, DemoConfig, DemoPace } from '@/domain/types';
-import { clearPersist, loadPersist, savePersist } from './persistence.js';
+import { clearPersist, loadPersist, schedulePersist } from './persistence.js';
 
 export interface ManualFactEntry {
   factId: string;
@@ -247,7 +247,7 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
 
 // 状态变化即持久化（AC-025）
 useDemoStore.subscribe((state) => {
-  savePersist('demo', {
+  schedulePersist('demo', {
     actorId: state.actorId,
     currentEventId: state.currentEventId,
     demoClock: state.demoClock,

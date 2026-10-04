@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import MockDocumentDetail from '@/components/doc/MockDocumentDetail';
 import { useMockDocumentStore } from '@/store/mockDocumentStore';
-import { MOCK_DOCUMENTS } from '@/seed/mockDocuments';
+import { MOCK_DOCUMENTS, sameMockDocument } from '@/seed/mockDocuments';
 
 // antd 的 message 走 portal 渲染，会造成 act 噪声；这里不测提示条，直接替掉。
 vi.mock('antd', async () => {
@@ -76,5 +76,40 @@ describe('模拟文书编辑缓冲', () => {
     expect(saved.title).toBe('保存的标题');
     act(() => { useMockDocumentStore.getState().update(SCOPE, saved); });
     expect(workingOf()).toBeUndefined();    expect(useMockDocumentStore.getState().libraries[SCOPE].documents[0].title).toBe('保存的标题');
+  });
+
+  it('连续输入不做整篇文书序列化（性能回归）', () => {
+    const original = JSON.stringify;
+    let documentSerializations = 0;
+    const isDocument = (value: unknown) =>
+      typeof value === 'object' && value !== null && 'sections' in value && 'title' in value;
+    JSON.stringify = function (value: unknown, ...rest: unknown[]) {
+      if (isDocument(value)) documentSerializations += 1;
+      return (original as (...args: unknown[]) => string)(value, ...rest);
+    } as typeof JSON.stringify;
+    try {
+      mount();
+      fireEvent.click(screen.getByRole('button', { name: '在线编辑' }));
+      documentSerializations = 0;
+      const field = screen.getByLabelText('文书标题') as HTMLInputElement;
+      for (let i = 0; i < 30; i++) fireEvent.change(field, { target: { value: `标题第 ${i} 版` } });
+      // 原来是「每次击键 4 次整篇 JSON.stringify」（dirty 判断 ×1 + 改回原文判断 ×1，各序列化两份）。
+      expect(documentSerializations).toBe(0);
+    } finally {
+      JSON.stringify = original;
+    }
+  });
+});
+
+describe('sameMockDocument', () => {
+  it('逐字段比较：sections 长度与标题/正文任一不同即不等', () => {
+    const base = MOCK_DOCUMENTS[0];
+    expect(sameMockDocument(base, { ...base })).toBe(true);
+    expect(sameMockDocument(base, base)).toBe(true);
+    expect(sameMockDocument(base, { ...base, title: '改过的标题' })).toBe(false);
+    expect(sameMockDocument(base, { ...base, number: '应急值〔2026〕999号' })).toBe(false);
+    expect(sameMockDocument(base, { ...base, sections: [...base.sections.slice(0, -1)] })).toBe(false);
+    expect(sameMockDocument(base, { ...base, sections: base.sections.map((s, i) => (i === 0 ? (['改了标题', s[1]] as const) : s)) })).toBe(false);
+    expect(sameMockDocument(base, { ...base, sections: base.sections.map((s, i) => (i === 0 ? ([s[0], '改了正文'] as const) : s)) })).toBe(false);
   });
 });

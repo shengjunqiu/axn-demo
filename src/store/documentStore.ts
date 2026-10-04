@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { AuditEvent, DocumentContent, DocumentDraft, DocumentRevision, SourceSnapshot, ValidationReport } from '@/domain/types';
 import { useDemoStore } from './demoStore.js';
 import { shift } from '@/seed/scenario';
-import { clearPersist, loadPersist, savePersist } from './persistence.js';
+import { clearPersist, loadPersist, schedulePersist } from './persistence.js';
 import { formatFactValue } from '@/services/factLookup';
 import { collectRunDerivedKeys, collectRunFactIds } from '@/services/contentRuns';
 
@@ -18,8 +18,8 @@ function deepFreeze<T>(value: T): T {
 }
 
 /** Deterministic local comparison token; this is not a cryptographic signature. */
-export function computeContentHash(content: DocumentContent): string {
-  const json = JSON.stringify(content);
+export function computeContentHash(content: DocumentContent, precomputedJson?: string): string {
+  const json = precomputedJson ?? JSON.stringify(content);
   let h = 5381;
   for (let i = 0; i < json.length; i++) h = ((h << 5) + h + json.charCodeAt(i)) >>> 0;
   return `demo-content-${h.toString(16).padStart(8, '0')}`;
@@ -95,8 +95,13 @@ export const useDocumentStore = create<DocumentState>()((set, get) => ({
   getDraft: id => get().drafts[id],
   updateWorkingContent: (id, content) => set(s => {
     const draft = s.drafts[id];
-    if (!draft || !editable(draft) || JSON.stringify(content) === JSON.stringify(draft.working.content)) return s;
-    return { drafts: { ...s.drafts, [id]: { ...stale(draft), working: { ...draft.working, content: clone(content), contentHash: computeContentHash(content), updatedAt: new Date().toISOString() } } } };
+    if (!draft || !editable(draft)) return s;
+    // 每次击键只序列化一次：既用于精确比对，也复用为内容指纹（原先串行 stringify 三次）。
+    const json = JSON.stringify(content);
+    const contentHash = computeContentHash(content, json);
+    // 指纹相同才回落精确比对，避免 32 位指纹碰撞导致用户编辑被静默丢弃。
+    if (contentHash === draft.working.contentHash && json === JSON.stringify(draft.working.content)) return s;
+    return { drafts: { ...s.drafts, [id]: { ...stale(draft), working: { ...draft.working, content: clone(content), contentHash, updatedAt: new Date().toISOString() } } } };
   }),
   markValidation: (id, status, reportId) => set(s => {
     const draft = s.drafts[id];
@@ -228,5 +233,6 @@ export const useDocumentStore = create<DocumentState>()((set, get) => ({
   resetAll: () => { clearPersist('doc'); set({ drafts: {}, revisions: {}, reports: {}, activeReportByDocument: {}, audit: [] }); },
 }));
 
-useDocumentStore.subscribe(state => savePersist('doc', { drafts: state.drafts, revisions: state.revisions, reports: state.reports, activeReportByDocument: state.activeReportByDocument, audit: state.audit } satisfies DocumentPersist));
+// 状态变化即持久化（AC-025）；连续输入（击键）由 persistence 合并为一次落盘。
+useDocumentStore.subscribe(state => schedulePersist('doc', { drafts: state.drafts, revisions: state.revisions, reports: state.reports, activeReportByDocument: state.activeReportByDocument, audit: state.audit } satisfies DocumentPersist));
 export type { SourceSnapshot };
