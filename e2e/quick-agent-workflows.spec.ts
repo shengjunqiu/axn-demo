@@ -26,7 +26,7 @@ test('快捷任务在智能体卡片内展示执行过程和模拟结果', async
 
 test('空白对话提示关联灾情，关联后可正常生成摘要', async ({ page }) => {
   await page.goto('/');
-  await page.locator('.axn-gs-nav-item', { hasText: '新建任务' }).first().click();
+  await page.getByTestId('new-task-btn').click();
   await expect(page.getByText('空白对话（未关联事件）').first()).toBeVisible();
   await clickQuickTask(page, '生成灾情摘要');
   const card = page.getByTestId('agent-summon-card').last();

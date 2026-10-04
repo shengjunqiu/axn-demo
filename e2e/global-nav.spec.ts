@@ -4,36 +4,41 @@
  * 异步任务污染防护、刷新恢复、折叠移除、导航页可达。
  * 前置：playwright.config webServer = preview(4173)，需先 pnpm build。
  */
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-async function openNav(page: import('@playwright/test').Page, label: string) {
+async function openNav(page: Page, label: string) {
   await page.locator('.axn-gs-nav-item', { hasText: label }).first().click();
 }
 
-async function sendInChat(page: import('@playwright/test').Page, text: string) {
+/** 新建任务：改版后是侧栏置顶的实心按钮（不再是导航项）。 */
+async function newTask(page: Page) {
+  await page.getByTestId('new-task-btn').click();
+}
+
+async function sendInChat(page: Page, text: string) {
   await page.getByPlaceholder(/向安小能发送指令/).fill(text);
   await page.keyboard.press('Enter');
 }
 
 /** 打开“资源与态势”抽屉（资源/知识页签已按标注移除，改为对话任务卡触发的抽屉）。 */
-async function openResourceDrawer(page: import('@playwright/test').Page) {
+async function openResourceDrawer(page: Page) {
   await page.getByRole('button', { name: '查看资源与态势' }).first().click();
   await expect(page.locator('.ant-drawer', { hasText: '资源与态势（模拟）' })).toBeVisible();
 }
 
-async function closeDrawer(page: import('@playwright/test').Page) {
+async function closeDrawer(page: Page) {
   await page.keyboard.press('Escape');
   await expect(page.locator('.ant-drawer', { hasText: '资源与态势（模拟）' })).toBeHidden({ timeout: 5000 });
 }
 
 /** 执行资源查询并打开抽屉等待表格出现（表格仅在抽屉内渲染）。 */
-async function ensureResourceTable(page: import('@playwright/test').Page) {
+async function ensureResourceTable(page: Page) {
   await sendInChat(page, '查询周边救援资源');
   await openResourceDrawer(page);
   await expect(page.locator('table tr', { hasText: '一号工程应急救援队' }).first()).toBeVisible({ timeout: 30000 });
 }
 
-async function checkFirstCandidate(page: import('@playwright/test').Page) {
+async function checkFirstCandidate(page: Page) {
   await page.locator('table tr', { hasText: '一号工程应急救援队' }).first().locator('span.ant-checkbox').click();
   // 候选区以 Tag 呈现所选力量；出现一号队 Tag 即候选已生效
   await expect(page.locator('.axn-candidate-zone').getByText('一号工程应急救援队')).toBeVisible({ timeout: 10000 });
@@ -48,7 +53,7 @@ test.beforeEach(async ({ page }) => {
 
 test('1. 新建任务 → 直接创建空白对话并激活（无弹窗，标注 vibe_1790652706390）', async ({ page }) => {
   const before = await page.locator('.axn-gs-conversation').count();
-  await openNav(page, '新建任务');
+  await newTask(page);
   await page.waitForTimeout(400);
   const after = await page.locator('.axn-gs-conversation').count();
   expect(after).toBe(before + 1);
@@ -59,7 +64,7 @@ test('1. 新建任务 → 直接创建空白对话并激活（无弹窗，标注
 });
 
 test('2. 对话区内关联灾情 → 切换事件上下文与共享 session', async ({ page }) => {
-  await openNav(page, '新建任务');
+  await newTask(page);
   await page.getByTestId('chat-link-incident').click();
   await page.locator('.ant-select-item-option', { hasText: '清河段堤防险情' }).click();
   await page.waitForTimeout(500);
@@ -92,8 +97,9 @@ test('4. 收藏功能已按标注移除（无入口、无星标；删除入口�
   await expect(page.locator('.axn-gs-conv-action .anticon-star')).toHaveCount(0);
   await expect(page.locator('.axn-gs-conv-action [aria-label*="收藏"]')).toHaveCount(0);
   await expect(page.locator('.axn-gs-conv-favorite')).toHaveCount(0);
-  // 保留删除覆盖
-  await expect(first.locator('.axn-gs-conv-action .anticon-delete')).toHaveCount(1);
+  // 保留删除覆盖（图标已由 antd 迁到 lucide，故用可访问名断言，不依赖图标 class）
+  await expect(first.locator('.axn-gs-conv-actions button')).toHaveCount(1);
+  await expect(first.getByRole('button', { name: /^删除对话/ })).toHaveCount(1);
 });
 
 test('4b. 删除对话（Popconfirm 确认 → 条目移除 → active 切换）', async ({ page }) => {
@@ -101,8 +107,8 @@ test('4b. 删除对话（Popconfirm 确认 → 条目移除 → active 切换）
   const first = page.locator('.axn-gs-conversation').first();
   const firstTitle = await first.locator('.axn-gs-conv-title-text').textContent();
   await first.hover();
-  await first.locator('button', { hasText: '' }).filter({ has: page.locator('.anticon-delete') }).first().click();
-  await page.getByRole('button', { name: '删 除' }).click();
+  await first.getByRole('button', { name: /^删除对话/ }).click();
+  await page.getByRole('button', { name: /^删\s*除$/ }).click();
   await expect(page.locator('.axn-gs-conversation', { hasText: firstTitle ?? '' })).toHaveCount(0);
   expect(await page.locator('.axn-gs-conversation').count()).toBe(before - 1);
   // 激活态仍存在（切换到剩余最近会话）或全部删光

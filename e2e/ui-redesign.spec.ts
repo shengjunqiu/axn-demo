@@ -165,12 +165,23 @@ test('未保存编辑：关闭需确认，取消保留、放弃丢弃', async ({
   await expect(ws).toBeVisible();
   await expect(ws.getByRole('textbox', { name: '文书标题', exact: true })).toHaveValue('未保存的标题');
 
-  // 再关闭 → 放弃修改并关闭
+  // 再关闭 → 「关闭并保留修改」（关闭只收起工作区，不回滚工作副本）
   await page.getByTestId('workspace-close-btn').click();
-  await page.getByRole('button', { name: '放弃修改并关闭' }).click();
+  await page.getByRole('button', { name: '关闭并保留修改' }).click();
   await expect(ws).toHaveCount(0);
 
-  // 重新打开：未保存修改已丢弃（保存作用域未被污染）
+  // 重新打开：工作副本仍在（受保护，可继续编辑），未被回滚
+  await openFirstSample(page);
+  await expect(page.getByTestId('mock-dirty-note')).toBeVisible();
+  await expect(ws.getByRole('textbox', { name: '文书标题', exact: true })).toHaveValue('未保存的标题');
+
+  // 真正丢弃只发生在编辑器内的「放弃修改」
+  await ws.getByRole('button', { name: '放弃修改', exact: true }).click();
+  await expect(page.getByTestId('mock-dirty-note')).toHaveCount(0);
+  await page.getByTestId('workspace-close-btn').click();
+  await expect(ws).toHaveCount(0);
+
+  // 放弃后重开：修改已丢弃（保存作用域未被污染）
   await openFirstSample(page);
   await expect(page.getByTestId('mock-redhead-document')).not.toContainText('未保存的标题');
 });
@@ -206,13 +217,19 @@ test('未保存修改在导航、会话和关联事件切换时受到保护', as
   await page.getByRole('button', { name: '继续编辑' }).click();
   await expect(title).toHaveValue('保护中的工作副本');
   await page.locator('.axn-gs-nav-item', { hasText: '应急项目' }).click();
-  await page.getByRole('button', { name: '放弃修改并继续' }).click();
+  await page.getByRole('button', { name: /^继\s*续$/ }).click();
+  // 四条切换路径（导航 / 会话 / 关联事件 / 再导航）都只解除编辑态，不回滚工作副本
   await openFirstSample(page);
-  await page.getByRole('button', { name: '在线编辑', exact: true }).click();
-  await expect(title).not.toHaveValue('保护中的工作副本');
+  await expect(page.getByTestId('mock-dirty-note')).toBeVisible();
+  await expect(title).toHaveValue('保护中的工作副本');
+  // 真正丢弃只发生在编辑器内的「放弃修改」
+  await page.getByTestId('document-workspace').getByRole('button', { name: '放弃修改', exact: true }).click();
+  await expect(page.getByTestId('mock-dirty-note')).toHaveCount(0);
+  await page.getByTestId('workspace-close-btn').click();
+  await expect(page.getByTestId('document-workspace')).toHaveCount(0);
 });
 
-test('从聊天预览切换文书时取消保留编辑、确认放弃后切换', async ({ page }) => {
+test('从聊天预览切换文书时取消保留编辑、确认后切换（工作副本不丢弃）', async ({ page }) => {
   await page.goto('/');
   for (const name of ['生成值班日报', '生成应急要情']) {
     await clickQuickTask(page, name);
@@ -225,7 +242,7 @@ test('从聊天预览切换文书时取消保留编辑、确认放弃后切换',
   await page.getByRole('button', { name: '继续编辑' }).click();
   await expect(title).toHaveValue('切换前未保存标题');
   await page.getByRole('button', { name: '查看文书', exact: true }).first().click();
-  await page.getByRole('button', { name: '放弃修改并继续' }).click();
+  await page.getByRole('button', { name: '打开并保留修改' }).click();
   await expect(page.getByTestId('mock-redhead-document')).toContainText('防汛值守日报（新生成）');
   await expect(title).toHaveCount(0);
 });
