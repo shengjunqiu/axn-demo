@@ -8,6 +8,7 @@
  */
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { NAV_PATH } from './navRoutes';
 import {
   Bot,
   Clock,
@@ -56,6 +57,7 @@ export function ConversationSettingsPanel({ onDone }: { onDone?: () => void } = 
   const settings = useConversationStore((s) => s.settings);
   const updateSettings = useConversationStore((s) => s.updateSettings);
   const { message } = AntdApp.useApp();
+  const navigate = useNavigate();
   const items: { key: keyof ConversationSettings; label: string; desc: string }[] = [
     { key: 'openRecentOnStart', label: '默认进入最近会话', desc: '打开工作台时自动恢复上次的活跃会话' },
     { key: 'notifyTaskDone', label: '任务完成提醒', desc: '模拟任务完成时在会话列表更新状态' },
@@ -105,6 +107,8 @@ export function ConversationSettingsPanel({ onDone }: { onDone?: () => void } = 
           okButtonProps={{ danger: true }}
           onConfirm={() => {
             resetDemoData();
+            // 重置后导航也回到首页；URL 是唯一权威，所以这里显式跳转（store 不再回推 URL）。
+            navigate(NAV_PATH.assistant);
             message.success('已恢复为初始演示数据。');
             onDone?.();
           }}
@@ -170,6 +174,7 @@ export default function GlobalSidebar() {
       status: 'active',
     });
     selectConversation(conversation.id);
+    navigate(NAV_PATH.assistant);
     const nextScope =
       useSessionStore.getState().sessionByConversation[conversation.id] ?? conversation.id;
     setMode(nextScope, mode);
@@ -296,7 +301,12 @@ export default function GlobalSidebar() {
                   key={c.id}
                   conversation={c}
                   active={c.id === activeConversationId}
-                  onSelect={() => guardDirty('切换会话', () => selectConversation(c.id))}
+                  onSelect={() =>
+                    guardDirty('切换会话', () => {
+                      selectConversation(c.id);
+                      navigate(NAV_PATH.assistant);
+                    })
+                  }
                   onDelete={() => guardDirty('删除会话', () => deleteConversation(c.id))}
                 />
               ))}

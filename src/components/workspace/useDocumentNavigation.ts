@@ -1,22 +1,24 @@
 import { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { App } from 'antd';
-import { useConversationStore } from '@/store/conversationStore';
+import { NAV_PATH } from '@/components/nav/navRoutes';
 import { useActiveScope, useWorkspaceStore, type WorkspaceSelection } from '@/store/workspaceStore';
 
 /** 文书库与聊天产物共用的打开动作，保护当前未保存的工作副本。 */
 export function useDocumentNavigation() {
   const scope = useActiveScope();
   const { modal } = App.useApp();
+  const navigate = useNavigate();
   return useCallback((targetScope: string, selection: WorkspaceSelection) => {
     const workspace = useWorkspaceStore.getState();
     const current = workspace.selectionOf(scope);
     if (targetScope === scope && current?.kind === selection.kind && current.id === selection.id) {
-      useConversationStore.getState().setActiveNav('assistant');
+      navigate(NAV_PATH.assistant);
       return;
     }
     const open = () => {
       workspace.select(targetScope, selection);
-      useConversationStore.getState().setActiveNav('assistant');
+      navigate(NAV_PATH.assistant);
     };
     if (!workspace.isDirty(scope)) { open(); return; }
     modal.confirm({
@@ -27,5 +29,5 @@ export function useDocumentNavigation() {
       cancelText: '继续编辑',
       onOk: () => { workspace.setDirty(scope, false); workspace.close(scope); open(); },
     });
-  }, [modal, scope]);
+  }, [modal, navigate, scope]);
 }

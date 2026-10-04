@@ -9,6 +9,7 @@
  */
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button, Result, Space, Typography } from 'antd';
+import { NAV_PATH } from '@/components/nav/navRoutes';
 import { resetDemoData } from '@/store/resetDemo';
 
 interface ErrorBoundaryProps {
@@ -37,6 +38,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   private handleReset = (): void => {
     try {
       resetDemoData();
+      // 兜底页在 HashRouter 之外，用不了 useNavigate；重置后让 URL 也回到首页，
+      // 否则侧栏高亮（activeNav）会和实际页面不一致，也可能回到出错的那一页。
+      window.location.hash = NAV_PATH.assistant;
     } catch (resetError) {
       // 重置本身失败（例如持久化不可用）也照常留在兜底页，不要让恢复动作再抛一次。
       console.error('[anneng-demo] 重置演示数据失败。', resetError);

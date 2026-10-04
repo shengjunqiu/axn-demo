@@ -9,6 +9,8 @@ import { useDocumentNavigation } from './useDocumentNavigation';
  * 全部数据为模拟数据。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { NAV_PATH } from '@/components/nav/navRoutes';
 import { Button, Empty, Skeleton, Space, Spin, Tag, Tooltip, Typography, message, theme } from 'antd';
 import { useDocumentStore } from '@/store/documentStore';
 import { useDemoStore } from '@/store/demoStore';
@@ -119,6 +121,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
 
   /** 打开文书：显式切换到助理页并写入选择状态（库/对话预览共用同一入口，不触发重新生成）。 */
   const navigateDocument = useDocumentNavigation();
+  const navigate = useNavigate();
   const openDocument = useCallback(
     (next: { kind: 'mock'; id: string } | { kind: 'draft'; id: string }) => {
       navigateDocument(libraryScope, next);
@@ -128,14 +131,14 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
 
   const generateMock = useCallback(
     (code: string) => {
-      useConversationStore.getState().setActiveNav('assistant');
+      navigate(NAV_PATH.assistant);
       if (code === 'WORK_SUMMARY' && sessionId) {
         void generateWorkSummary(sessionId);
         return;
       }
       void useMockDocumentStore.getState().generate(libraryScope, code);
     },
-    [libraryScope, sessionId],
+    [libraryScope, navigate, sessionId],
   );
 
   const drafts = useMemo(

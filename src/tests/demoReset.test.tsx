@@ -5,6 +5,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App as AntdApp } from 'antd';
 import { fireEvent, render } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { ConversationSettingsPanel } from '@/components/nav/GlobalSidebar';
 import { resetDemoData } from '@/store/resetDemo';
 import { useConversationStore } from '@/store/conversationStore';
@@ -58,9 +59,12 @@ describe('演示数据重置', () => {
     dirtyAllStores();
     const onDone = vi.fn();
     const view = render(
-      <AntdApp>
-        <ConversationSettingsPanel onDone={onDone} />
-      </AntdApp>,
+      // 重置后要在路由里回到首页，所以面板现在依赖 Router 上下文。
+      <MemoryRouter>
+        <AntdApp>
+          <ConversationSettingsPanel onDone={onDone} />
+        </AntdApp>
+      </MemoryRouter>,
     );
 
     // 入口在设置面板底部；点击后需二次确认（防现场误触）。

@@ -5,8 +5,9 @@
  * 全部数据为模拟数据。
  */
 import { useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { App as AntdApp } from 'antd';
-import { useConversationStore } from '@/store/conversationStore';
+import { NAV_PATH } from '@/components/nav/navRoutes';
 import { useActiveScope, useWorkspaceStore } from '@/store/workspaceStore';
 import DocCenterPanel from './DocCenterPanel';
 import '../doc/doc.css';
@@ -14,6 +15,7 @@ import '../doc/doc.css';
 export default function DocumentWorkspace() {
   const scope = useActiveScope();
   const close = useWorkspaceStore((s) => s.close);
+  const navigate = useNavigate();
   const { modal } = AntdApp.useApp();
 
   /** 关闭文书：不带 token → 抑制最近一次自动打开标记，同一完成不再弹出。 */
@@ -42,7 +44,7 @@ export default function DocumentWorkspace() {
 
   const openLibrary = useCallback(() => {
     if (!useWorkspaceStore.getState().isDirty(scope)) {
-      useConversationStore.getState().setActiveNav('library');
+      navigate(NAV_PATH.library);
       return;
     }
     modal.confirm({
@@ -53,10 +55,10 @@ export default function DocumentWorkspace() {
       onOk: () => {
         useWorkspaceStore.getState().setDirty(scope, false);
         close(scope);
-        useConversationStore.getState().setActiveNav('library');
+        navigate(NAV_PATH.library);
       },
     });
-  }, [close, modal, scope]);
+  }, [close, modal, navigate, scope]);
 
   return (
     <div className="doc-workspace" data-testid="document-workspace-shell">

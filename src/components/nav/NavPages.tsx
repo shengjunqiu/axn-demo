@@ -18,6 +18,8 @@ import {
   Zap,
 } from 'lucide-react'
 import { Alert, Button, Card, Drawer, Empty, Input, Space, Tag, Timeline, Typography } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { NAV_PATH } from './navRoutes';
 import type { NavPage } from '@/domain/types';
 import { useConversationStore } from '@/store/conversationStore';
 import { knowledgeChunks } from '@/seed/scenario';
@@ -92,7 +94,7 @@ export function ProjectsPage() {
   const createConversation = useConversationStore((s) => s.createConversation);
   const conversations = useConversationStore((s) => s.conversations);
   const selectConversation = useConversationStore((s) => s.selectConversation);
-  const setActiveNav = useConversationStore((s) => s.setActiveNav);
+  const navigate = useNavigate();
 
   const enterWorkspace = (project: ProjectRow) => {
     // 优先进入项目关联的既有会话；不存在则新建
@@ -107,7 +109,7 @@ export function ProjectsPage() {
         summary: `${project.name} · 项目会话`,
       });
     }
-    setActiveNav('assistant');
+    navigate(NAV_PATH.assistant);
   };
 
   return (

@@ -9,33 +9,18 @@
  */
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Drawer } from 'antd';
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { useUrlNavSync } from '@/components/nav/navRoutes';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { useConversationStore } from '@/store/conversationStore';
 import { useActiveScope, useWorkspaceStore } from '@/store/workspaceStore';
-import type { NavPage } from '@/domain/types';
 import ChatPanel from '@/components/chat/ChatPanel';
 import GlobalSidebar from '@/components/nav/GlobalSidebar';
 import WorkspaceSync from '@/components/workspace/WorkspaceSync';
 
-// URL 路径 → NavPage 映射表（模块级常量，避免每次渲染重建）。
-const PATH_TO_NAV: Record<string, NavPage> = {
-  '/assistant': 'assistant',
-  '/library': 'library',
-  '/projects': 'projects',
-  '/agents': 'agents',
-  '/schedules': 'schedules',
-  '/knowledge': 'knowledge',
-};
-const NAV_TO_PATH: Record<NavPage, string> = {
-  assistant: '/assistant',
-  library: '/library',
-  projects: '/projects',
-  agents: '/agents',
-  schedules: '/schedules',
-  knowledge: '/knowledge',
-};
+// URL 路径 → NavPage 映射表与「URL → store」单向同步都放在 navRoutes.ts，
+// 路由表与代码内跳转共用同一套路径。
 
 /** 工作区抽屉中按需渲染的面板。 */
 const DocumentLibraryPage = lazy(() => import('@/components/workspace/DocumentLibraryPage'));
@@ -50,7 +35,6 @@ export type WorkspaceTab = 'resource' | 'knowledge';
 
 export default function AppRoot() {
   const storageWarning = useDemoStore((s) => s.storageWarning);
-  const activeNav = useConversationStore((s) => s.activeNav);
   const activeConversationId = useConversationStore((s) => s.activeConversationId);
   const conversations = useConversationStore((s) => s.conversations);
   const scope = useActiveScope();
@@ -62,28 +46,8 @@ export default function AppRoot() {
   // 资源/知识面板抽屉（由对话任务卡触发）
   const [panelDrawer, setPanelDrawer] = useState<'resource' | 'knowledge' | null>(null);
 
-  // ── react-router 双向同步 ──────────────────────────────────────
-  const location = useLocation();
-  const navigate = useNavigate();
-  const setActiveNav = useConversationStore((s) => s.setActiveNav);
-
-  // URL 变化（用户点击导航/前进/后退）→ 同步到 store。
-  useEffect(() => {
-    const page = PATH_TO_NAV[location.pathname];
-    if (page && page !== activeNav) {
-      setActiveNav(page);
-    }
-  }, [location.pathname, activeNav, setActiveNav]);
-
-  // store 中 activeNav 变化（createConversation / selectConversation 等）→ 同步到 URL。
-  // 使用 push 而非 replace，保留浏览器历史栈（让「从 library 新建后」能后退回去）。
-  useEffect(() => {
-    const target = NAV_TO_PATH[activeNav];
-    if (target && location.pathname !== target) {
-      navigate(target);
-    }
-  }, [activeNav, location.pathname, navigate]);
-  // ── 路由同步结束 ────────────────────────────────────────────────
+  // URL 是导航的唯一权威；store 的 activeNav 只跟着 URL 走，用来驱动侧栏高亮。
+  useUrlNavSync();
 
   // 刷新恢复：让业务上下文（事件/会话）对齐已持久化的 activeConversation
   useEffect(() => {
