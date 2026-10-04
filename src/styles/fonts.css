@@ -1,0 +1,37 @@
+/**
+ * Inter 字体：仅保留 latin 与 latin-ext 两个子集。
+ *
+ * 为什么不直接 import '@fontsource-variable/inter/index.css'：
+ * 它额外声明了 cyrillic / cyrillic-ext / greek / greek-ext / vietnamese 共 5 个子集。
+ * 中文产品永远用不到这些字形，但它们会被 Vite 全部复制进 dist（约 1.2MB），
+ * 是构建产物的纯噪音。此处只保留实际可能命中的两个子集。
+ *
+ * - unicode-range 从 Fontsource 原样复制，未做改动
+ * - url() 使用包说明符，交由 Vite 解析并加指纹
+ * - 字体只提供拉丁字形；中文由 global.css 的 font-family 栈回退到系统字体
+ * - font-display: swap 保证字体未就绪时先以回退字体渲染，不阻塞首屏
+ */
+
+/* inter-latin-ext-wght-normal */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* inter-latin-wght-normal */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}

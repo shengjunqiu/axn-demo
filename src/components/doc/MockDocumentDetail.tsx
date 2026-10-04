@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Input, message } from 'antd';
-import { FileTextOutlined } from '@ant-design/icons';
+import {
+  FileText,
+} from 'lucide-react'
 import { DOCUMENT_CATEGORIES, type MockDocument } from '@/seed/mockDocuments';
 import DocumentDetailToolbar from './DocumentDetailToolbar';
 
@@ -47,7 +49,7 @@ export default function MockDocumentDetail({ document, onClose, onOpenLibrary, o
         <div className="doc-document-signature"><p>应急管理</p><p>{document.date}</p></div>
         <div className="axn-redhead-foot"><span>报送：有关单位（模拟）</span><span>模拟样稿 · 仅供评估</span></div>
       </article>
-      <div className="doc-reading-footer"><FileTextOutlined /> {category} · 红头格式<span>{displayed.sections.reduce((count, section) => count + section.join('').length, displayed.title.length)} 字</span></div>
+      <div className="doc-reading-footer"><FileText /> {category} · 红头格式<span>{displayed.sections.reduce((count, section) => count + section.join('').length, displayed.title.length)} 字</span></div>
     </div>
   </div>;
 }

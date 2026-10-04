@@ -8,18 +8,18 @@
  */
 import { useCallback, useMemo, useState } from 'react';
 import {
-  AppstoreOutlined,
-  ClockCircleOutlined,
-  DeleteOutlined,
-  DingtalkOutlined,
-  ExperimentOutlined,
-  FileAddOutlined,
-  FolderOpenOutlined,
-  PlusOutlined,
-  RobotOutlined,
-  SearchOutlined,
-  SettingOutlined,
-} from '@ant-design/icons';
+  Bot,
+  Clock,
+  FilePlus,
+  FlaskConical,
+  FolderOpen,
+  LayoutGrid,
+  Plus,
+  Search,
+  Settings,
+  Sparkles,
+  Trash2,
+} from 'lucide-react'
 import { App as AntdApp, Button, Empty, Input, Modal, Popconfirm, Radio, Select, theme } from 'antd';
 import type { Conversation, ConversationSettings, NavPage } from '@/domain/types';
 import {
@@ -40,12 +40,12 @@ import './sidebar.css';
 type NavKey = NavPage;
 
 const NAV: { key: NavKey; label: string; icon: React.ReactNode }[] = [
-  { key: 'library', label: '文书库', icon: <FolderOpenOutlined /> },
-  { key: 'assistant', label: '智能助理', icon: <DingtalkOutlined /> },
-  { key: 'projects', label: '应急项目', icon: <AppstoreOutlined /> },
-  { key: 'agents', label: '智能体与 Skill', icon: <RobotOutlined /> },
-  { key: 'schedules', label: '定时任务', icon: <ClockCircleOutlined /> },
-  { key: 'knowledge', label: '知识库', icon: <ExperimentOutlined /> },
+  { key: 'library', label: '文书库', icon: <FolderOpen /> },
+  { key: 'assistant', label: '智能助理', icon: <Sparkles /> },
+  { key: 'projects', label: '应急项目', icon: <LayoutGrid /> },
+  { key: 'agents', label: '智能体与 Skill', icon: <Bot /> },
+  { key: 'schedules', label: '定时任务', icon: <Clock /> },
+  { key: 'knowledge', label: '知识库', icon: <FlaskConical /> },
 ];
 
 /** 对话与通知设置（轻量展示，需求 2.6）。 */
@@ -65,7 +65,7 @@ export function ConversationSettingsPanel() {
         return (
           <div key={item.key}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 13.5, fontWeight: 600, color: '#2a3444' }}>{item.label}</span>
+              <span style={{ fontSize: 'var(--fs-body)', fontWeight: 600, color: 'var(--nav-text)' }}>{item.label}</span>
               <Radio.Group
                 size="small"
                 value={settings[item.key] ? 'on' : 'off'}
@@ -78,11 +78,11 @@ export function ConversationSettingsPanel() {
                 <Radio.Button value="off">关</Radio.Button>
               </Radio.Group>
             </div>
-            <div style={{ fontSize: 12, color: '#8a94a6', marginTop: 4 }}>{item.desc}</div>
+            <div style={{ fontSize: 'var(--fs-body)', color: 'var(--nav-muted)', marginTop: 4 }}>{item.desc}</div>
           </div>
         );
       })}
-      <div style={{ fontSize: 12, color: '#a0a8b8' }}>
+      <div style={{ fontSize: 'var(--fs-body)', color: 'var(--nav-muted)' }}>
         以上均为模拟环境的轻量设置（模拟数据），不连接真实通知渠道。
       </div>
     </div>
@@ -179,14 +179,13 @@ export default function GlobalSidebar() {
       data-testid="global-sidebar"
       style={{
         '--nav-primary': token.colorPrimary,
-        '--nav-tint': token.colorPrimaryBg,
         '--nav-text': token.colorText,
         '--nav-muted': token.colorTextSecondary,
         '--nav-border': token.colorBorderSecondary,
         '--nav-surface': token.colorBgContainer,
-        '--nav-soft': '#f6f7f9',
+        '--nav-soft': token.colorFillAlter,
         '--nav-error': token.colorError,
-      } as React.CSSProperties}
+      }}
     >
       {/* 1. 品牌区（左上，保留安小能身份与模拟环境标识） */}
       <div className="axn-gs-brand">
@@ -197,7 +196,29 @@ export default function GlobalSidebar() {
         </span>
       </div>
 
-      {/* 2. 一级功能导航（含独立文书库） */}
+      {/* 2. 新建：主要动作置顶，紧跟品牌 */}
+      <div className="axn-gs-new">
+        <Button
+          className="axn-gs-new-btn axn-gs-new-btn--solid"
+          type="default"
+          icon={<FilePlus />}
+          onClick={() => guardDirty('新建任务', () => handleNew('work'))}
+          data-testid="new-task-btn"
+        >
+          新建任务
+        </Button>
+        <Button
+          className="axn-gs-new-btn axn-gs-new-btn--ghost"
+          type="default"
+          icon={<Plus />}
+          onClick={() => guardDirty('新建应急对话', () => handleNew('chat'))}
+          data-testid="new-conversation-btn"
+        >
+          新建应急对话
+        </Button>
+      </div>
+
+      {/* 3. 一级功能导航（含独立文书库） */}
       <nav className="axn-gs-nav" aria-label="全局功能导航">
         {NAV.map((item) => (
           <button
@@ -218,33 +239,11 @@ export default function GlobalSidebar() {
         ))}
       </nav>
 
-      {/* 3. 新建：一次操作各自决定实际模式 */}
-      <div className="axn-gs-new">
-        <Button
-          className="axn-gs-nav-item axn-gs-new-btn axn-gs-new-btn--solid"
-          type="default"
-          icon={<FileAddOutlined />}
-          onClick={() => guardDirty('新建任务', () => handleNew('work'))}
-          data-testid="new-task-btn"
-        >
-          新建任务
-        </Button>
-        <Button
-          className="axn-gs-new-btn"
-          type="default"
-          icon={<PlusOutlined />}
-          onClick={() => guardDirty('新建应急对话', () => handleNew('chat'))}
-          data-testid="new-conversation-btn"
-        >
-          新建应急对话
-        </Button>
-      </div>
-
       {/* 4. 对话搜索 */}
       <div className="axn-gs-search">
         <Input
           allowClear
-          prefix={<SearchOutlined style={{ color: '#a0a8b8' }} />}
+          prefix={<Search style={{ color: 'var(--axn-faint)' }} />}
           placeholder="搜索对话或事件"
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
@@ -293,7 +292,7 @@ export default function GlobalSidebar() {
           />
         </div>
         <button className="axn-gs-nav-item" onClick={() => setSettingsOpen(true)}>
-          <SettingOutlined />
+          <Settings />
           <span>对话与通知设置</span>
         </button>
       </div>
@@ -358,7 +357,7 @@ function ConversationRow({
               aria-label={`删除对话 ${conversation.title}`}
               onClick={(e) => e.stopPropagation()}
             >
-              <DeleteOutlined />
+              <Trash2 />
             </button>
           </Popconfirm>
         </div>

@@ -65,7 +65,7 @@ export default function KnowledgePanel() {
   );
 
   if (!session) {
-    return <Alert type="error" showIcon message="会话未初始化" description="请稍候或重置模拟环境后重试（模拟数据）。" />;
+    return <Alert type="error" showIcon title="会话未初始化" description="请稍候或重置模拟环境后重试（模拟数据）。" />;
   }
 
   const askProposal = () => {
@@ -125,10 +125,10 @@ export default function KnowledgePanel() {
               type="info"
               showIcon
               style={{ marginBottom: 10 }}
-              message="本建议由规则模拟生成，仅供评估，需人工审核确认后方可作为处置依据。"
+              title="本建议由规则模拟生成，仅供评估，需人工审核确认后方可作为处置依据。"
             />
             {proposalStale && <Alert type="warning" showIcon style={{ marginBottom: 10 }}
-              message="下列为原候选集合生成的历史建议，不能作为当前建议采纳。"
+              title="下列为原候选集合生成的历史建议，不能作为当前建议采纳。"
               action={<Button size="small" disabled={busy} onClick={askProposal}>重新生成建议</Button>} />}
             {proposalRecord.sections.map((section) => {
               const boundTeamNames = (section.bindingResourceIds ?? [])

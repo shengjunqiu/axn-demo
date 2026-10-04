@@ -108,7 +108,7 @@ export default function ResourcePanel() {
   );
 
   if (!session) {
-    return <Alert type="error" showIcon message="会话未初始化" description="请稍候或重置模拟环境后重试（模拟数据）。" />;
+    return <Alert type="error" showIcon title="会话未初始化" description="请稍候或重置模拟环境后重试（模拟数据）。" />;
   }
 
   const sortResults = (by: SortKey) => {

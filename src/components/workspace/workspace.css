@@ -11,7 +11,7 @@
   flex-wrap: wrap;
   gap: 8px;
   padding: 12px 16px 8px;
-  border-bottom: 1px solid #eef1f6;
+  border-bottom: 1px solid var(--axn-border);
 }
 
 .axn-resource-panel {
@@ -32,8 +32,8 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid #eef1f6;
-  background: #fbfcff;
+  border-top: 1px solid var(--axn-border);
+  background: var(--axn-soft);
 }
 
 /* ===== 派生汇总指标 ===== */
@@ -46,58 +46,67 @@
 .axn-derived-item {
   flex: 1 1 100px;
   min-width: 96px;
-  border: 1px solid #e5e9f0;
-  border-radius: 8px;
-  background: #fff;
+  border: 1px solid var(--axn-border);
+  border-radius: var(--radius-md);
+  background: var(--axn-surface);
   padding: 8px 12px;
 }
 
 .axn-derived-label {
-  font-size: 12px;
-  color: #8a97ac;
+  font-size: var(--fs-meta);
+  color: var(--axn-muted);
 }
 
 .axn-derived-value {
   font-size: 18px;
   font-weight: 600;
-  color: #1d3a5f;
+  color: var(--axn-text);
   font-variant-numeric: tabular-nums;
 }
 
 .axn-derived-unit {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-weight: 400;
-  color: #8a97ac;
+  color: var(--axn-muted);
 }
 
 /* 资源表格行选中（与 SVG 高亮联动） */
 .axn-row-selected > td {
-  background: #eaf3ff !important;
+  background: var(--axn-primary-bg) !important;
 }
 
 /* ===== 态势示意图 ===== */
 .axn-schematic {
   display: flex;
   flex-direction: column;
-  border: 1px solid #e5e9f0;
+  border: 1px solid var(--axn-border);
   border-radius: 10px;
-  background: #f8fbff;
+  background: var(--axn-soft);
   padding: 8px;
   margin: 12px 16px 0;
 }
 
 /* 态势图高度约束：不抢占表格区（否则表格被挤压为 0 高、候选区遮挡表格） */
 .axn-schematic svg {
+  display: block;
   width: 100%;
   height: min(300px, 32vh);
+  background: var(--axn-canvas);
+  border: 1px solid var(--axn-border);
+  border-radius: var(--radius-md);
+}
+
+/* 图元分组统一为可点击 */
+.axn-schematic svg g {
+  cursor: pointer;
 }
 
 .axn-legend-item {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  color: #5b6b84;
+  font-size: var(--fs-meta);
+  color: var(--axn-muted);
 }
 
 .axn-legend-swatch {
@@ -107,15 +116,24 @@
   border-radius: 3px;
 }
 
+/* 图例色块：与图元语义色一一对应（数据可视化调色板，非 UI 主题色） */
+.axn-legend-swatch--team { background: #52c41a; }
+.axn-legend-swatch--warehouse { background: var(--axn-primary); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.axn-legend-swatch--event { background: #ff8c1f; border-radius: 50%; }
+.axn-legend-swatch--station { background: #722ed1; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+
+.axn-legend { margin-top: 8px; }
+.axn-legend-text { font-size: var(--fs-meta); }
+
 /* ===== 建议与知识 ===== */
 .axn-proposal-empty {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  background: #fffbe6;
-  border: 1px dashed #ffe58f;
-  border-radius: 8px;
+  background: color-mix(in srgb, var(--axn-warning) 10%, var(--axn-surface));
+  border: 1px dashed color-mix(in srgb, var(--axn-warning) 25%, var(--axn-surface));
+  border-radius: var(--radius-md);
   padding: 8px 12px;
 }
 

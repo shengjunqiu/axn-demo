@@ -80,13 +80,13 @@ function IssueItem({ issue, locate, onAdopt }: IssueItemProps) {
       </Space>
       <div style={{ fontSize: 13, marginTop: 2 }}>{issue.message}</div>
       {issue.currentValue && (
-        <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>当前值：{issue.currentValue}</div>
+        <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--axn-muted)', marginTop: 4 }}>当前值：{issue.currentValue}</div>
       )}
       {(() => {
         const locateText = locate(issue);
         if (!locateText) return null;
         return (
-          <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>定位：{locateText}</div>
+          <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--axn-muted)', marginTop: 4 }}>定位：{locateText}</div>
         );
       })()}
       {issue.suggestionText && (
@@ -248,7 +248,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
               style={{ marginTop: 12 }}
               type="warning"
               showIcon
-              message="校核结果已过期"
+              title="校核结果已过期"
               description="工作副本在校核后又被修改，请重新校核后再提交送审。"
             />
           )}
@@ -257,7 +257,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
               style={{ marginTop: 12 }}
               type="success"
               showIcon
-              message="校核通过"
+              title="校核通过"
               description={`未发现问题（规则集 v${report.rulesetVersion}，模拟校核）。`}
             />
           )}
@@ -282,7 +282,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
           <IssueList title="阻断级（阻断签发）" items={blocks} locate={locate} onAdopt={handleAdopt} />
           <IssueList title="提示级" items={warnings} locate={locate} onAdopt={handleAdopt} />
           <IssueList title="说明" items={infos} locate={locate} onAdopt={handleAdopt} />
-          <div style={{ marginTop: 12, fontSize: 12, color: '#888' }}>
+          <div style={{ marginTop: 12, fontSize: 'var(--fs-meta)', color: 'var(--axn-muted)' }}>
             校核内容指纹：<Typography.Text code>{report.contentHash}</Typography.Text>
             {hashMismatch && (
               <>

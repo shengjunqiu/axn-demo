@@ -5,13 +5,13 @@
  */
 import { Alert, Button, Space, Tag, Tooltip, Typography } from 'antd';
 import {
-  CheckCircleFilled,
-  ClockCircleOutlined,
-  CloseCircleFilled,
-  LoadingOutlined,
-  MinusCircleFilled,
-  PauseCircleOutlined,
-} from '@ant-design/icons';
+  CircleCheck,
+  CircleMinus,
+  CirclePause,
+  CircleX,
+  Clock,
+  LoaderCircle,
+} from 'lucide-react'
 import type {
   AgentTask,
   DocumentLinkArtifact,
@@ -53,15 +53,15 @@ const STATUS_META: Record<TaskStatus, { label: string; color: string }> = {
 function StepIcon({ status }: { status: StepStatus }) {
   switch (status) {
     case 'completed':
-      return <CheckCircleFilled className="axn-tc-green" />;
+      return <CircleCheck className="axn-tc-green" />;
     case 'running':
-      return <LoadingOutlined spin className="axn-tc-blue" />;
+      return <LoaderCircle className="axn-tc-blue axn-spin" />;
     case 'failed':
-      return <CloseCircleFilled className="axn-tc-red" />;
+      return <CircleX className="axn-tc-red" />;
     case 'cancelled':
-      return <MinusCircleFilled className="axn-tc-muted" />;
+      return <CircleMinus className="axn-tc-muted" />;
     default:
-      return <ClockCircleOutlined className="axn-tc-muted" />;
+      return <Clock className="axn-tc-muted" />;
   }
 }
 
@@ -364,7 +364,7 @@ export default function TaskCard({ task, onOpenDrawer }: TaskCardProps) {
           )}
           {task.status === 'waiting_input' && (
             <Tooltip title="请在下方补录表单或对话中回复所需信息">
-              <Button size="small" icon={<PauseCircleOutlined />} disabled>
+              <Button size="small" icon={<CirclePause />} disabled>
                 等待输入
               </Button>
             </Tooltip>

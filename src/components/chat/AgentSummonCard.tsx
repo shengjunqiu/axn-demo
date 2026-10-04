@@ -1,6 +1,8 @@
 /** 智能体调用与真实任务状态同步，执行步骤和模拟结果在同一张卡中展示。 */
 import type { ReactNode } from 'react';
-import { RobotOutlined } from '@ant-design/icons';
+import {
+  Bot,
+} from 'lucide-react'
 import { Tag, Typography } from 'antd';
 import type { TaskStatus } from '@/domain/types';
 
@@ -14,7 +16,7 @@ export default function AgentSummonCard({ agentName, agentRole, action, status =
   const active = status === 'running' || status === 'queued';
   return <section className={`axn-agent-execution ${active ? 'is-running' : ''}`} data-testid="agent-summon-card" aria-live="polite">
     <div className="axn-agent-summon">
-      <span className="axn-agent-summon-avatar" aria-hidden><RobotOutlined /></span>
+      <span className="axn-agent-summon-avatar" aria-hidden><Bot /></span>
       <div className="axn-agent-summon-body">
         <div className="axn-agent-summon-head"><Typography.Text strong>{agentName}</Typography.Text><Tag color={active ? 'processing' : status === 'succeeded' ? 'blue' : status === 'failed' ? 'error' : 'default'}>{LABELS[status]}</Tag></div>
         <div className="axn-agent-summon-role"><Typography.Text type="secondary">{agentRole} · 模拟执行</Typography.Text></div>

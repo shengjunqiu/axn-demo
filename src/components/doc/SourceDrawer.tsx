@@ -65,13 +65,16 @@ export default function SourceDrawer({ factId, documentId, open, onClose }: Sour
       : '来源溯源';
 
   return (
-    <Drawer title={title} width={520} open={open} onClose={onClose} destroyOnHidden>
+    <Drawer
+      title={title}
+      size={520}
+      open={open} onClose={onClose} destroyOnHidden>
       {!factId && <Empty description="未选择正文数据（点击正文中的蓝色数据芯片查看来源）" />}
       {factId && !resolved && !derived && (
         <Alert
           type="error"
           showIcon
-          message="来源无法解析"
+          title="来源无法解析"
           description={`绑定标识 ${factId} 在本文书范围内无法解析，可能来源缺失或不属于本文书授权范围。校核会以阻断级问题提示（模拟数据）。`}
         />
       )}
@@ -88,7 +91,7 @@ export default function SourceDrawer({ factId, documentId, open, onClose }: Sour
               style={{ marginBottom: 12 }}
               type="warning"
               showIcon
-              message="该数据处于待核实状态"
+              title="该数据处于待核实状态"
               description="签发前请通过电话或其他渠道人工复核（边界说明）。"
             />
           )}

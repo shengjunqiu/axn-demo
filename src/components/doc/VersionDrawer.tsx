@@ -197,7 +197,7 @@ export default function VersionDrawer({ documentId, open, onClose }: VersionDraw
   return (
     <Drawer
       title={draft ? `版本历史 · ${draft.title}` : '版本历史'}
-      width={760}
+      size={760}
       open={open}
       onClose={onClose}
       destroyOnHidden
@@ -210,7 +210,7 @@ export default function VersionDrawer({ documentId, open, onClose }: VersionDraw
             type="info"
             showIcon
             style={{ marginBottom: 12 }}
-            message="版本说明（模拟）"
+            title="版本说明（模拟）"
             description="保存/提交/签发都会形成不可变版本快照；导出与打印严格基于所选版本的冻结来源快照渲染，监测数据更新不会影响已存版本。"
           />
 
@@ -228,7 +228,7 @@ export default function VersionDrawer({ documentId, open, onClose }: VersionDraw
             <div
               key={rev.revisionId}
               className="doc-card"
-              style={{ marginBottom: 12, borderColor: rev.signedRecord ? '#b7eb8f' : undefined }}
+              style={{ marginBottom: 12, borderColor: rev.signedRecord ? 'color-mix(in srgb, var(--axn-success) 40%, var(--axn-surface))' : undefined }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                 <Space size={8} wrap>
@@ -249,7 +249,7 @@ export default function VersionDrawer({ documentId, open, onClose }: VersionDraw
               <div style={{ fontSize: 13, marginTop: 4 }}>
                 变更说明：{rev.changeNote ?? '（无）'}
               </div>
-              <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
+              <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--axn-muted)', marginTop: 4 }}>
                 内容指纹：<Typography.Text code>{rev.contentHash}</Typography.Text>
                 {rev.signedRecord && (
                   <>
@@ -293,7 +293,7 @@ export default function VersionDrawer({ documentId, open, onClose }: VersionDraw
               )}
               {baseRev && targetRev && baseRev.revisionId !== targetRev.revisionId && (
                 <>
-                  <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
+                  <div style={{ fontSize: 'var(--fs-body)', color: 'var(--axn-muted)', marginBottom: 8 }}>
                     {baseRev.displayVersion} → {targetRev.displayVersion}：绿色为新增内容、红色为删除内容（行级简化对比，模拟）。
                   </div>
                   <DiffView rows={diffRows} />

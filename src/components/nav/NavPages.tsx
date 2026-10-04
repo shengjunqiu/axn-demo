@@ -4,19 +4,19 @@
  */
 import { useMemo, useState } from 'react';
 import {
-  ApartmentOutlined,
-  BookOutlined,
-  BulbOutlined,
-  ClockCircleOutlined,
-  FileProtectOutlined,
-  FireOutlined,
-  FundProjectionScreenOutlined,
-  HeartOutlined,
-  SearchOutlined,
-  SafetyCertificateOutlined,
-  ThunderboltOutlined,
-  ToolOutlined,
-} from '@ant-design/icons';
+  BookOpen,
+  Clock,
+  FileCheck,
+  Flame,
+  Heart,
+  Lightbulb,
+  Network,
+  Presentation,
+  Search,
+  ShieldCheck,
+  Wrench,
+  Zap,
+} from 'lucide-react'
 import { Alert, Button, Card, Drawer, Empty, Input, Space, Tag, Timeline, Typography } from 'antd';
 import type { NavPage } from '@/domain/types';
 import { useConversationStore } from '@/store/conversationStore';
@@ -116,7 +116,7 @@ export function ProjectsPage() {
       <div className="axn-np-col">
         {PROJECTS.map((p) => (
           <Card key={p.projectId} size="small" styles={{ body: { display: 'flex', alignItems: 'center', gap: 14 } }}>
-            <FundProjectionScreenOutlined className="axn-np-icon-huge" />
+            <Presentation className="axn-np-icon-huge" />
             <div className="axn-np-flex-1">
               <div className="axn-np-flex-row">
                 <Typography.Text strong className="axn-np-fs14">
@@ -129,7 +129,7 @@ export function ProjectsPage() {
               <div className="axn-np-meta-nowrap">
                 {p.desc}
               </div>
-              <div className="axn-np-meta2">
+              <div className="axn-np-meta">
                 更新 {p.updatedAt} · 负责人 {p.owner} · 关联会话「{p.conversationTitle}」
               </div>
             </div>
@@ -159,7 +159,7 @@ const AGENTS: AgentCard[] = [
   {
     agentId: 'agent-situation',
     name: '态势感知智能体',
-    icon: <FireOutlined />,
+    icon: <Flame />,
     desc: '汇聚监测与人工补录数据，形成事件态势摘要，标注待核实信息。',
     tasks: ['生成灾情摘要', '水位变化跟踪', '影响范围梳理'],
     skills: ['灾情摘要生成', '数据待核实标注'],
@@ -168,7 +168,7 @@ const AGENTS: AgentCard[] = [
   {
     agentId: 'agent-resource',
     name: '资源管理智能体',
-    icon: <ToolOutlined />,
+    icon: <Wrench />,
     desc: '查询周边救援资源，按距离/预计到达排序，维护候选力量池。',
     tasks: ['查询周边救援资源', '候选力量增删', '资源汇总统计'],
     skills: ['资源检索', 'ETA 排序问答', '派生汇总'],
@@ -177,7 +177,7 @@ const AGENTS: AgentCard[] = [
   {
     agentId: 'agent-plan',
     name: '救援方案生成智能体',
-    icon: <BulbOutlined />,
+    icon: <Lightbulb />,
     desc: '基于态势与资源生成处置建议与依据引用，建议等级需人工确认。',
     tasks: ['形成处置建议', '预置力量方案', '风险提示'],
     skills: ['建议生成', '知识引用', '建议等级标注'],
@@ -186,7 +186,7 @@ const AGENTS: AgentCard[] = [
   {
     agentId: 'agent-doc',
     name: '文书生成智能体',
-    icon: <FileProtectOutlined />,
+    icon: <FileCheck />,
     desc: '按模板生成应急要情/值班日报草稿，支持事实绑定与来源溯源。',
     tasks: ['生成应急要情', '生成值班日报', '缺项补录'],
     skills: ['模板填充', '事实芯片', '来源锚点'],
@@ -195,7 +195,7 @@ const AGENTS: AgentCard[] = [
   {
     agentId: 'agent-eval',
     name: '效果评估智能体',
-    icon: <SafetyCertificateOutlined />,
+    icon: <ShieldCheck />,
     desc: '对比救援目标与实际进展，评估响应时效、人员救助和处置成效，识别剩余风险。',
     tasks: ['评估救援效果', '阶段成效复盘', '改进建议'],
     skills: ['目标完成率分析', '响应时效评估', '剩余风险识别'],
@@ -272,7 +272,7 @@ export function SchedulesPage() {
       <div className="axn-np-col">
         {SCHEDULES.map((s) => (
           <Card key={s.scheduleId} size="small" styles={{ body: { display: 'flex', alignItems: 'center', gap: 14 } }}>
-            <ClockCircleOutlined className="axn-np-icon-med" />
+            <Clock className="axn-np-icon-med" />
             <div className="axn-np-flex-1">
               <Space size={8}>
                 <Typography.Text strong className="axn-np-fs13">
@@ -304,12 +304,12 @@ interface KnowledgeLibrary {
 }
 
 const LIBRARIES: KnowledgeLibrary[] = [
-  { libraryId: 'lib-plan', name: '预案库', icon: <FileProtectOutlined />, desc: '应急预案与处置流程文档', count: 12 },
-  { libraryId: 'lib-law', name: '法规规范库', icon: <BookOutlined />, desc: '相关法规、规程与标准条目', count: 8 },
-  { libraryId: 'lib-case', name: '历史案例库', icon: <ApartmentOutlined />, desc: '历史事件处置案例与复盘', count: 15 },
-  { libraryId: 'lib-tactic', name: '救援技战法', icon: <ThunderboltOutlined />, desc: '典型场景技战法与操作要点', count: 10 },
-  { libraryId: 'lib-equipment', name: '装备知识库', icon: <ToolOutlined />, desc: '救援装备参数与使用要点', count: 22 },
-  { libraryId: 'lib-team', name: '队伍能力库', icon: <HeartOutlined />, desc: '救援队伍能力档案与擅长场景', count: 6 },
+  { libraryId: 'lib-plan', name: '预案库', icon: <FileCheck />, desc: '应急预案与处置流程文档', count: 12 },
+  { libraryId: 'lib-law', name: '法规规范库', icon: <BookOpen />, desc: '相关法规、规程与标准条目', count: 8 },
+  { libraryId: 'lib-case', name: '历史案例库', icon: <Network />, desc: '历史事件处置案例与复盘', count: 15 },
+  { libraryId: 'lib-tactic', name: '救援技战法', icon: <Zap />, desc: '典型场景技战法与操作要点', count: 10 },
+  { libraryId: 'lib-equipment', name: '装备知识库', icon: <Wrench />, desc: '救援装备参数与使用要点', count: 22 },
+  { libraryId: 'lib-team', name: '队伍能力库', icon: <Heart />, desc: '救援队伍能力档案与擅长场景', count: 6 },
 ];
 
 export function KnowledgePage() {
@@ -331,7 +331,7 @@ export function KnowledgePage() {
             <Input
               allowClear
               size="small"
-              prefix={<SearchOutlined className="axn-np-icon-gray" />}
+              prefix={<Search className="axn-np-icon-gray" />}
               placeholder="搜索知识库"
               className="axn-np-search"
               value={keyword}
@@ -386,7 +386,7 @@ export function KnowledgePage() {
                   <div>
                     <div className="axn-np-k-title">{k.title}</div>
                     <div className="axn-np-meta">{k.content}</div>
-                    <div className="axn-np-meta2">
+                    <div className="axn-np-meta">
                       {k.category} · {k.version} · {k.sourceLabel}
                     </div>
                     <div className="axn-np-k-notice">{k.notice}</div>

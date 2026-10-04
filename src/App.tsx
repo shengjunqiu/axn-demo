@@ -91,10 +91,10 @@ export default function AppRoot() {
         )}
       </main>
 
-      <Drawer title="资源与态势（模拟）" width={760} open={panelDrawer === 'resource'} onClose={() => setPanelDrawer(null)} destroyOnHidden>
+      <Drawer title="资源与态势（模拟）" size={760} open={panelDrawer === 'resource'} onClose={() => setPanelDrawer(null)} destroyOnHidden>
         <Suspense>{panelDrawer === 'resource' && <ResourcePanel />}</Suspense>
       </Drawer>
-      <Drawer title="建议与知识（模拟）" width={560} open={panelDrawer === 'knowledge'} onClose={() => setPanelDrawer(null)} destroyOnHidden>
+      <Drawer title="建议与知识（模拟）" size={560} open={panelDrawer === 'knowledge'} onClose={() => setPanelDrawer(null)} destroyOnHidden>
         <Suspense>{panelDrawer === 'knowledge' && <KnowledgePanel />}</Suspense>
       </Drawer>
       <Suspense><PrintView /></Suspense>

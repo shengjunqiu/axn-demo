@@ -1,127 +1,127 @@
 /* 对话工作区：统一气泡、任务过程和结果的视觉层级。 */
 .axn-chat-page { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--chat-surface); color: var(--chat-text); }
-.axn-chat-head { display: flex; align-items: center; min-height: 48px; padding: 0 8px; border-bottom: 1px solid var(--chat-line); background: var(--chat-surface); }
+.axn-chat-head { display: flex; align-items: center; min-height: 48px; padding: 0 8px; border-bottom: 1px solid var(--chat-border); background: var(--chat-surface); }
 .axn-collapse-btn { margin-left: 4px; color: var(--chat-muted); font-size: 16px; }
 .axn-chat-head-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .axn-chat-head .ant-select-selector { border-radius: 6px; }
-.axn-chat-avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: var(--chat-tint); color: var(--chat-primary); font-size: 13px; font-weight: 600; flex-shrink: 0; }
-.axn-message-list { padding: 24px max(24px, calc((100% - 880px) / 2)); scrollbar-width: thin; scrollbar-color: var(--chat-line) transparent; background: #fff; flex: 1; min-height: 0; }
+.axn-chat-avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: var(--chat-primary-bg); color: var(--chat-primary); font-size: 13px; font-weight: 600; flex-shrink: 0; }
+.axn-message-list { padding: 24px max(24px, calc((100% - 880px) / 2)); scrollbar-width: thin; scrollbar-color: var(--chat-border) transparent; background: var(--chat-surface); flex: 1; min-height: 0; }
 .axn-message-list .ant-bubble-content { overflow-wrap: anywhere; }
-.axn-chat-page .ant-tag { border-radius: 5px; font-size: 12px; line-height: 18px; padding-inline: 6px; margin-inline-end: 0; }
-.axn-chat-page .ant-btn-sm { font-size: 12px; border-radius: 6px; box-shadow: none; }
-.axn-chat-page .ant-alert { border-radius: 8px; padding: 12px 12px; line-height: 1.7; font-size: 12px; }
-.axn-chat-page .ant-alert-message, .axn-chat-page .ant-alert-title { font-size: 12px; font-weight: 500; }
-.axn-chat-page .ant-alert-description { font-size: 12px; color: var(--chat-muted); }
+.axn-chat-page .ant-tag { border-radius: 5px; font-size: var(--fs-meta); line-height: 18px; padding-inline: 6px; margin-inline-end: 0; }
+.axn-chat-page .ant-btn-sm { font-size: var(--fs-meta); border-radius: 6px; box-shadow: none; }
+.axn-chat-page .ant-alert { border-radius: var(--radius-md); padding: 12px 12px; line-height: var(--lh-normal); font-size: var(--fs-body); }
+.axn-chat-page .ant-alert-message, .axn-chat-page .ant-alert-title { font-size: var(--fs-body); font-weight: 500; }
+.axn-chat-page .ant-alert-description { font-size: var(--fs-body); color: var(--chat-muted); }
 
 /* 首页：宽敞居中欢迎 + 知识库引导问题。 */
 .axn-home { display: flex; flex-direction: column; align-items: center; }
 .axn-chat-empty-compact { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 40px 24px; text-align: center; color: var(--chat-muted); }
-.axn-chat-empty-compact > .anticon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 16px; color: var(--chat-muted); background: var(--chat-soft); font-size: 22px; }
+.axn-chat-empty-compact > .anticon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: var(--radius-xl); color: var(--chat-muted); background: var(--chat-soft); font-size: 22px; }
 .axn-chat-empty-compact .ant-typography { margin: 8px 0 0; }
 .axn-home-inner { width: 100%; max-width: 880px; padding: 0 10px; box-sizing: border-box; margin: 60px 0 0; }
 .axn-home-hero { text-align: center; margin: 0 0 34px; padding-top: clamp(26px, 7vh, 76px); }
 .axn-home-greeting { font-size: 13px; display: block; }
-.axn-home-title.ant-typography { font-size: clamp(28px, 2.7vw, 38px); color: #17191d; margin: 0 0 12px; letter-spacing: -.8px; }
-.axn-home-copy.ant-typography { margin: 0 0 18px; font-size: 14px; line-height: 1.9; color: var(--chat-muted); }
+.axn-home-title.ant-typography { font-size: clamp(28px, 2.7vw, 38px); color: var(--chat-text); margin: 0 0 12px; letter-spacing: -.8px; }
+.axn-home-copy.ant-typography { margin: 0 0 18px; font-size: 14px; line-height: var(--lh-relaxed); color: var(--chat-muted); }
 .axn-home-block { display: flex; flex-direction: column; gap: 4px; }
 .axn-question-list { list-style: none; margin: 12px 0 16px; padding: 0; display: grid; gap: 8px; max-width: 740px; }
-.axn-question-item { display: block; position: relative; width: 100%; text-align: left; border: 1px solid var(--chat-line); background: var(--chat-soft); color: var(--chat-text); border-radius: 8px; padding: 8px 24px 8px 12px; font: inherit; font-size: 12px; line-height: 1.7; cursor: pointer; transition: border-color .15s, background .15s; }
+.axn-question-item { display: block; position: relative; width: 100%; text-align: left; border: 1px solid var(--chat-border); background: var(--chat-soft); color: var(--chat-text); border-radius: var(--radius-md); padding: 8px 24px 8px 12px; font: inherit; font-size: var(--fs-body); line-height: var(--lh-normal); cursor: pointer; transition: border-color .15s, background .15s; }
 .axn-question-item::after { content: '›'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--chat-muted); }
-.axn-question-item:hover:not(:disabled) { background: var(--chat-tint); border-color: color-mix(in srgb, var(--chat-primary) 24%, var(--chat-line)); color: var(--chat-primary); }
+.axn-question-item:hover:not(:disabled) { background: var(--chat-primary-bg); border-color: color-mix(in srgb, var(--chat-primary) 24%, var(--chat-border)); color: var(--chat-primary); }
 .axn-question-item:disabled { color: var(--chat-muted); cursor: not-allowed; opacity: .6; }
-.axn-question-item:focus-visible { outline: 2px solid var(--chat-primary); outline-offset: 2px; }
+.axn-question-item:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
 .axn-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 8px; border: 0; background: transparent; flex: 0 0 auto; min-width: 0; max-width: 880px; margin: 0 0 8px; width: 100%; box-sizing: border-box; }
 .axn-more-tasks { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
 .axn-more-tasks .ant-btn { justify-content: flex-start; font-size: 13px; }
 .axn-assistant--split .axn-composer { padding: 12px 12px 12px; }
-.axn-chip.ant-btn { height: 27px; padding: 0 9px; border: 1px solid var(--chat-line); background: var(--chat-surface); color: var(--chat-muted); border-radius: 7px; font-size: 12px; box-shadow: none; transition: background .16s, border-color .16s; }
-.axn-chip.ant-btn:hover:not(:disabled) { background: var(--chat-tint); color: var(--chat-primary); border-color: color-mix(in srgb, var(--chat-primary) 25%, var(--chat-line)); }
+.axn-chip.ant-btn { height: 27px; padding: 0 9px; border: 1px solid var(--chat-border); background: var(--chat-surface); color: var(--chat-muted); border-radius: 7px; font-size: var(--fs-meta); box-shadow: none; transition: background .16s, border-color .16s; }
+.axn-chip.ant-btn:hover:not(:disabled) { background: var(--chat-primary-bg); color: var(--chat-primary); border-color: color-mix(in srgb, var(--chat-primary) 25%, var(--chat-border)); }
 .axn-chip:disabled { opacity: .5; }
 /* 会话头：默认空白，收起侧边栏按钮居左。
    圆角一体化输入区：快捷 chips 在输入框下方，发送按钮在右下角，与 Sender 共享一层外框；宽屏下限制正文宽度保持留白。 */
 .axn-composer { padding: 12px 16px 16px; display: flex; justify-content: center; }
-.axn-composer-shell { width: 100%; max-width: 880px; display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1px solid var(--chat-line); border-radius: 16px; background: var(--chat-surface); box-shadow: 0 4px 16px rgba(25,45,75,.05); }
-.axn-composer-shell:focus-within { border-color: color-mix(in srgb, var(--chat-primary) 45%, var(--chat-line)); }
+.axn-composer-shell { width: 100%; max-width: 880px; display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1px solid var(--chat-border); border-radius: var(--radius-xl); background: var(--chat-surface); box-shadow: var(--shadow-md); transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
+.axn-composer-shell:focus-within { border-color: color-mix(in srgb, var(--chat-primary) 45%, var(--chat-border)); }
 .axn-composer-shell .ant-sender { border: 0; background: transparent; box-shadow: none; }
 .axn-composer-shell .ant-sender:focus-within { box-shadow: none; }
 .axn-composer-footer { display: flex; align-items: flex-end; gap: 8px; }
 .axn-send-btn { flex-shrink: 0; }
-.axn-clarification { padding: 8px 16px; border-top: 1px solid var(--chat-line); }
+.axn-clarification { padding: 8px 16px; border-top: 1px solid var(--chat-border); }
 .axn-clarification .ant-space-compact { margin-top: 12px; }
 
 /* 任务卡与步骤时间线：名称、输出各占一行，长文本不挤压状态图标。 */
-.axn-task-card { display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--chat-line); border-radius: 12px; background: var(--chat-surface); padding: 16px; max-width: 100%; min-width: 0; box-sizing: border-box; }
+.axn-task-card { display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--chat-border); border-radius: var(--radius-lg); background: var(--chat-surface); padding: 16px; max-width: 100%; min-width: 0; box-sizing: border-box; }
 .axn-task-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .axn-task-head > .ant-space { row-gap: 8px; }
-.axn-task-steps { list-style: none; margin: 0; padding: 12px; display: flex; flex-direction: column; gap: 12px; background: var(--chat-soft); border-radius: 8px; }
-.axn-task-step { position: relative; display: grid; grid-template-columns: 15px minmax(0,1fr) auto; column-gap: 8px; row-gap: 4px; min-height: 22px; font-size: 12px; line-height: 1.65; }
-.axn-task-step:not(:last-child)::after { content: ''; position: absolute; left: 6px; top: 21px; bottom: -10px; border-left: 1px solid var(--chat-line); }
+.axn-task-steps { list-style: none; margin: 0; padding: 12px; display: flex; flex-direction: column; gap: 12px; background: var(--chat-soft); border-radius: var(--radius-md); }
+.axn-task-step { position: relative; display: grid; grid-template-columns: 15px minmax(0,1fr) auto; column-gap: 8px; row-gap: 4px; min-height: 22px; font-size: var(--fs-body); line-height: var(--lh-normal); }
+.axn-task-step:not(:last-child)::after { content: ''; position: absolute; left: 6px; top: 21px; bottom: -10px; border-left: 1px solid var(--chat-border); }
 .axn-task-step > .anticon { grid-column: 1; grid-row: 1; margin-top: 3px; font-size: 13px; z-index: 1; }
 .axn-step-name { grid-column: 2; grid-row: 1; color: var(--chat-text); font-weight: 500; overflow-wrap: anywhere; }
-.axn-step-output { grid-column: 2; color: var(--chat-muted); font-size: 12px; overflow-wrap: anywhere; }
-.axn-step-time { grid-column: 3; grid-row: 1; font-size: 12px; color: var(--chat-muted); font-variant-numeric: tabular-nums; }
+.axn-step-output { grid-column: 2; color: var(--chat-muted); font-size: var(--fs-body); overflow-wrap: anywhere; }
+.axn-step-time { grid-column: 3; grid-row: 1; font-size: var(--fs-meta); color: var(--chat-muted); font-variant-numeric: tabular-nums; }
 .axn-step-pending .axn-step-name, .axn-step-cancelled .axn-step-name { color: var(--chat-muted); }
 .axn-step-running .axn-step-name { color: var(--chat-primary); }
 .axn-step-failed .axn-step-name { color: var(--chat-error); }
-.axn-task-answer { background: var(--chat-surface); padding: 2px 0; font-size: 14px; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
-.axn-task-card--failed { border-color: color-mix(in srgb, var(--chat-error) 25%, var(--chat-line)); }
+.axn-task-answer { background: var(--chat-surface); padding: 2px 0; font-size: 14px; line-height: var(--lh-relaxed); white-space: pre-wrap; overflow-wrap: anywhere; }
+.axn-task-card--failed { border-color: color-mix(in srgb, var(--chat-error) 25%, var(--chat-border)); }
 
 /* 摘要、资源、知识引用和建议。 */
-.axn-artifact { border: 1px solid var(--chat-line); border-radius: 9px; background: var(--chat-surface); overflow: hidden; min-width: 0; }
-.axn-artifact-row { display: grid; grid-template-columns: 76px minmax(0,1fr); gap: 12px; padding: 12px 12px; font-size: 12px; line-height: 1.8; border-bottom: 1px solid var(--chat-line); }
+.axn-artifact { border: 1px solid var(--chat-border); border-radius: 9px; background: var(--chat-surface); overflow: hidden; min-width: 0; }
+.axn-artifact-row { display: grid; grid-template-columns: 76px minmax(0,1fr); gap: 12px; padding: 12px 12px; font-size: var(--fs-body); line-height: var(--lh-relaxed); border-bottom: 1px solid var(--chat-border); }
 .axn-artifact-row:last-child { border-bottom: 0; }
 .axn-artifact-label { color: var(--chat-muted); }
 .axn-artifact-value { color: var(--chat-text); text-align: left; overflow-wrap: anywhere; min-width: 0; }
-.axn-artifact-foot { padding: 12px 12px; color: var(--chat-muted); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; background: var(--chat-soft); }
+.axn-artifact-foot { padding: 12px 12px; color: var(--chat-muted); font-size: var(--fs-body); line-height: var(--lh-normal); overflow-wrap: anywhere; background: var(--chat-soft); }
 .axn-artifact > .ant-btn { margin: 12px 12px 12px; }
 .axn-artifact > .ant-alert { margin: 12px; }
 .axn-resource-results { display: grid; gap: 8px; padding: 12px; }
-.axn-resource-result, .axn-document-result { padding: 12px; border: 1px solid var(--chat-line); border-radius: 8px; background: var(--chat-soft); }
-.axn-resource-result { display: flex; flex-direction: column; gap: 8px; font-size: 12px; line-height: 1.75; }
-.axn-resource-result .ant-typography { font-size: 12px; overflow-wrap: anywhere; }
+.axn-resource-result, .axn-document-result { padding: 12px; border: 1px solid var(--chat-border); border-radius: var(--radius-md); background: var(--chat-soft); }
+.axn-resource-result { display: flex; flex-direction: column; gap: 8px; font-size: var(--fs-body); line-height: var(--lh-normal); }
+.axn-resource-result .ant-typography { font-size: var(--fs-body); overflow-wrap: anywhere; }
 .axn-artifact > .axn-resource-result { margin: 12px; }
 .axn-qa { padding: 12px; }
 .axn-qa .axn-artifact-row { padding-inline: 0; }
-.axn-qa-source { padding: 12px 12px; border-radius: 7px; background: var(--chat-soft); border-left: 2px solid color-mix(in srgb, var(--chat-primary) 35%, var(--chat-line)); overflow-wrap: anywhere; }
+.axn-qa-source { padding: 12px 12px; border-radius: 7px; background: var(--chat-soft); border-left: 2px solid color-mix(in srgb, var(--chat-primary) 35%, var(--chat-border)); overflow-wrap: anywhere; }
 .axn-qa-source > div + div { margin-top: 8px; }
 
 /* 智能体身份与任务形成一张连续卡片。 */
-.axn-agent-execution { border: 1px solid var(--chat-line); border-radius: 12px; overflow: hidden; background: var(--chat-surface); box-shadow: 0 2px 8px rgba(25,45,75,.025); }
+.axn-agent-execution { border: 1px solid var(--chat-border); border-radius: var(--radius-lg); overflow: hidden; background: var(--chat-surface); box-shadow: var(--shadow-sm); }
 .axn-agent-summon { display: flex; gap: 12px; align-items: flex-start; padding: 16px; background: var(--chat-surface); width: 100%; box-sizing: border-box; }
-.axn-agent-summon-avatar { position: relative; flex-shrink: 0; width: 32px; height: 32px; border-radius: 10px; background: var(--chat-tint); color: var(--chat-primary); display: grid; place-items: center; font-size: 17px; }
-.is-running .axn-agent-summon-avatar::after { content: ''; position: absolute; inset: -3px; border-radius: 12px; border: 1px solid var(--chat-primary); animation: axn-summon-pulse 1.8s ease-out infinite; }
+.axn-agent-summon-avatar { position: relative; flex-shrink: 0; width: 32px; height: 32px; border-radius: 10px; background: var(--chat-primary-bg); color: var(--chat-primary); display: grid; place-items: center; font-size: 17px; }
+.is-running .axn-agent-summon-avatar::after { content: ''; position: absolute; inset: -3px; border-radius: var(--radius-lg); border: 1px solid var(--chat-primary); animation: axn-summon-pulse 1.8s var(--ease-out)-out infinite; }
 @keyframes axn-summon-pulse { 0% { transform: scale(.95); opacity: .35; } 100% { transform: scale(1.15); opacity: 0; } }
 .axn-agent-summon-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .axn-agent-summon-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .axn-agent-summon-head > .ant-typography { font-size: 14px; }
-.axn-agent-summon-role .ant-typography { font-size: 12px; line-height: 1.6; }
-.axn-agent-summon-action .ant-typography { font-size: 12px; line-height: 1.75; color: var(--chat-muted); overflow-wrap: anywhere; }
-.axn-agent-execution > .axn-task-card { border: 0; border-top: 1px solid var(--chat-line); border-radius: 0; margin: 0; }
+.axn-agent-summon-role .ant-typography { font-size: var(--fs-meta); line-height: var(--lh-normal); }
+.axn-agent-summon-action .ant-typography { font-size: var(--fs-body); line-height: var(--lh-normal); color: var(--chat-muted); overflow-wrap: anywhere; }
+.axn-agent-execution > .axn-task-card { border: 0; border-top: 1px solid var(--chat-border); border-radius: 0; margin: 0; }
 
 /* 文书生成过程、要素摘要与文书预览。 */
-.axn-document-workflow { padding: 16px; border: 1px solid var(--chat-line); border-radius: 12px; background: var(--chat-surface); box-shadow: 0 2px 8px rgba(25,45,75,.025); }
+.axn-document-workflow { padding: 16px; border: 1px solid var(--chat-border); border-radius: var(--radius-lg); background: var(--chat-surface); box-shadow: var(--shadow-sm); }
 .axn-document-workflow-head { margin-bottom: 8px; }
 .axn-document-workflow-head .anticon { color: var(--chat-primary); }
-.axn-document-workflow > .ant-typography { font-size: 12px; margin-bottom: 16px; }
+.axn-document-workflow > .ant-typography { font-size: var(--fs-body); margin-bottom: 16px; }
 .axn-document-workflow .ant-steps { margin-bottom: 16px; }
-.axn-document-workflow .ant-steps-item-title { font-size: 12px; font-weight: 500; }
-.axn-document-workflow .ant-steps-item-description { font-size: 12px; line-height: 1.75; }
-.axn-document-elements { margin: 12px 0; padding: 4px 12px; font-size: 12px; border: 1px solid var(--chat-line); border-radius: 8px; background: var(--chat-soft); }
-.axn-document-elements > div { display: grid; grid-template-columns: 60px minmax(0,1fr); gap: 8px; padding: 8px 0; line-height: 1.7; }
-.axn-document-elements > div + div { border-top: 1px solid var(--chat-line); }
-.axn-document-elements dt { color: var(--chat-muted); font-size: 12px; }
+.axn-document-workflow .ant-steps-item-title { font-size: var(--fs-meta); font-weight: 500; }
+.axn-document-workflow .ant-steps-item-description { font-size: var(--fs-body); line-height: var(--lh-normal); }
+.axn-document-elements { margin: 12px 0; padding: 4px 12px; font-size: var(--fs-body); border: 1px solid var(--chat-border); border-radius: var(--radius-md); background: var(--chat-soft); }
+.axn-document-elements > div { display: grid; grid-template-columns: 60px minmax(0,1fr); gap: 8px; padding: 8px 0; line-height: var(--lh-normal); }
+.axn-document-elements > div + div { border-top: 1px solid var(--chat-border); }
+.axn-document-elements dt { color: var(--chat-muted); font-size: var(--fs-meta); }
 .axn-document-elements dd { margin: 0; overflow-wrap: anywhere; color: var(--chat-text); }
 .axn-document-result { margin: 16px 0; }
-.axn-document-result .ant-typography { margin-bottom: 8px; font-size: 12px; line-height: 1.8; }
+.axn-document-result .ant-typography { margin-bottom: 8px; font-size: var(--fs-body); line-height: var(--lh-relaxed); }
 .axn-document-result > .ant-typography:first-child { display: block; }
-.axn-document-workflow-footer { padding-top: 12px; border-top: 1px solid var(--chat-line); width: 100%; }
-.axn-document-workflow-footer .ant-typography { font-size: 12px; }
+.axn-document-workflow-footer { padding-top: 12px; border-top: 1px solid var(--chat-border); width: 100%; }
+.axn-document-workflow-footer .ant-typography { font-size: var(--fs-body); }
 .axn-document-workflow-footer .anticon { color: var(--chat-success); }
 @media (prefers-reduced-motion: reduce) { .is-running .axn-agent-summon-avatar::after { animation: none; } .axn-question-item, .axn-chip { transition: none; } }
 
 .axn-summary-collection { display: grid; gap: 12px; margin: 16px 0; }
-.axn-summary-round { padding: 12px 16px; border: 1px solid var(--ant-color-border-secondary, #e8edf3); border-radius: 10px; background: var(--ant-color-fill-quaternary, #fafbfd); }
-.axn-summary-round .ant-typography { line-height: 1.8; }
+.axn-summary-round { padding: 12px 16px; border: 1px solid var(--chat-border); border-radius: 10px; background: var(--chat-soft); }
+.axn-summary-round .ant-typography { line-height: var(--lh-relaxed); }
 .axn-summary-round .ant-typography + .ant-typography { margin: 8px 0 0; }
 .axn-summary-input { display: grid; gap: 12px; margin-top: 12px; }
 .axn-summary-input > .ant-btn { justify-self: start; }
@@ -131,27 +131,27 @@
 .axn-tc-mb4 { margin-bottom: 4px; }
 .axn-tc-ml6 { margin-left: 8px; }
 .axn-tc-m-6-0 { margin: 8px 0; }
-.axn-tc-heading { margin: 8px 0 4px; font-weight: 600; line-height: 1.6; }
-.axn-tc-divider { border-top: 1px dashed #d9dfe8; padding-top: 8px; margin-top: 8px; }
+.axn-tc-heading { margin: 8px 0 4px; font-weight: 600; line-height: var(--lh-normal); }
+.axn-tc-divider { border-top: 1px dashed var(--chat-border); padding-top: 8px; margin-top: 8px; }
 
 /* TaskCard 字体 */
-.axn-tc-fs12 { font-size: 12px; }
+.axn-tc-fs12 { font-size: var(--fs-meta); }
 .axn-tc-fs13 { font-size: 13px; }
 .axn-tc-pre { white-space: pre-wrap; font-size: 13px; }
-.axn-tc-fs12-lh16 { font-size: 12px; line-height: 1.6; }
-.axn-tc-body { margin: 8px 0; font-size: 12px; line-height: 1.6; }
-.axn-tc-tag-sm { margin-inline-end: 4px; font-size: 12px; }
+.axn-tc-fs12-lh16 { font-size: var(--fs-meta); line-height: var(--lh-normal); }
+.axn-tc-body { margin: 8px 0; font-size: var(--fs-body); line-height: var(--lh-normal); }
+.axn-tc-tag-sm { margin-inline-end: 4px; font-size: var(--fs-meta); }
 
-/* TaskCard 图标颜色 */
-.axn-tc-green { color: #52c41a; }
-.axn-tc-blue { color: #1d6ff2; }
-.axn-tc-red { color: #ff4d4f; }
-.axn-tc-muted { color: #bfbfbf; }
-.axn-tc-gray { color: #666; }
+/* TaskCard 图标颜色（非文本图形，需 ≥3:1；.axn-tc-gray 是文本，需 ≥4.5:1） */
+.axn-tc-green { color: var(--chat-success); }
+.axn-tc-blue { color: var(--chat-primary); }
+.axn-tc-red { color: var(--chat-error); }
+.axn-tc-muted { color: var(--chat-faint); }
+.axn-tc-gray { color: var(--chat-muted); }
 
 /* ChatPanel 工具类 */
 .axn-cp-title { font-size: 14px; flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .axn-cp-compact { width: 100%; margin-top: 8px; }
 .axn-cp-chips-wrap { display: flex; justify-content: center; padding: 0 16px; width: 100%; box-sizing: border-box; }
 .axn-cp-select-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.axn-cp-select { min-width: 100px; font-size: 12px; }
+.axn-cp-select { min-width: 100px; font-size: var(--fs-meta); }

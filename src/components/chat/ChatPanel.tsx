@@ -7,7 +7,12 @@ import { generateWorkSummary, submitWorkSummaryImprovement } from '@/services/wo
  * 本界面为模拟数据演示（规则意图识别，不接真实大模型）。
  */
 import { useEffect, useMemo, useState } from 'react';
-import { DownOutlined, MenuFoldOutlined, MenuUnfoldOutlined, MessageOutlined } from '@ant-design/icons';
+import {
+  ChevronDown,
+  MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from 'lucide-react'
 import { Alert, App as AntdApp, Button, Input, Popover, Select, Space, Tag, Tooltip, Typography, theme } from 'antd';
 import { Bubble, Sender } from '@ant-design/x';
 import type { BubbleItemType } from '@ant-design/x';
@@ -248,7 +253,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
           key: m.messageId,
           role: 'system',
           content: m.text ?? '',
-          styles: { content: { fontSize: 12, color: '#8c8c8c' } },
+          styles: { content: { fontSize: 'var(--fs-body)', color: 'var(--chat-muted)' } },
         };
       }
       return { key: m.messageId, role: 'ai', content: m.text ?? '', avatar: AVATAR };
@@ -258,14 +263,14 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   const hasMessages = items.length > 0;
 
   return (
-    <div className="axn-chat-page" style={{ '--chat-primary': token.colorPrimary, '--chat-tint': token.colorPrimaryBg, '--chat-line': token.colorBorderSecondary, '--chat-muted': token.colorTextSecondary, '--chat-text': token.colorText, '--chat-surface': token.colorBgContainer, '--chat-soft': token.colorFillAlter, '--chat-success': token.colorSuccess, '--chat-error': token.colorError } as React.CSSProperties}>
+    <div className="axn-chat-page" style={{ '--chat-primary': token.colorPrimary, '--chat-primary-bg': token.colorPrimaryBg, '--chat-border': token.colorBorderSecondary, '--chat-muted': token.colorTextSecondary, '--chat-faint': token.colorTextTertiary, '--chat-text': token.colorText, '--chat-surface': token.colorBgContainer, '--chat-soft': token.colorFillAlter, '--chat-warning': token.colorWarning, '--chat-success': token.colorSuccess, '--chat-error': token.colorError }}>
           {/* 会话头：左侧收起侧边栏 + 标题 */}
       <div className="axn-chat-head">
         <div className="axn-chat-head-row">
           <Button
             type="text"
             className="axn-collapse-btn"
-            icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            icon={sidebarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
             onClick={toggleSidebar}
             aria-label={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
           />
@@ -291,7 +296,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             user: {
               placement: 'end',
               variant: 'filled',
-              styles: { content: { background: token.colorPrimary, color: '#fff', borderRadius: '14px 14px 4px 14px', padding: '11px 15px', lineHeight: 1.8, fontSize: 13, overflowWrap: 'anywhere' } },
+              styles: { content: { background: token.colorPrimary, color: token.colorTextLightSolid, borderRadius: '14px 14px 4px 14px', padding: '11px 15px', lineHeight: 1.8, fontSize: 13, overflowWrap: 'anywhere' } },
             },
             system: { placement: 'start', variant: 'borderless' },
             task: {
@@ -307,7 +312,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         />
       ) : compact ? (
         <div className="axn-chat-empty-compact" data-testid="split-chat-empty">
-          <MessageOutlined />
+          <MessageSquare />
           <Typography.Title level={5}>围绕这份文书继续讨论</Typography.Title>
           <Typography.Text type="secondary">可以补充资料、发起任务，或在右侧编辑文书。</Typography.Text>
         </div>
@@ -418,7 +423,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             aria-expanded={moreOpen}
             disabled={!session || busy}
           >
-            更多任务 <DownOutlined />
+            更多任务 <ChevronDown />
           </Button>
         </Popover>
       </div>

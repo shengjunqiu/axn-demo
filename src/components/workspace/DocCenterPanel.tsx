@@ -27,16 +27,16 @@ import DocumentDetailToolbar from '@/components/doc/DocumentDetailToolbar';
 import DocumentEditor from '@/components/doc/DocumentEditor';
 import { flattenRuns } from '@/services/contentRuns';
 import {
-  AlertOutlined,
-  BarChartOutlined,
-  CalendarOutlined,
-  FileTextOutlined,
-  InboxOutlined,
-  PlusOutlined,
-  RightOutlined,
-  RobotOutlined,
-  TeamOutlined,
-} from '@ant-design/icons';
+  Bot,
+  Calendar,
+  ChartColumn,
+  ChevronRight,
+  FileText,
+  Inbox,
+  Plus,
+  TriangleAlert,
+  Users,
+} from 'lucide-react'
 import VersionDrawer from '@/components/doc/VersionDrawer';
 import SourceDrawer from '@/components/doc/SourceDrawer';
 import { ValidationStatusTag, runValidationForDocument } from '@/components/doc/ValidationPanel';
@@ -280,7 +280,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
               <ValidationStatusTag status={draft.validation.status} />
               {draft.freshness === 'stale' && <Tag color="orange">快照已过期</Tag>}
             </Space>
-            <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+            <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--doc-muted)', marginTop: 4 }}>
               {templateByCode.get(draft.templateCode)?.name ?? draft.templateCode} ·{' '}
               {draft.scopeKind === 'event' ? '事件' : `班次范围：${shiftEventIds(draft.shiftId ?? '').join('、')}`} · 当前版本：
               {activeRev ? activeRev.displayVersion : '未保存版本'} · 更新于 {fmtTime(draft.updatedAt)} · ID {draft.documentId}
@@ -345,14 +345,14 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
           </Space>
         </div>
         {report && (
-          <div style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
+          <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--doc-muted)', marginTop: 8 }}>
             最近校核：{report.issues.length === 0 ? '无问题' : `${report.issues.length} 条问题（阻断 ${report.issues.filter((i) => i.level === 'block').length} / 提示 ${report.issues.filter((i) => i.level === 'warning').length}）`}{' '}
             · 校核时间 {fmtTime(report.checkedAt)}
             {report.contentHash !== draft.working.contentHash && ' · 校核后内容已变更，需重新校核'}
           </div>
         )}
         {activeRev?.signedRecord && (
-          <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+          <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--doc-muted)', marginTop: 4 }}>
             签发人 {activeRev.signedRecord.signedByActorName} · {fmtTime(activeRev.signedRecord.performedAt)} ·{' '}
             {activeRev.signedRecord.note}
           </div>
@@ -397,17 +397,17 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
       data-testid={view === 'library' ? 'document-library' : 'document-workspace'}
       style={{
         '--doc-primary': token.colorPrimary,
-        '--doc-hover': token.colorPrimaryBg,
+        '--doc-primary-bg': token.colorPrimaryBg,
         '--doc-muted': token.colorTextSecondary,
         '--doc-border': token.colorBorderSecondary,
         '--doc-surface': token.colorBgContainer,
         '--doc-canvas': token.colorBgLayout,
         '--doc-text': token.colorText,
         '--doc-radius': `${token.borderRadiusLG}px`,
-      } as React.CSSProperties}
+      }}
     >
       {view === 'library' && <header className="doc-agent-header">
-        <span className="doc-agent-avatar"><RobotOutlined /></span>
+        <span className="doc-agent-avatar"><Bot /></span>
         <div className="doc-agent-heading"><h2>文书库</h2><p>规范成文，让每一份文书清晰有据</p></div>
         <Tag className="doc-demo-badge">模拟</Tag>
       </header>}
@@ -461,7 +461,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
           <>
           <DocumentDetailToolbar title="文书工作区" onBack={onClose} onOpenLibrary={onOpenLibrary} previewExports={false} />
           <div className="doc-center-empty">
-            <InboxOutlined />
+            <Inbox />
             <Typography.Title level={5}>尚未打开文书</Typography.Title>
             <Typography.Text type="secondary">
               从左侧对话预览、任务产物或「文书库」打开文书后，将在此处显示。
@@ -483,7 +483,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
               <section className="doc-category" key={category.code}>
                 <div className="doc-library-row">
                   <span className={`doc-category-icon doc-category-icon--${category.code}`}>
-                    {category.code === 'DUTY_DAILY' ? <CalendarOutlined /> : category.code === 'EMERGENCY_BRIEF' ? <AlertOutlined /> : category.code === 'MEETING_MINUTES' ? <TeamOutlined /> : <BarChartOutlined />}
+                    {category.code === 'DUTY_DAILY' ? <Calendar /> : category.code === 'EMERGENCY_BRIEF' ? <TriangleAlert /> : category.code === 'MEETING_MINUTES' ? <Users /> : <ChartColumn />}
                   </span>
                   <span className="doc-library-copy">
                     <strong>{category.name}</strong>
@@ -492,7 +492,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
                   <Button
                     className="doc-create-button"
                     size="small"
-                    icon={<PlusOutlined />}
+                    icon={<Plus />}
                     aria-label={`生成${category.name}`}
                     onClick={() => generateMock(category.code)}
                   >
@@ -502,12 +502,12 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
                 <div className="doc-category-items">
                   {mockDocuments.filter((doc) => doc.code === category.code).map((doc) => (
                     <button className="doc-sample-row" key={doc.id} onClick={() => openDocument({ kind: 'mock', id: doc.id })}>
-                      <span className="doc-file-mark"><FileTextOutlined /></span>
+                      <span className="doc-file-mark"><FileText /></span>
                       <span className="doc-file-copy">
                         <span>{doc.title}</span>
                         <small>{doc.date}<span className="doc-file-status">模拟稿</span></small>
                       </span>
-                      <RightOutlined className="doc-file-arrow" />
+                      <ChevronRight className="doc-file-arrow" />
                     </button>
                   ))}
                 </div>

@@ -7,8 +7,127 @@ body,
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+  /* 分两层：Inter 负责拉丁字形（x-height 更大、字距更紧，为屏幕小字号设计），
+   * 后面的系统字体负责中文 —— Inter 不含任何 CJK 字形，中文必然逐字回退。
+   *
+   * 中文这一层必须逐个平台点名，不能只写 sans-serif：
+   * 在 Linux 上 sans-serif 解析到 Liberation Sans（无 CJK），
+   * 中文要靠 fontconfig 二次回退才落到 Noto Sans CJK，结果不可预期。
+   * 点名后三个平台的黑体均为已知且带 Medium 字重，--fw-medium 才不会被合成加粗。
+   *
+   * Inter 缺失时（离线、加载失败）整条栈退化为原系统字体，无副作用。 */
+  font-family: 'Inter Variable',
+    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans CJK SC', 'Source Han Sans SC', 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
+  font-optical-sizing: auto;
+  /* 表格、时间戳、编号、KPI 数字对齐 —— 切换数值时不会左右跳动 */
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== 设计系统变量 =====
+ * 基础颜色令牌（--axn-primary / text / muted / …）由 main.tsx 在运行时从 theme.ts 注入 :root，
+ * 全局可用（包括 portal 渲染的 Drawer / Modal 内容）。此处只放尺度常量与由令牌派生的
+ * 深档文字色 —— 不出现任何字面色值，换主题只改 theme.ts。 */
+:root {
+  /* 阴影色（匹配 Deep Ocean Blue 冷调） */
+  --shadow-rgb: 15, 35, 65;
+
+  /* 深档文字色：同类浅色底上的正文专用。
+   * 主色 #1A5CFF 在白底 5.23:1，但在 colorPrimaryBg 底上只有 3.64:1（12px 正文不合格）；
+   * 掺黑后（实测）主色 7.3:1 / 警示 5.1:1 / 成功 6.5:1 / 错误 6.9:1，均满足 AA 正文。 */
+  --axn-primary-text: color-mix(in srgb, var(--axn-primary) 72%, #000);
+  --axn-warning-text: color-mix(in srgb, var(--axn-warning) 68%, #000);
+  --axn-success-text: color-mix(in srgb, var(--axn-success) 72%, #000);
+  --axn-error-text: color-mix(in srgb, var(--axn-error) 72%, #000);
+
+  /* 字号尺度：12px 仅用于标签/元信息；正文一律 ≥13px */
+  --fs-caption: 11px;
+  --fs-meta: 12px;
+  --fs-body: 13px;
+  --fs-lead: 14px;
+
+  /* 圆角系统 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* 圆角嵌套：内层 = 外层 − padding。
+   * 12px 容器配 8px padding，内层用 4px 才同心；否则圆角看起来「不平行」。 */
+  --radius-nest-sm: 2px;
+  --radius-nest-md: 4px;
+  --radius-nest-lg: 6px;
+  --radius-nest-xl: 8px;
+
+  /* ===== 动效系统 =====
+   * ease / linear 是浏览器默认曲线：起步迟滞、收尾突然，是「没设计过」的强信号。
+   * expo-out 起步快、收尾极缓，产生物理减速感。 */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --dur-instant: 80ms;
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 260ms;
+
+  /* 组合过渡：所有过渡都应引用这三个，禁止裸写 ease */
+  --transition-fast: var(--dur-fast) var(--ease-out);
+  --transition-normal: var(--dur-base) var(--ease-out);
+  --transition-slow: var(--dur-slow) var(--ease-out);
+
+  /* ===== 行高尺度 =====
+   * 原来全站散落 12 种行高（1.35 / 1.4 / 1.45 / 1.5 / 1.6 / 1.7 / 1.75 / 1.8 / 1.9 / 2 / 2.1
+   * + 20px / 19px / 18px 的 chip 药丸高度）。收敛为 5 档语义，chip 高度不属排版行高，保持不动。
+   * 中文需要比拉丁文更大的行高，故 relaxed 与 document 两档偏松。 */
+  --lh-tight: 1.35; /* 标题、单行大字 */
+  --lh-snug: 1.5; /* 控件、标签、单行 UI */
+  --lh-normal: 1.65; /* UI 正文（多行） */
+  --lh-relaxed: 1.9; /* 中文长文、聊天正文 */
+  --lh-document: 2.1; /* 公文正文（配首行缩进 2em） */
+
+  /* ===== 层次系统：多层阴影 =====
+   * 真实物体有近影（接触）+ 远影（环境）。单层阴影永远显得平。
+   * 透明度保持极低（.04–.10），层次靠「叠加」而非「加深」。 */
+  --shadow-xs: 0 1px 2px rgba(var(--shadow-rgb), .04);
+  --shadow-sm: 0 1px 2px rgba(var(--shadow-rgb), .04), 0 2px 6px rgba(var(--shadow-rgb), .05);
+  --shadow-md: 0 2px 4px rgba(var(--shadow-rgb), .04), 0 8px 24px rgba(var(--shadow-rgb), .07);
+  --shadow-lg: 0 4px 8px rgba(var(--shadow-rgb), .05), 0 16px 40px rgba(var(--shadow-rgb), .1);
+  --shadow-primary: 0 1px 2px rgba(var(--shadow-rgb), .06),
+    0 2px 8px color-mix(in srgb, var(--axn-primary) 24%, transparent);
+
+  /* 公文纸专用：暖色阴影，与 --shadow-rgb 的冷调体系刻意区分（纸张质感） */
+  --shadow-paper: 0 1px 2px rgba(60, 50, 30, .05), 0 10px 28px rgba(60, 50, 30, .09);
+
+  /* 焦点环：2px 实线 + 2px 留白，全站统一。
+   * 用 outline 而非 box-shadow —— 这套系统给大量元素加了 elevation 阴影，
+   * box-shadow 焦点环会被 hover 阴影覆盖，二者必然冲突。 */
+  --focus-ring: 2px solid color-mix(in srgb, var(--axn-primary) 60%, var(--axn-surface));
+  --focus-offset: 2px;
+}
+
+/* ===== 图标衔接：lucide-react ← @ant-design/icons =====
+ * 全站图标已由 @ant-design/icons 迁移至 lucide-react。
+ * antd 原生 .anticon 的契约是：display:inline-flex + vertical-align:-0.125em + 1em 尺寸
+ * （见 antd/dist/reset.css）。这里对 svg.lucide 复刻同一契约，保证内联基线与尺寸零位移。
+ * 另：antd 图标的 `spin` prop 在 Lucide 无对应，统一改用 .axn-spin 工具类。 */
+svg.lucide {
+  display: inline-flex;
+  align-items: center;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+}
+
+.axn-spin {
+  animation: axn-icon-spin 1s linear infinite;
+}
+
+@keyframes axn-icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ===== 新版外壳：260px 中性侧栏 + 宽敞白色主区（无全宽业务页头） ===== */
@@ -17,8 +136,8 @@ body {
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: #fff;
-  --shell-line: #e9edf3;
+  background: var(--axn-surface);
+  --shell-line: var(--axn-border);
 }
 
 .axn-shell-sidebar {
@@ -35,16 +154,17 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #fff;
+  background: var(--axn-surface);
 }
 
+/* 存储告警条：警示色浅底 + 同族深档文字 */
 .axn-shell-warning {
   flex-shrink: 0;
-  background: #fffbe6;
-  border-bottom: 1px solid #ffe58f;
+  background: color-mix(in srgb, var(--axn-warning) 10%, var(--axn-surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--axn-warning) 25%, var(--axn-surface));
   padding: 8px 16px;
-  font-size: 12px;
-  color: #874d00;
+  font-size: var(--fs-body);
+  color: var(--axn-warning-text);
 }
 
 /* 助理区：默认宽栏（对话），打开文书写后为两列；<=1000px 时文书占满主区 */
@@ -68,7 +188,7 @@ body {
 
 .axn-workspace-pane {
   border-left: 1px solid var(--shell-line);
-  background: #fbfcfe;
+  background: var(--axn-soft);
   display: flex;
   flex-direction: column;
 }
@@ -106,19 +226,19 @@ body {
   padding: 0 6px;
   margin: 0 2px;
   border-radius: 4px;
-  background: #e8f0fe;
-  color: #1d5fd2;
-  border: 1px solid #c4d9fb;
-  font-size: 12px;
+  background: var(--axn-primary-bg);
+  color: var(--axn-primary-text);
+  border: 1px solid color-mix(in srgb, var(--axn-primary) 30%, var(--axn-surface));
+  font-size: var(--fs-meta);
   line-height: 20px;
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
 }
 .fact-chip--missing {
-  background: #fff1f0;
-  color: #d4380d;
-  border-color: #ffccc7;
+  background: color-mix(in srgb, var(--axn-error) 8%, var(--axn-surface));
+  color: var(--axn-error-text);
+  border-color: color-mix(in srgb, var(--axn-error) 28%, var(--axn-surface));
 }
 
 /* 派生值芯片 */
@@ -127,10 +247,10 @@ body {
   padding: 0 6px;
   margin: 0 2px;
   border-radius: 4px;
-  background: #f0f5ff;
-  color: #2a4fb8;
-  border: 1px dashed #adc6ff;
-  font-size: 12px;
+  background: var(--axn-soft);
+  color: var(--axn-primary-text);
+  border: 1px dashed color-mix(in srgb, var(--axn-primary) 35%, var(--axn-surface));
+  font-size: var(--fs-meta);
   line-height: 20px;
 }
 
@@ -155,7 +275,7 @@ body {
     background: #fff;
     color: #000;
     font-size: 14px;
-    line-height: 1.9;
+    line-height: var(--lh-relaxed);
   }
   .print-root .print-doc-title {
     text-align: center;
@@ -166,7 +286,7 @@ body {
   .print-root .print-doc-meta {
     text-align: center;
     color: #444;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     margin-bottom: 16px;
   }
   .print-root h3.print-section-title {
@@ -180,9 +300,9 @@ body {
   }
   .print-root .print-footer {
     margin-top: 28px;
-    color: #666;
-    font-size: 12px;
-    border-top: 1px solid #ddd;
+    color: var(--axn-muted);
+    font-size: var(--fs-meta);
+    border-top: 1px solid var(--axn-border);
     padding-top: 8px;
   }
 }
@@ -200,6 +320,6 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d3d9e3;
+  background: color-mix(in srgb, var(--axn-muted) 40%, var(--axn-surface));
   border-radius: 4px;
 }
