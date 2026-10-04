@@ -7,6 +7,7 @@ import { generateWorkSummary, submitWorkSummaryImprovement } from '@/services/wo
  * 本界面为模拟数据演示（规则意图识别，不接真实大模型）。
  */
 import { useEffect, useMemo, useState } from 'react';
+import { useSessionTasks } from '@/hooks/useSessionTasks';
 import {
   ChevronDown,
   MessageSquare,
@@ -61,7 +62,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   );
   const activeConversationId = activeConversation?.id ?? null;
   const session = useSessionStore((s) => s.sessions[s.sessionByConversation[activeConversationId ?? ''] ?? '']);
-  const tasks = useSessionStore((s) => s.tasks);
+  const tasks = useSessionTasks(session);
   const scope = useActiveScope();
 
   const [input, setInput] = useState('');

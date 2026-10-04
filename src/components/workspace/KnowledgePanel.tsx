@@ -4,6 +4,7 @@
  * 无候选力量时“拟预置力量”小节显示占位说明（候选 ≠ 已调派）。全部为模拟数据。
  */
 import { useMemo } from 'react';
+import { useSessionTasks } from '@/hooks/useSessionTasks';
 import { Alert, Button, Card, Empty, Space, Tag, Typography } from 'antd';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
@@ -17,7 +18,7 @@ const { Text, Paragraph } = Typography;
 export default function KnowledgePanel() {
   const currentEventId = useDemoStore((s) => s.currentEventId);
   const session = useSessionStore((s) => s.sessions[s.sessionByEvent[currentEventId] ?? '']);
-  const tasks = useSessionStore((s) => s.tasks);
+  const tasks = useSessionTasks(session);
   // 展示优先级：已采纳建议 > 本会话最近生成的建议（生成后即使未采纳也可查看/采纳）
   const latestProposalId = useMemo(() => {
     if (!session) return null;
