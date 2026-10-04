@@ -1,5 +1,6 @@
 import { StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
+import { HashRouter } from 'react-router-dom';
 import { App as AntdApp, ConfigProvider, theme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import 'antd/dist/reset.css';
@@ -56,7 +57,9 @@ createRoot(document.getElementById('root')!).render(
         {/* 兜底页放在 ConfigProvider / AntdApp 之内：出错界面仍用同一套 antd 主题与中文 locale。 */}
         <ErrorBoundary>
           <DesignTokenVars />
-          <AppRoot />
+          <HashRouter>
+            <AppRoot />
+          </HashRouter>
         </ErrorBoundary>
       </AntdApp>
     </ConfigProvider>

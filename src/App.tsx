@@ -3,14 +3,18 @@
  * 左侧 260px 中性侧栏（品牌 / 功能导航含独立文书库 / 新建 / 搜索 / 历史 / 底部角色与设置），
  * 右侧宽敞主区：助理页 = 宽对话（打开文书后为「对话 + 文书工作区」两列），文书库独立成页，
  * 其余导航页占满主内容区。原全宽业务页头移除，其承载项下移至侧栏底部。
- * 单页应用不引入 react-router；导航页与工作区可见性均为本地/UI 状态。
+ *
+ * 路由：HashRouter（react-router-dom v7），URL hash 为导航唯一真相源；
+ * 浏览器前进/后退直接生效；不合法路径回退到 /assistant。
  */
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer } from 'antd';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { useConversationStore } from '@/store/conversationStore';
 import { useActiveScope, useWorkspaceStore } from '@/store/workspaceStore';
+import type { NavPage } from '@/domain/types';
 import ChatPanel from '@/components/chat/ChatPanel';
 import GlobalSidebar from '@/components/nav/GlobalSidebar';
 import WorkspaceSync from '@/components/workspace/WorkspaceSync';
@@ -40,6 +44,57 @@ export default function AppRoot() {
   // 资源/知识面板抽屉（由对话任务卡触发）
   const [panelDrawer, setPanelDrawer] = useState<'resource' | 'knowledge' | null>(null);
 
+  // ── react-router 双向同步 ──────────────────────────────────────
+  const location = useLocation();
+  const navigate = useNavigate();
+  const setActiveNav = useConversationStore((s) => s.setActiveNav);
+
+  // URL 路径 → NavPage 映射。
+  const pathToNav: Record<string, NavPage> = {
+    '/assistant': 'assistant',
+    '/library': 'library',
+    '/projects': 'projects',
+    '/agents': 'agents',
+    '/schedules': 'schedules',
+    '/knowledge': 'knowledge',
+  };
+  const navToPath: Record<NavPage, string> = {
+    assistant: '/assistant',
+    library: '/library',
+    projects: '/projects',
+    agents: '/agents',
+    schedules: '/schedules',
+    knowledge: '/knowledge',
+  };
+
+  // 首次挂载：URL 为唯一真相源，覆盖 store 中的 activeNav。
+  const initialSyncDone = useRef(false);
+  useEffect(() => {
+    if (initialSyncDone.current) return;
+    initialSyncDone.current = true;
+    const page = pathToNav[location.pathname];
+    if (page && page !== activeNav) {
+      setActiveNav(page);
+    }
+  }, [location.pathname, activeNav, setActiveNav]);
+
+  // URL 变化（用户点击导航/前进/后退）→ 同步到 store。
+  useEffect(() => {
+    const page = pathToNav[location.pathname];
+    if (page && page !== activeNav) {
+      setActiveNav(page);
+    }
+  }, [location.pathname, activeNav, setActiveNav]);
+
+  // store 中 activeNav 变化（createConversation / selectConversation 等）→ 同步到 URL。
+  useEffect(() => {
+    const target = navToPath[activeNav];
+    if (target && location.pathname !== target) {
+      navigate(target, { replace: true });
+    }
+  }, [activeNav, location.pathname, navigate]);
+  // ── 路由同步结束 ────────────────────────────────────────────────
+
   // 刷新恢复：让业务上下文（事件/会话）对齐已持久化的 activeConversation
   useEffect(() => {
     const conversation = activeConversationId ? conversations[activeConversationId] : null;
@@ -64,31 +119,49 @@ export default function AppRoot() {
         <GlobalSidebar />
       </aside>
 
-      {/* 主区：无全宽业务页头；文书工作区在助理页内以两列呈现 */}
+      {/* 主区：HashRouter 路由分发 */}
       <main className="axn-shell-main">
         {/* 常驻协调：即使文书库/工作区未挂载也观察真实草稿任务与模拟文书流程 */}
         <WorkspaceSync />
 
         {storageWarning && <div className="axn-shell-warning">{storageWarning}</div>}
 
-        {activeNav === 'library' ? (
-          <Suspense><DocumentLibraryPage /></Suspense>
-        ) : activeNav === 'assistant' ? (
-          <div className={`axn-assistant${workspaceOpen ? ' axn-assistant--split' : ''}`}>
-            <div className="axn-chat-pane">
-              <ChatPanel compact={workspaceOpen} onOpenDrawer={(target: 'resource' | 'knowledge') => setPanelDrawer(target)} />
-            </div>
-            {workspaceOpen && (
-              <div className="axn-workspace-pane">
-                <Suspense><DocumentWorkspace /></Suspense>
+        <Routes>
+          <Route path="/assistant" element={
+            <div className={`axn-assistant${workspaceOpen ? ' axn-assistant--split' : ''}`}>
+              <div className="axn-chat-pane">
+                <ChatPanel compact={workspaceOpen} onOpenDrawer={(target: 'resource' | 'knowledge') => setPanelDrawer(target)} />
               </div>
-            )}
-          </div>
-        ) : (
-          <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-            <Suspense><NavPageContent page={activeNav} /></Suspense>
-          </div>
-        )}
+              {workspaceOpen && (
+                <div className="axn-workspace-pane">
+                  <Suspense><DocumentWorkspace /></Suspense>
+                </div>
+              )}
+            </div>
+          } />
+          <Route path="/library" element={<Suspense><DocumentLibraryPage /></Suspense>} />
+          <Route path="/projects" element={
+            <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+              <Suspense><NavPageContent page="projects" /></Suspense>
+            </div>
+          } />
+          <Route path="/agents" element={
+            <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+              <Suspense><NavPageContent page="agents" /></Suspense>
+            </div>
+          } />
+          <Route path="/schedules" element={
+            <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+              <Suspense><NavPageContent page="schedules" /></Suspense>
+            </div>
+          } />
+          <Route path="/knowledge" element={
+            <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+              <Suspense><NavPageContent page="knowledge" /></Suspense>
+            </div>
+          } />
+          <Route path="*" element={<Navigate to="/assistant" replace />} />
+        </Routes>
       </main>
 
       <Drawer title="资源与态势（模拟）" size={760} open={panelDrawer === 'resource'} onClose={() => setPanelDrawer(null)} destroyOnHidden>

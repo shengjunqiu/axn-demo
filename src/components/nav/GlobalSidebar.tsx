@@ -7,6 +7,7 @@
  * 全部数据为模拟数据。
  */
 import { useCallback, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bot,
   Clock,
@@ -123,10 +124,10 @@ export default function GlobalSidebar() {
   const conversations = useConversationStore((s) => s.conversations);
   const activeConversationId = useConversationStore((s) => s.activeConversationId);
   const activeNav = useConversationStore((s) => s.activeNav);
+  const navigate = useNavigate();
   const selectConversation = useConversationStore((s) => s.selectConversation);
   const createConversation = useConversationStore((s) => s.createConversation);
   const deleteConversation = useConversationStore((s) => s.deleteConversation);
-  const setActiveNav = useConversationStore((s) => s.setActiveNav);
   const actorId = useDemoStore((s) => s.actorId);
   const setActor = useDemoStore((s) => s.setActor);
   const globalBanner = useDemoStore((s) => s.globalBanner);
@@ -180,7 +181,7 @@ export default function GlobalSidebar() {
     );
   };
 
-  const openLibrary = () => guardDirty('切换到文书库', () => setActiveNav('library'));
+  const openLibrary = () => guardDirty('切换到文书库', () => navigate('/library'));
 
   const list = useMemo(
     () => Object.values(conversations).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
@@ -258,7 +259,7 @@ export default function GlobalSidebar() {
                 openLibrary();
                 return;
               }
-              guardDirty('切换导航页', () => setActiveNav(item.key as NavPage));
+              guardDirty('切换导航页', () => navigate(`/${item.key}`));
             }}
           >
             {item.icon}
