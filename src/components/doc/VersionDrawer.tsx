@@ -5,7 +5,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Drawer, Empty, Select, Space, Tag, Tooltip, Typography, message } from 'antd';
 import { useDocumentStore } from '@/store/documentStore';
-import { exportRevision } from '@/services/docxExport';
 import { openPrintPreview } from './PrintView';
 import type { DocumentContent, DocumentRevision, InlineRun } from '@/domain/types';
 import './doc.css';
@@ -127,6 +126,9 @@ function RevisionActions({ rev }: RevisionActionsProps) {
   const handleExport = useCallback(async () => {
     setExporting(true);
     try {
+      // docx 体积大（633 KB raw）：只在真正导出 Word 时按需加载，
+      // 否则打开文书区就会连同文书工作区一起白下这一大块。
+      const { exportRevision } = await import('@/services/docxExport');
       await exportRevision(rev.revisionId);
       message.success(`已导出 Word：${rev.displayVersion}（模拟导出，基于该版本冻结数据渲染）`);
     } catch (error) {
