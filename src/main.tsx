@@ -8,6 +8,7 @@ import 'antd/dist/reset.css';
 import './styles/fonts.css';
 import './styles/global.css';
 import AppRoot from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { themeConfig } from './theme';
 
 /**
@@ -52,8 +53,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ConfigProvider locale={zhCN} theme={themeConfig}>
       <AntdApp>
-        <DesignTokenVars />
-        <AppRoot />
+        {/* 兜底页放在 ConfigProvider / AntdApp 之内：出错界面仍用同一套 antd 主题与中文 locale。 */}
+        <ErrorBoundary>
+          <DesignTokenVars />
+          <AppRoot />
+        </ErrorBoundary>
       </AntdApp>
     </ConfigProvider>
   </StrictMode>,

@@ -14,6 +14,7 @@ import { computeDerived, DERIVED_META } from '@/seed/derived';
 import type { DerivedKey } from '@/seed/derived';
 import { factNumber, factText, teamById, warehouseById } from '@/seed/scenario';
 import { resourceAllowed } from '@/services/factLookup';
+import { resetDemoData } from '@/store/resetDemo';
 import SchematicMap from './SchematicMap';
 import './workspace.css';
 
@@ -108,7 +109,19 @@ export default function ResourcePanel() {
   );
 
   if (!session) {
-    return <Alert type="error" showIcon title="会话未初始化" description="请稍候或重置模拟环境后重试（模拟数据）。" />;
+    return (
+      <Alert
+        type="error"
+        showIcon
+        title="会话未初始化"
+        description="请稍候或重置模拟环境后重试（模拟数据）。"
+        action={
+          <Button size="small" onClick={() => resetDemoData()}>
+            重置演示数据
+          </Button>
+        }
+      />
+    );
   }
 
   const sortResults = (by: SortKey) => {

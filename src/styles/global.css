@@ -307,6 +307,37 @@ svg.lucide {
   }
 }
 
+/* 兜底错误页（components/ErrorBoundary）：整页居中，技术细节折叠在下方。 */
+.axn-error-fallback {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--axn-canvas);
+}
+
+.axn-error-details {
+  width: 100%;
+  max-width: 720px;
+  font-size: var(--fs-meta);
+  color: var(--axn-muted);
+}
+
+.axn-error-details summary {
+  cursor: pointer;
+}
+
+.axn-error-details pre {
+  margin: 8px 0 0;
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--fs-caption);
+}
+
 /* 长文本与滚动约束 */
 .ellipsis-2 {
   display: -webkit-box;

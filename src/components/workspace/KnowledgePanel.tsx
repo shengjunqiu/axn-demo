@@ -8,6 +8,7 @@ import { Alert, Button, Card, Empty, Space, Tag, Typography } from 'antd';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { sendMessage } from '@/services/taskRunner';
+import { resetDemoData } from '@/store/resetDemo';
 import { factText, knowledgeById, teamById } from '@/seed/scenario';
 import './workspace.css';
 
@@ -65,7 +66,19 @@ export default function KnowledgePanel() {
   );
 
   if (!session) {
-    return <Alert type="error" showIcon title="会话未初始化" description="请稍候或重置模拟环境后重试（模拟数据）。" />;
+    return (
+      <Alert
+        type="error"
+        showIcon
+        title="会话未初始化"
+        description="请稍候或重置模拟环境后重试（模拟数据）。"
+        action={
+          <Button size="small" onClick={() => resetDemoData()}>
+            重置演示数据
+          </Button>
+        }
+      />
+    );
   }
 
   const askProposal = () => {

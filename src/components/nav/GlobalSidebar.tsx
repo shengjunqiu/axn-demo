@@ -15,12 +15,13 @@ import {
   FolderOpen,
   LayoutGrid,
   Plus,
+  RotateCcw,
   Search,
   Settings,
   Sparkles,
   Trash2,
 } from 'lucide-react'
-import { App as AntdApp, Button, Empty, Input, Modal, Popconfirm, Radio, Select, theme } from 'antd';
+import { App as AntdApp, Button, Divider, Empty, Input, Modal, Popconfirm, Radio, Select, theme } from 'antd';
 import type { Conversation, ConversationSettings, NavPage } from '@/domain/types';
 import {
   GROUP_LABEL,
@@ -34,6 +35,7 @@ import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { useActiveScope, useWorkspaceStore, type WorkMode } from '@/store/workspaceStore';
 import { eventDisplayName } from '@/services/factLookup';
+import { resetDemoData } from '@/store/resetDemo';
 import { actors } from '@/seed/scenario';
 import './sidebar.css';
 
@@ -48,10 +50,11 @@ const NAV: { key: NavKey; label: string; icon: React.ReactNode }[] = [
   { key: 'knowledge', label: '知识库', icon: <FlaskConical /> },
 ];
 
-/** 对话与通知设置（轻量展示，需求 2.6）。 */
-export function ConversationSettingsPanel() {
+/** 对话与通知设置（轻量展示，需求 2.6）+ 演示数据重置入口（现场一键回到初始场景）。 */
+export function ConversationSettingsPanel({ onDone }: { onDone?: () => void } = {}) {
   const settings = useConversationStore((s) => s.settings);
   const updateSettings = useConversationStore((s) => s.updateSettings);
+  const { message } = AntdApp.useApp();
   const items: { key: keyof ConversationSettings; label: string; desc: string }[] = [
     { key: 'openRecentOnStart', label: '默认进入最近会话', desc: '打开工作台时自动恢复上次的活跃会话' },
     { key: 'notifyTaskDone', label: '任务完成提醒', desc: '模拟任务完成时在会话列表更新状态' },
@@ -84,6 +87,31 @@ export function ConversationSettingsPanel() {
       })}
       <div style={{ fontSize: 'var(--fs-body)', color: 'var(--nav-muted)' }}>
         以上均为模拟环境的轻量设置（模拟数据），不连接真实通知渠道。
+      </div>
+
+      <Divider style={{ margin: 0 }} />
+
+      <div>
+        <div style={{ fontSize: 'var(--fs-body)', fontWeight: 600, color: 'var(--nav-text)' }}>演示数据</div>
+        <div style={{ fontSize: 'var(--fs-body)', color: 'var(--nav-muted)', margin: '4px 0 8px' }}>
+          把模拟会话、文书与工作台状态全部恢复为初始场景，便于重新演示（不可撤销）。
+        </div>
+        <Popconfirm
+          title="重置演示数据？"
+          description="当前模拟会话、文书、审计记录与工作台状态都会回到初始场景。"
+          okText="确认重置"
+          cancelText="取消"
+          okButtonProps={{ danger: true }}
+          onConfirm={() => {
+            resetDemoData();
+            message.success('已恢复为初始演示数据。');
+            onDone?.();
+          }}
+        >
+          <Button danger size="small" icon={<RotateCcw />}>
+            重置演示数据
+          </Button>
+        </Popconfirm>
       </div>
     </div>
   );
@@ -304,7 +332,7 @@ export default function GlobalSidebar() {
         footer={null}
         width={440}
       >
-        <ConversationSettingsPanel />
+        <ConversationSettingsPanel onDone={() => setSettingsOpen(false)} />
       </Modal>
     </div>
   );
