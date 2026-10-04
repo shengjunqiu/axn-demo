@@ -7,7 +7,7 @@
  * 路由：HashRouter（react-router-dom v7），URL hash 为导航唯一真相源；
  * 浏览器前进/后退直接生效；不合法路径回退到 /assistant。
  */
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Drawer } from 'antd';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useDemoStore } from '@/store/demoStore';
@@ -18,6 +18,24 @@ import type { NavPage } from '@/domain/types';
 import ChatPanel from '@/components/chat/ChatPanel';
 import GlobalSidebar from '@/components/nav/GlobalSidebar';
 import WorkspaceSync from '@/components/workspace/WorkspaceSync';
+
+// URL 路径 → NavPage 映射表（模块级常量，避免每次渲染重建）。
+const PATH_TO_NAV: Record<string, NavPage> = {
+  '/assistant': 'assistant',
+  '/library': 'library',
+  '/projects': 'projects',
+  '/agents': 'agents',
+  '/schedules': 'schedules',
+  '/knowledge': 'knowledge',
+};
+const NAV_TO_PATH: Record<NavPage, string> = {
+  assistant: '/assistant',
+  library: '/library',
+  projects: '/projects',
+  agents: '/agents',
+  schedules: '/schedules',
+  knowledge: '/knowledge',
+};
 
 /** 工作区抽屉中按需渲染的面板。 */
 const DocumentLibraryPage = lazy(() => import('@/components/workspace/DocumentLibraryPage'));
@@ -49,48 +67,20 @@ export default function AppRoot() {
   const navigate = useNavigate();
   const setActiveNav = useConversationStore((s) => s.setActiveNav);
 
-  // URL 路径 → NavPage 映射。
-  const pathToNav: Record<string, NavPage> = {
-    '/assistant': 'assistant',
-    '/library': 'library',
-    '/projects': 'projects',
-    '/agents': 'agents',
-    '/schedules': 'schedules',
-    '/knowledge': 'knowledge',
-  };
-  const navToPath: Record<NavPage, string> = {
-    assistant: '/assistant',
-    library: '/library',
-    projects: '/projects',
-    agents: '/agents',
-    schedules: '/schedules',
-    knowledge: '/knowledge',
-  };
-
-  // 首次挂载：URL 为唯一真相源，覆盖 store 中的 activeNav。
-  const initialSyncDone = useRef(false);
-  useEffect(() => {
-    if (initialSyncDone.current) return;
-    initialSyncDone.current = true;
-    const page = pathToNav[location.pathname];
-    if (page && page !== activeNav) {
-      setActiveNav(page);
-    }
-  }, [location.pathname, activeNav, setActiveNav]);
-
   // URL 变化（用户点击导航/前进/后退）→ 同步到 store。
   useEffect(() => {
-    const page = pathToNav[location.pathname];
+    const page = PATH_TO_NAV[location.pathname];
     if (page && page !== activeNav) {
       setActiveNav(page);
     }
   }, [location.pathname, activeNav, setActiveNav]);
 
   // store 中 activeNav 变化（createConversation / selectConversation 等）→ 同步到 URL。
+  // 使用 push 而非 replace，保留浏览器历史栈（让「从 library 新建后」能后退回去）。
   useEffect(() => {
-    const target = navToPath[activeNav];
+    const target = NAV_TO_PATH[activeNav];
     if (target && location.pathname !== target) {
-      navigate(target, { replace: true });
+      navigate(target);
     }
   }, [activeNav, location.pathname, navigate]);
   // ── 路由同步结束 ────────────────────────────────────────────────
