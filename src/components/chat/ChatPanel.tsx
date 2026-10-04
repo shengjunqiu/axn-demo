@@ -24,7 +24,7 @@ import { useSessionStore } from '@/store/sessionStore';
 import { useActiveScope, useWorkspaceStore } from '@/store/workspaceStore';
 import { sendMessage, cancelTask } from '@/services/taskRunner';
 import { AGENT_QUICK_TASKS } from '@/seed/agentQuickTasks';
-import { getQaItem } from '@/services/qaKnowledge';
+import { WELCOME_QUESTIONS } from '@/seed/welcomeQuestions';
 import { factText, incidentById, incidents } from '@/seed/scenario';
 import { eventDisplayName } from '@/services/factLookup';
 import TaskCard from './TaskCard';
@@ -40,11 +40,6 @@ export interface ChatPanelProps {
 }
 
 const AVATAR = <div className="axn-chat-avatar">安</div>;
-
-/** 首页引导问题：取自已接入知识库 qa.json 的原问题，点击后命中对应答案。 */
-const WELCOME_QUESTIONS = [38, 43, 16, 67]
-  .map((id) => getQaItem(id)?.question)
-  .filter((question): question is string => !!question);
 
 // 输入区常驻 3 个常用任务，其余收进「更多任务」浮层（任务全集见 seed/agentQuickTasks）
 const PRIMARY_LABELS = ['生成灾情摘要', '查询周边救援资源', '生成应急要情'];

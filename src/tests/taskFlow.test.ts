@@ -9,6 +9,10 @@ import { useDemoStore } from '@/store/demoStore';
 import { useDocumentStore } from '@/store/documentStore';
 import { DEFAULT_EVENT_ID, factText } from '@/seed/scenario';
 import { sendMessage, cancelTask } from '@/services/taskRunner';
+import { ensureQaLoaded } from '@/services/qaKnowledge';
+
+// 问答语料改为按需加载（不进首屏）：本文件直接同步调用 recognize，需先备好语料。
+await ensureQaLoaded();
 
 function ctx() {
   const store = useSessionStore.getState();

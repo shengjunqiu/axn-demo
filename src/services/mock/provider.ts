@@ -33,7 +33,7 @@ import {
   missingBriefFields,
   missingDailyFields,
 } from '../documentFactory.js';
-import { getQaItem, matchQa, qaStatusLabel } from '../qaKnowledge.js';
+import { ensureQaLoaded, getQaItem, matchQa, qaStatusLabel } from '../qaKnowledge.js';
 
 export class TaskFault extends Error {
   constructor(
@@ -637,6 +637,8 @@ async function* runKnowledge(req: Ctx, signal: AbortSignal, paceMs: number): Asy
  */
 async function* runQaKnowledge(req: Ctx, signal: AbortSignal, paceMs: number): AsyncIterable<TaskEvent> {
   const qaId = Number(req.params.qaId);
+  // 语料按需加载（正常链路在 taskRunner 已加载，这里兜住直接调用本函数的路径）。
+  await ensureQaLoaded();
   const item = getQaItem(qaId);
   if (!item) {
     yield* runUnknown(req, signal, paceMs);

@@ -8,6 +8,10 @@ import { useSessionStore } from '@/store/sessionStore';
 import { useDocumentStore } from '@/store/documentStore';
 import { sendMessage } from '@/services/taskRunner';
 import { recognize } from '@/services/mock/provider';
+import { ensureQaLoaded } from '@/services/qaKnowledge';
+
+// 问答语料改为按需加载（不进首屏）：本文件直接同步调用 recognize，需先备好语料。
+await ensureQaLoaded();
 import { createEventDocument } from '@/services/documentFactory';
 import { computeDerived } from '@/seed/derived';
 import { factText, knowledgeById, teamById } from '@/seed/scenario';

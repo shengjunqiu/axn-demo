@@ -3,11 +3,28 @@
  * 数据完整性、规则匹配（精确/双向包含/不误吞业务短句）、意图识别、模拟溯源卡字段。
  */
 import { beforeEach, describe, expect, it } from 'vitest';
-import { matchQa, normalizeQaText, qaItems, qaStatusLabel } from '@/services/qaKnowledge';
+import {
+  ensureQaLoaded,
+  getQaItem,
+  loadedQaItems,
+  matchQa,
+  normalizeQaText,
+  qaStatusLabel,
+} from '@/services/qaKnowledge';
+import { WELCOME_QUESTION_QA_IDS, WELCOME_QUESTIONS } from '@/seed/welcomeQuestions';
 import { recognize } from '@/services/mock/provider';
 import { useSessionStore } from '@/store/sessionStore';
 
+// 问答语料改为按需加载（不进首屏）：本文件直接同步调用 recognize/matchQa，需先备好语料。
+await ensureQaLoaded();
+const qaItems = loadedQaItems();
+
 describe('qa.json 数据完整性', () => {
+  it('首页引导问题与 qa.json 原问题一致（ChatPanel 内联副本不得漂移）', () => {
+    // ChatPanel 的引导问题内联为字面量（避免整包语料进首屏），这里守住它与语料的一致性。
+    expect(WELCOME_QUESTIONS).toEqual(WELCOME_QUESTION_QA_IDS.map((id) => getQaItem(id)?.question));
+  });
+
   it('126 条问题，每条含答案与至少 1 个模拟文档来源', () => {
     expect(qaItems.length).toBe(126);
     for (const item of qaItems) {

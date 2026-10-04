@@ -5,6 +5,7 @@ import type { TaskEvent } from '@/domain/types';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { mockProvider, recognize, TaskFault } from './mock/provider.js';
+import { ensureQaLoaded } from './qaKnowledge.js';
 
 import { registerRun, isActiveRun, finishRun, invalidateRun } from './taskRuns.js';
 
@@ -32,6 +33,8 @@ export async function sendMessage(sessionId: string, options: SendOptions): Prom
     text: options.text,
     taskId: null,
   });
+  // 问答语料按需加载（不进首屏）；recognize 内部的 matchQa 要求语料已就绪。
+  await ensureQaLoaded();
   const recognized = recognize(options.text, {
     lastResourceResultIds: session.lastResourceResultIds,
     candidateResourceIds: session.candidateResourceIds,
@@ -190,6 +193,7 @@ export async function retryTask(taskId: string): Promise<void> {
   const session = store.sessions[task.sessionId];
   const userText =
     session?.messages.find((m) => m.messageId === userMsg)?.text ?? task.displayTitle;
+  await ensureQaLoaded();
   const recognized = recognize(userText ?? '', {
     lastResourceResultIds: session?.lastResourceResultIds ?? [],
     candidateResourceIds: session?.candidateResourceIds ?? [],
