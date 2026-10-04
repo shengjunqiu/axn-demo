@@ -8,7 +8,7 @@
  * 4. 映射表完整性（从源码导入，不自建副本）
  */
 import { act, render, waitFor } from '@testing-library/react';
-
+import { useEffect } from 'react';
 import { MemoryRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useConversationStore } from '@/store/conversationStore';
@@ -21,11 +21,13 @@ function RoutingShell() {
   const activeNav = useConversationStore((s) => s.activeNav);
   const setActiveNav = useConversationStore((s) => s.setActiveNav);
 
-  // URL→store 单向同步（与 App.tsx 一致；store 从不推回 URL）。
-  const page = PATH_TO_NAV[location.pathname];
-  if (page && page !== activeNav) {
-    setActiveNav(page);
-  }
+  // URL→store 单向同步（与 App.tsx 的 useUrlNavSync 一致；store 从不推回 URL）。
+  useEffect(() => {
+    const page = PATH_TO_NAV[location.pathname];
+    if (page && page !== activeNav) {
+      setActiveNav(page);
+    }
+  }, [location.pathname, activeNav, setActiveNav]);
 
   return (
     <Routes>
