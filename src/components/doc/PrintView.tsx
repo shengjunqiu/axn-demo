@@ -3,7 +3,8 @@
  * 打印内容来自用户选定的版本快照，与 Word 导出同源。
  */
 import { useEffect, useState } from 'react';
-import { Button, Drawer, Space, Typography, message } from 'antd';
+// message 反馈走 AntdApp.useApp()：antd v5 静态方法不消费 ConfigProvider 主题，会退回默认 token。
+import { App as AntdApp, Button, Drawer, Space, Typography } from 'antd';
 import {
   Printer,
 } from 'lucide-react'
@@ -12,14 +13,18 @@ import { renderRevision } from '@/services/docRender';
 
 let openPrint: ((revisionId: string | null) => void) | null = null;
 
-/** 供文书中心调用：打开打印预览（revisionId 为空则打工作副本）。 */
-export function openPrintPreview(revisionId: string | null) {
+type MessageApi = ReturnType<typeof AntdApp.useApp>['message'];
+
+/** 供文书中心调用：打开打印预览（revisionId 为空则打工作副本）。
+ * 本函数是模块级非组件函数，不能调用 useApp()；message 由调用方（组件顶层已 useApp）传入。 */
+export function openPrintPreview(revisionId: string | null, messageApi: MessageApi) {
   const reason = revisionId ? useDocumentStore.getState().getRevisionGuard(revisionId, 'export') : '请选择已保存并校核的版本';
-  if (reason) { message.warning(reason); return; }
+  if (reason) { messageApi.warning(reason); return; }
   openPrint?.(revisionId);
 }
 
 export default function PrintView() {
+  const { message } = AntdApp.useApp();
   const [revisionId, setRevisionId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const revisions = useDocumentStore((s) => s.revisions);

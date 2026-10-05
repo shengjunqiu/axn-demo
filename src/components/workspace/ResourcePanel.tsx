@@ -261,7 +261,7 @@ export default function ResourcePanel() {
             dataSource={rows}
             rowKey="id"
             pagination={false}
-            scroll={{ y: 240 }}
+            scroll={{ x: 'max-content', y: 240 }}
             onRow={(row) => ({
               onClick: () => setSelectedId((prev) => (prev === row.id ? null : row.id)),
               style: { cursor: 'pointer' },

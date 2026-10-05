@@ -11,7 +11,8 @@ import { useDocumentNavigation } from './useDocumentNavigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { NAV_PATH } from '@/components/nav/navRoutes';
-import { Button, Empty, Skeleton, Space, Spin, Tag, Tooltip, Typography, message, theme } from 'antd';
+// message 反馈走 AntdApp.useApp()：antd v5 静态方法不消费 ConfigProvider 主题，会退回默认 token。
+import { App as AntdApp, Button, Empty, Skeleton, Space, Spin, Tag, Tooltip, Typography } from 'antd';
 import { useDocumentStore } from '@/store/documentStore';
 import { useDemoStore } from '@/store/demoStore';
 import { useConversationStore } from '@/store/conversationStore';
@@ -88,7 +89,7 @@ function HintButton({ hint, ...buttonProps }: React.ComponentProps<typeof Button
 }
 
 export default function DocCenterPanel({ view, onClose = () => window.dispatchEvent(new Event('axn:close-document')), onOpenLibrary }: { view: DocView; onClose?: () => void; onOpenLibrary?: () => void }) {
-  const { token } = theme.useToken();
+  const { message } = AntdApp.useApp();
   const draftsMap = useDocumentStore((s) => s.drafts);
   const revisionsMap = useDocumentStore((s) => s.revisions);
   const activeReportMap = useDocumentStore((s) => s.activeReportByDocument);
@@ -283,7 +284,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
               <ValidationStatusTag status={draft.validation.status} />
               {draft.freshness === 'stale' && <Tag color="orange">快照已过期</Tag>}
             </Space>
-            <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--doc-muted)', marginTop: 4 }}>
+            <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--axn-muted)', marginTop: 4 }}>
               {templateByCode.get(draft.templateCode)?.name ?? draft.templateCode} ·{' '}
               {draft.scopeKind === 'event' ? '事件' : `班次范围：${shiftEventIds(draft.shiftId ?? '').join('、')}`} · 当前版本：
               {activeRev ? activeRev.displayVersion : '未保存版本'} · 更新于 {fmtTime(draft.updatedAt)} · ID {draft.documentId}
@@ -348,14 +349,14 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
           </Space>
         </div>
         {report && (
-          <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--doc-muted)', marginTop: 8 }}>
+          <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--axn-muted)', marginTop: 8 }}>
             最近校核：{report.issues.length === 0 ? '无问题' : `${report.issues.length} 条问题（阻断 ${report.issues.filter((i) => i.level === 'block').length} / 提示 ${report.issues.filter((i) => i.level === 'warning').length}）`}{' '}
             · 校核时间 {fmtTime(report.checkedAt)}
             {report.contentHash !== draft.working.contentHash && ' · 校核后内容已变更，需重新校核'}
           </div>
         )}
         {activeRev?.signedRecord && (
-          <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--doc-muted)', marginTop: 4 }}>
+          <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--axn-muted)', marginTop: 4 }}>
             签发人 {activeRev.signedRecord.signedByActorName} · {fmtTime(activeRev.signedRecord.performedAt)} ·{' '}
             {activeRev.signedRecord.note}
           </div>
@@ -398,16 +399,6 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
     <div
       className={`doc-center doc-center--${view}`}
       data-testid={view === 'library' ? 'document-library' : 'document-workspace'}
-      style={{
-        '--doc-primary': token.colorPrimary,
-        '--doc-primary-bg': token.colorPrimaryBg,
-        '--doc-muted': token.colorTextSecondary,
-        '--doc-border': token.colorBorderSecondary,
-        '--doc-surface': token.colorBgContainer,
-        '--doc-canvas': token.colorBgLayout,
-        '--doc-text': token.colorText,
-        '--doc-radius': `${token.borderRadiusLG}px`,
-      }}
     >
       {view === 'library' && <header className="doc-agent-header">
         <span className="doc-agent-avatar"><Bot /></span>

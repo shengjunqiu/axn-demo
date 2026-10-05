@@ -5,7 +5,8 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { App as AntdApp, Alert, Button, Drawer, Dropdown, Empty, Space, Tag, Tooltip, Typography, message } from 'antd';
+// message/Modal 反馈走 AntdApp.useApp()：antd v5 静态方法不消费 ConfigProvider 主题，会退回默认 token。
+import { App as AntdApp, Alert, Button, Drawer, Dropdown, Empty, Space, Tag, Tooltip, Typography } from 'antd';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/react';
 import { Node, mergeAttributes } from '@tiptap/core';
@@ -424,6 +425,7 @@ interface EditorSurfaceProps {
 }
 
 function EditorSurface({ draft, locked, signedVersion, onCloseRequest, onDirtyChange, onDiscardReady }: EditorSurfaceProps) {
+  const { message } = AntdApp.useApp();
   const [dirty, setDirty] = useState(false);
   const [nonce, setNonce] = useState(0);
   const [revisionMode, setRevisionMode] = useState(false);

@@ -4,7 +4,9 @@
  * 图上位置不用于计算距离或 ETA（示意，非真实地图）。
  *
  * 配色：品牌蓝（仓库、候选高亮）一律取主题 token，随 theme.ts 联动；队伍绿 / 事件橙 /
- * 水位站紫 / 河道蓝属于图元语义色（数据可视化专用），与 UI 主题无关，故保留字面量。
+ * 水位站紫 / 当前选中 / 常态连线 / 高亮 属于图元语义色（数据可视化专用），与 UI 主题无关，
+ * 统一取 global.css 定义的 --axn-legend-* / --axn-map-* 语义色 token（避免与图例色块重复字面值）。
+ * 河道蓝与各标记的文字色暂无对应 token，保留字面量。
  */
 import { Alert, Space, Tag, Typography, theme } from 'antd';
 import type { MouseEvent as ReactMouseEvent } from 'react';
@@ -86,7 +88,7 @@ export default function SchematicMap({
           <title>{`水位站（模拟）· 观测 ${factText(station?.latestObservationId ?? '') || '—'}`}</title>
           <polygon
             points={`${station.schematicPosition.x},${station.schematicPosition.y - 9} ${station.schematicPosition.x + 9},${station.schematicPosition.y} ${station.schematicPosition.x},${station.schematicPosition.y + 9} ${station.schematicPosition.x - 9},${station.schematicPosition.y}`}
-            fill="#722ed1"
+            fill="var(--axn-legend-station)"
             stroke={token.colorBgContainer}
             strokeWidth={1.5}
           />
@@ -96,7 +98,7 @@ export default function SchematicMap({
         {incidentMarkers.map((m) => (
           <g key={m.id}>
             <title>{`${m.name}（模拟事件）`}</title>
-            <circle cx={m.x} cy={m.y} r={9} fill="#ff8c1f" stroke={token.colorBgContainer} strokeWidth={2} />
+            <circle cx={m.x} cy={m.y} r={9} fill="var(--axn-legend-event)" stroke={token.colorBgContainer} strokeWidth={2} />
             <text x={m.x + 13} y={m.y + 4} fontSize={12} fill="#ad4e00">
               {m.name}
             </text>
@@ -112,7 +114,7 @@ export default function SchematicMap({
               <polygon
                 points={`${m.x},${m.y - 11} ${m.x - 10},${m.y + 8} ${m.x + 10},${m.y + 8}`}
                 fill={selected ? token.colorPrimaryHover : token.colorPrimary}
-                stroke={selected ? '#fa541c' : token.colorPrimaryActive}
+                stroke={selected ? 'var(--axn-map-active)' : token.colorPrimaryActive}
                 strokeWidth={selected ? 3 : 1.5}
               />
               <text x={m.x} y={m.y + 22} fontSize={11} textAnchor="middle" fill="#1c4d80">
@@ -126,7 +128,7 @@ export default function SchematicMap({
         {teamMarkers.map((m) => {
           const highlighted = highlightIds.includes(m.id);
           const selected = selectedResourceId === m.id;
-          const stroke = selected ? '#fa541c' : highlighted ? token.colorPrimary : '#2e7d0e';
+          const stroke = selected ? 'var(--axn-map-active)' : highlighted ? token.colorPrimary : 'var(--axn-map-route)';
           const strokeWidth = selected ? 3 : highlighted ? 2.5 : 1.5;
           return (
             <g key={m.id} onClick={pickMarker(m.id)}>
@@ -138,7 +140,7 @@ export default function SchematicMap({
                 width={18}
                 height={18}
                 rx={3}
-                fill={selected ? '#73d13d' : '#52c41a'}
+                fill={selected ? 'var(--axn-map-selected)' : 'var(--axn-legend-team)'}
                 stroke={stroke}
                 strokeWidth={strokeWidth}
               />

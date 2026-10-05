@@ -140,7 +140,7 @@ export default function SourceDrawer({ factId, documentId, open, onClose }: Sour
                 dataSource={fieldRows}
                 rowKey="key"
                 pagination={false}
-                scroll={{ y: 200 }}
+                scroll={{ x: 'max-content', y: 200 }}
               />
             </>
           )}

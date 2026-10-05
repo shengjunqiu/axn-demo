@@ -23,7 +23,7 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react'
-import { App as AntdApp, Button, Divider, Empty, Input, Modal, Popconfirm, Radio, Select, theme } from 'antd';
+import { App as AntdApp, Button, Divider, Drawer, Empty, Input, Popconfirm, Radio, Select } from 'antd';
 import type { Conversation, ConversationSettings, NavPage } from '@/domain/types';
 import {
   GROUP_LABEL,
@@ -71,7 +71,7 @@ export function ConversationSettingsPanel({ onDone }: { onDone?: () => void } = 
         return (
           <div key={item.key}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 'var(--fs-body)', fontWeight: 600, color: 'var(--nav-text)' }}>{item.label}</span>
+              <span style={{ fontSize: 'var(--fs-body)', fontWeight: 600, color: 'var(--axn-text)' }}>{item.label}</span>
               <Radio.Group
                 size="small"
                 value={settings[item.key] ? 'on' : 'off'}
@@ -84,19 +84,19 @@ export function ConversationSettingsPanel({ onDone }: { onDone?: () => void } = 
                 <Radio.Button value="off">关</Radio.Button>
               </Radio.Group>
             </div>
-            <div style={{ fontSize: 'var(--fs-body)', color: 'var(--nav-muted)', marginTop: 4 }}>{item.desc}</div>
+            <div style={{ fontSize: 'var(--fs-body)', color: 'var(--axn-muted)', marginTop: 4 }}>{item.desc}</div>
           </div>
         );
       })}
-      <div style={{ fontSize: 'var(--fs-body)', color: 'var(--nav-muted)' }}>
+      <div style={{ fontSize: 'var(--fs-body)', color: 'var(--axn-muted)' }}>
         以上均为模拟环境的轻量设置（模拟数据），不连接真实通知渠道。
       </div>
 
       <Divider style={{ margin: 0 }} />
 
       <div>
-        <div style={{ fontSize: 'var(--fs-body)', fontWeight: 600, color: 'var(--nav-text)' }}>演示数据</div>
-        <div style={{ fontSize: 'var(--fs-body)', color: 'var(--nav-muted)', margin: '4px 0 8px' }}>
+        <div style={{ fontSize: 'var(--fs-body)', fontWeight: 600, color: 'var(--axn-text)' }}>演示数据</div>
+        <div style={{ fontSize: 'var(--fs-body)', color: 'var(--axn-muted)', margin: '4px 0 8px' }}>
           把模拟会话、文书与工作台状态全部恢复为初始场景，便于重新演示（不可撤销）。
         </div>
         <Popconfirm
@@ -123,7 +123,6 @@ export function ConversationSettingsPanel({ onDone }: { onDone?: () => void } = 
 }
 
 export default function GlobalSidebar() {
-  const { token } = theme.useToken();
   const { message, modal } = AntdApp.useApp();
   const conversations = useConversationStore((s) => s.conversations);
   const activeConversationId = useConversationStore((s) => s.activeConversationId);
@@ -207,19 +206,10 @@ export default function GlobalSidebar() {
   }, [filtered]);
 
   return (
-    <div
-      className="axn-global-sidebar"
-      data-testid="global-sidebar"
-      style={{
-        '--nav-primary': token.colorPrimary,
-        '--nav-text': token.colorText,
-        '--nav-muted': token.colorTextSecondary,
-        '--nav-border': token.colorBorderSecondary,
-        '--nav-surface': token.colorBgContainer,
-        '--nav-soft': token.colorFillAlter,
-        '--nav-error': token.colorError,
-      }}
-    >
+    // 颜色统一走 main.tsx 注入 :root 的 --axn-*：这里原先另起了一套侧栏级局部变量，
+    // 但它们只挂在侧栏这个 div 上 —— <main> 里的 NavPages 与 portal 出去的抽屉内容
+    // 都继承不到，那些引用实际取不到值（颜色静默回退到继承色）。已整体并入 --axn-*。
+    <div className="axn-global-sidebar" data-testid="global-sidebar">
       {/* 1. 品牌区（左上，保留安小能身份与模拟环境标识） */}
       <div className="axn-gs-brand">
         <span className="axn-gs-brand-mark">安</span>
@@ -335,15 +325,18 @@ export default function GlobalSidebar() {
         </button>
       </div>
 
-      <Modal
+      {/*
+       * 设置属于「有内容的二级视图」→ 用 Drawer 承载（Modal 仅用于轻量确认与短表单）。
+       * 反馈范式：message=瞬时结果 / notification=需处理的失败 / Popconfirm·Modal.confirm=破坏性确认。
+       */}
+      <Drawer
         title="对话与通知设置"
         open={settingsOpen}
-        onCancel={() => setSettingsOpen(false)}
-        footer={null}
-        width={440}
+        onClose={() => setSettingsOpen(false)}
+        size={440}
       >
         <ConversationSettingsPanel onDone={() => setSettingsOpen(false)} />
-      </Modal>
+      </Drawer>
     </div>
   );
 }

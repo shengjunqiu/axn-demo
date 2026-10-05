@@ -6,10 +6,21 @@
  *
  * 路由：HashRouter（react-router-dom v7），URL hash 为导航唯一真相源；
  * 浏览器前进/后退直接生效；不合法路径回退到 /assistant。
+ *
+ * 反馈范式（固定规则，后续开发遵守）：
+ *   - message      —— 轻量、无需用户决策的瞬时结果（成功 / 已保存 / 已导出）
+ *   - notification —— 失败且需要用户处理，或需要携带描述与操作按钮
+ *   - Modal.confirm / Popconfirm —— 破坏性操作二次确认（Popconfirm 用于行内，Modal.confirm 用于区块级）
+ *   - Drawer       —— 承载表单、详情、设置等有内容的二级视图（size 按内容定）
+ *   - Modal        —— 仅用于轻量确认与短表单
+ *
+ * 响应式：视口 ≤767px 时侧栏改为抽屉式（汉堡按钮 + 遮罩），由 matchMedia hook 驱动；
+ * ≤1024px 只收缩助理区列宽，侧栏依旧常驻。
  */
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer } from 'antd';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Menu } from 'lucide-react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useUrlNavSync } from '@/components/nav/navRoutes';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
@@ -32,6 +43,25 @@ const PrintView = lazy(() => import('@/components/doc/PrintView'));
 
 /** 工作区抽屉目标（资源/知识面板由对话任务卡触发的抽屉承载）。 */
 export type WorkspaceTab = 'resource' | 'knowledge';
+
+/**
+ * 响应式媒体查询 hook：监听窗口宽度并返回是否命中 `query`。
+ * 折叠 inline style 会压掉 media query（inline 优先级更高），所以窄屏判断必须走 JS。
+ * 使用 `change` 事件订阅并在卸载时移除监听。
+ */
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(query).matches : false,
+  );
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = (e: MediaQueryListEvent) => setMatches(e.matches);
+    setMatches(mql.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
+}
 
 export default function AppRoot() {
   const storageWarning = useDemoStore((s) => s.storageWarning);
@@ -64,14 +94,95 @@ export default function AppRoot() {
   }, []);
 
   const sidebarCollapsed = useDemoStore((s) => s.sidebarCollapsed);
-  const sidebarStyle = useMemo(() => sidebarCollapsed ? { flex: '0 0 0', width: 0, borderRight: 'none', overflow: 'hidden' } as React.CSSProperties : undefined, [sidebarCollapsed]);
+
+  // 窄屏（≤767px）下侧栏切换为抽屉式：需 JS 参与（遮罩 / 开关），无法纯 CSS 完成。
+  // 阈值必须与 global.css 的 @media (max-width: 767px) 一致，否则 JS 状态与 CSS 定位脱节。
+  const isCompact = useMediaQuery('(max-width: 767px)');
+  const [navOpen, setNavOpen] = useState(false);
+  const location = useLocation();
+  const navToggleRef = useRef<HTMLButtonElement>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const pendingNavFocusRef = useRef(false);
+
+  // 路由变化时自动收起抽屉，避免切换页面后遮罩残留（不动焦点：导航后用户应在内容区继续操作）。
+  useEffect(() => {
+    setNavOpen(false);
+  }, [location.pathname]);
+
+  // 抽屉可访问性：打开时把焦点送进抽屉，Escape 关闭。
+  // 手写抽屉不像 antd Drawer 自带焦点陷阱，这两件事必须自己补。
+
+  // 关闭抽屉。真正的 focus() 放到下面的 effect 里执行 —— 关闭瞬间汉堡按钮
+  // 还是 visibility:hidden，同步调用会静默失败，键盘用户就丢了位置。
+  const closeNav = () => {
+    pendingNavFocusRef.current = true;
+    setNavOpen(false);
+  };
+
+  // 关闭后把焦点交还给汉堡按钮（手写抽屉没有 antd Drawer 的 focusTriggerAfterClose）。
+  useEffect(() => {
+    if (navOpen || !isCompact || !pendingNavFocusRef.current) return;
+    pendingNavFocusRef.current = false;
+    navToggleRef.current?.focus();
+  }, [navOpen, isCompact]);
+
+  useEffect(() => {
+    if (!isCompact || !navOpen) return;
+    sidebarRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      pendingNavFocusRef.current = true;
+      setNavOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isCompact, navOpen]);
+
+  // 折叠 inline style 只在非窄屏生效：inline style 优先级高于 media query，
+  // 若在窄屏照常注入，width:0 会压掉 @media (max-width: 767px) 的抽屉定位
+  //（1024px 那个块只做助理区三列→单列折叠，不含抽屉定位）。
+  const sidebarStyle = useMemo(
+    () => !isCompact && sidebarCollapsed
+      ? { flex: '0 0 0', width: 0, borderRight: 'none', overflow: 'hidden' } as React.CSSProperties
+      : undefined,
+    [isCompact, sidebarCollapsed],
+  );
 
   return (
     <div className="axn-shell">
-      {/* 第一栏：全局导航 + 对话历史 + 底部角色/设置 */}
-      <aside className="axn-shell-sidebar" style={sidebarStyle}>
+      {/* 窄屏遮罩：点按关闭导航抽屉（纯装饰） */}
+      {isCompact && navOpen && (
+        <div
+          className={`axn-shell-backdrop${navOpen ? ' is-open' : ''}`}
+          aria-hidden="true"
+          onClick={closeNav}
+        />
+      )}
+
+      {/* 第一栏：全局导航 + 对话历史 + 底部角色/设置（窄屏下为抽屉）。
+          tabIndex={-1} 只为让打开抽屉时能把焦点送进来，不参与 Tab 顺序。 */}
+      <aside
+        ref={sidebarRef}
+        className={`axn-shell-sidebar${navOpen ? ' is-open' : ''}`}
+        style={sidebarStyle}
+        tabIndex={-1}
+      >
         <GlobalSidebar />
       </aside>
+
+      {/* 窄屏汉堡按钮：打开导航抽屉 */}
+      {isCompact && (
+        <button
+          ref={navToggleRef}
+          type="button"
+          className={`axn-shell-navtoggle${navOpen ? ' is-open' : ''}`}
+          aria-label="打开导航"
+          aria-expanded={navOpen}
+          onClick={() => setNavOpen(true)}
+        >
+          <Menu />
+        </button>
+      )}
 
       {/* 主区：HashRouter 路由分发 */}
       <main className="axn-shell-main">

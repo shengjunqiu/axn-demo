@@ -3,7 +3,8 @@
  * 导出基于用户选定版本的 factsSnapshot 冻结渲染（renderRevision），不导出静态样稿。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Drawer, Empty, Select, Space, Tag, Tooltip, Typography, message } from 'antd';
+// message 反馈走 AntdApp.useApp()：antd v5 静态方法不消费 ConfigProvider 主题，会退回默认 token。
+import { App as AntdApp, Alert, Button, Drawer, Empty, Select, Space, Tag, Tooltip, Typography } from 'antd';
 import { useDocumentStore } from '@/store/documentStore';
 import { openPrintPreview } from './PrintView';
 import type { DocumentContent, DocumentRevision, InlineRun } from '@/domain/types';
@@ -121,6 +122,7 @@ interface RevisionActionsProps {
 }
 
 function RevisionActions({ rev }: RevisionActionsProps) {
+  const { message } = AntdApp.useApp();
   const [exporting, setExporting] = useState(false);
 
   const handleExport = useCallback(async () => {
@@ -146,7 +148,7 @@ function RevisionActions({ rev }: RevisionActionsProps) {
         </Button>
       </Tooltip>
       <Tooltip title="打开打印预览（同样基于该版本冻结渲染）">
-        <Button size="small" onClick={() => openPrintPreview(rev.revisionId)}>
+        <Button size="small" onClick={() => openPrintPreview(rev.revisionId, message)}>
           打印
         </Button>
       </Tooltip>

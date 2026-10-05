@@ -12,8 +12,8 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  background: var(--nav-soft);
-  color: var(--nav-text);
+  background: var(--axn-soft);
+  color: var(--axn-text);
   overflow: hidden;
   user-select: none;
 }
@@ -22,8 +22,8 @@
 .axn-gs-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 18px 14px 14px;
+  gap: var(--space-2-5);
+  padding: 18px var(--space-3-5) var(--space-3-5);
   flex-shrink: 0;
 }
 .axn-gs-brand-mark {
@@ -33,10 +33,10 @@
   border-radius: 8px;
   display: grid;
   place-items: center;
-  background: var(--nav-primary);
+  background: var(--axn-primary);
   color: #fff;
   font-weight: 600;
-  font-size: 15px;
+  font-size: var(--fs-h4);
 }
 .axn-gs-brand-copy { min-width: 0; }
 .axn-gs-brand-name {
@@ -45,7 +45,7 @@
   font-weight: 600;
   line-height: var(--lh-tight);
   letter-spacing: -.01em;
-  color: var(--nav-text);
+  color: var(--axn-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -54,8 +54,8 @@
   display: block;
   font-size: var(--fs-caption);
   line-height: var(--lh-snug);
-  margin-top: 2px;
-  color: var(--nav-muted);
+  margin-top: var(--space-0-5);
+  color: var(--axn-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -65,31 +65,33 @@
 .axn-gs-nav {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  padding: 0 8px 10px;
+  gap: var(--space-px);
+  padding: 0 var(--space-2) var(--space-2-5);
   flex-shrink: 0;
 }
 .axn-gs-nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2-5);
   width: 100%;
   height: 34px;
-  padding: 0 10px;
+  padding: 0 var(--space-2-5);
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--nav-muted);
+  color: var(--axn-muted);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   letter-spacing: -.005em;
   cursor: pointer;
   text-align: left;
   transition: background .12s var(--ease-out), color .12s var(--ease-out);
 }
-.axn-gs-nav-item .anticon {
-  font-size: 15px;
+.axn-gs-nav-item svg.lucide {
+  /* 17px 定宽列：lucide 迁移后原 `.anticon` 已失效，改挂 `svg.lucide`；
+   * 定宽 17px 是为了让所有导航图标左对齐成同一列（图标本身 15px）。 */
+  font-size: var(--fs-h4);
   flex-shrink: 0;
   width: 17px;
   display: inline-flex;
@@ -98,16 +100,16 @@
   opacity: .8;
 }
 .axn-gs-nav-item:hover {
-  background: color-mix(in srgb, var(--nav-text) 5%, transparent);
-  color: var(--nav-text);
+  background: color-mix(in srgb, var(--axn-text) 5%, transparent);
+  color: var(--axn-text);
 }
-.axn-gs-nav-item:hover .anticon { opacity: 1; }
+.axn-gs-nav-item:hover svg.lucide { opacity: 1; }
 .axn-gs-nav-item.is-active {
-  background: color-mix(in srgb, var(--nav-primary) 10%, transparent);
-  color: var(--nav-primary);
+  background: color-mix(in srgb, var(--axn-primary) 10%, transparent);
+  color: var(--axn-primary);
   font-weight: 600;
 }
-.axn-gs-nav-item.is-active .anticon { opacity: 1; }
+.axn-gs-nav-item.is-active svg.lucide { opacity: 1; }
 .axn-gs-nav-item:focus-visible {
   outline: var(--focus-ring);
   outline-offset: var(--focus-offset);
@@ -115,12 +117,12 @@
 
 /* ── 新建按钮 ── */
 .axn-gs-new {
-  margin: 0 10px;
-  padding: 0 0 14px;
+  margin: 0 var(--space-2-5);
+  padding: 0 0 var(--space-3-5);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 .axn-gs-new-btn.ant-btn {
   width: 100%;
@@ -129,66 +131,66 @@
   font-size: var(--fs-body);
   font-weight: 500;
   letter-spacing: -.005em;
-  gap: 7px;
+  gap: var(--space-2);
   transition: background .12s var(--ease-out), border-color .12s var(--ease-out), color .12s var(--ease-out);
 }
-.axn-gs-new-btn.ant-btn .anticon { font-size: 14px; }
+.axn-gs-new-btn.ant-btn svg.lucide { font-size: var(--icon-sm); }
 .axn-gs-new-btn--solid.ant-btn {
-  background: var(--nav-primary);
-  border-color: var(--nav-primary);
+  background: var(--axn-primary);
+  border-color: var(--axn-primary);
   color: #fff;
   box-shadow: var(--shadow-primary);
 }
 .axn-gs-new-btn--solid.ant-btn:hover {
-  background: color-mix(in srgb, var(--nav-primary) 90%, #000);
-  border-color: color-mix(in srgb, var(--nav-primary) 90%, #000);
+  background: color-mix(in srgb, var(--axn-primary) 90%, #000);
+  border-color: color-mix(in srgb, var(--axn-primary) 90%, #000);
   color: #fff;
   box-shadow: var(--shadow-primary);
 }
 .axn-gs-new-btn--ghost.ant-btn {
-  border-color: var(--nav-border);
-  color: var(--nav-text);
+  border-color: var(--axn-border);
+  color: var(--axn-text);
   background: transparent;
 }
 .axn-gs-new-btn--ghost.ant-btn:hover {
-  border-color: color-mix(in srgb, var(--nav-primary) 40%, var(--nav-border));
-  color: var(--nav-primary);
-  background: color-mix(in srgb, var(--nav-primary) 5%, transparent);
+  border-color: color-mix(in srgb, var(--axn-primary) 40%, var(--axn-border));
+  color: var(--axn-primary);
+  background: color-mix(in srgb, var(--axn-primary) 5%, transparent);
 }
 
 /* ── 搜索 ── */
 .axn-gs-search {
-  padding: 0 10px 8px;
+  padding: 0 var(--space-2-5) var(--space-2);
   flex-shrink: 0;
 }
 .axn-gs-search .ant-input-affix-wrapper {
   height: 32px;
-  padding: 4px 10px;
+  padding: var(--space-1) var(--space-2-5);
   border-radius: 6px;
   border-color: transparent;
-  background: color-mix(in srgb, var(--nav-text) 4%, transparent);
+  background: color-mix(in srgb, var(--axn-text) 4%, transparent);
   box-shadow: none;
   font-size: var(--fs-body);
   transition: background .12s var(--ease-out), border-color .12s var(--ease-out), box-shadow .12s var(--ease-out);
 }
 .axn-gs-search .ant-input-affix-wrapper:hover {
-  background: color-mix(in srgb, var(--nav-text) 7%, transparent);
+  background: color-mix(in srgb, var(--axn-text) 7%, transparent);
 }
 .axn-gs-search .ant-input-affix-wrapper:focus-within {
-  background: var(--nav-surface);
-  border-color: var(--nav-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--nav-primary) 30%, transparent);
+  background: var(--axn-surface);
+  border-color: var(--axn-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--axn-primary) 30%, transparent);
 }
-.axn-gs-search .ant-input-prefix { margin-right: 7px; }
+.axn-gs-search .ant-input-prefix { margin-right: var(--space-2); }
 
 /* ── 会话历史 ── */
 .axn-gs-history {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 8px 12px;
+  padding: 0 var(--space-2) var(--space-3);
   scrollbar-width: thin;
-  scrollbar-color: var(--nav-border) transparent;
+  scrollbar-color: var(--axn-border) transparent;
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
   mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
 }
@@ -197,8 +199,8 @@
 .axn-gs-group-label {
   font-size: var(--fs-caption);
   font-weight: 600;
-  color: var(--nav-muted);
-  padding: 14px 10px 5px;
+  color: var(--axn-muted);
+  padding: var(--space-3-5) var(--space-2-5) var(--space-1);
   line-height: var(--lh-snug);
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -210,9 +212,9 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0-5);
   width: 100%;
-  padding: 7px 10px;
+  padding: var(--space-2) var(--space-2-5);
   margin: 0;
   border: none;
   border-radius: 6px;
@@ -221,23 +223,23 @@
   text-align: left;
   transition: background .12s var(--ease-out);
 }
-.axn-gs-conversation:hover { background: color-mix(in srgb, var(--nav-text) 5%, transparent); }
-.axn-gs-conversation.is-active { background: color-mix(in srgb, var(--nav-primary) 10%, transparent); }
+.axn-gs-conversation:hover { background: color-mix(in srgb, var(--axn-text) 5%, transparent); }
+.axn-gs-conversation.is-active { background: color-mix(in srgb, var(--axn-primary) 10%, transparent); }
 
 .axn-gs-conversation-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
   min-width: 0;
   font-size: var(--fs-body);
   font-weight: 500;
   letter-spacing: -.005em;
-  color: var(--nav-text);
+  color: var(--axn-text);
   line-height: var(--lh-snug);
 }
 .axn-gs-conversation.is-active .axn-gs-conversation-title {
-  color: var(--nav-primary);
+  color: var(--axn-primary);
   font-weight: 600;
 }
 .axn-gs-conv-title-text {
@@ -255,9 +257,9 @@
 .axn-gs-conversation-sub {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-meta);
-  color: var(--nav-muted);
+  color: var(--axn-muted);
   line-height: var(--lh-snug);
 }
 .axn-gs-conv-summary {
@@ -270,7 +272,7 @@
 }
 .axn-gs-conv-time {
   font-size: var(--fs-caption);
-  color: var(--nav-muted);
+  color: var(--axn-muted);
   opacity: .65;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
@@ -299,7 +301,7 @@
   height: 22px;
   border: 0;
   background: transparent;
-  color: var(--nav-muted);
+  color: var(--axn-muted);
   cursor: pointer;
   padding: 0;
   border-radius: 4px;
@@ -307,8 +309,8 @@
   transition: background .12s var(--ease-out), color .12s var(--ease-out);
 }
 .axn-gs-conv-action:hover {
-  background: color-mix(in srgb, var(--nav-error) 10%, transparent);
-  color: var(--nav-error);
+  background: color-mix(in srgb, var(--axn-error) 10%, transparent);
+  color: var(--axn-error);
 }
 .axn-gs-conversation:focus-visible,
 .axn-gs-conv-action:focus-visible {
@@ -319,53 +321,53 @@
 .axn-gs-history .ant-empty-description {
   font-size: var(--fs-meta);
   line-height: var(--lh-normal);
-  padding: 0 8px;
+  padding: 0 var(--space-2);
 }
 
 /* ── 底部工具区 ── */
 .axn-gs-footer {
   flex-shrink: 0;
-  background: var(--nav-soft);
-  border-top: 1px solid color-mix(in srgb, var(--nav-text) 9%, transparent);
-  padding: 12px 10px;
+  background: var(--axn-soft);
+  border-top: 1px solid color-mix(in srgb, var(--axn-text) 9%, transparent);
+  padding: var(--space-3) var(--space-2-5);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .axn-gs-event {
   font-size: var(--fs-meta);
   line-height: var(--lh-snug);
-  color: var(--nav-muted);
+  color: var(--axn-muted);
   overflow-wrap: anywhere;
 }
 .axn-gs-event strong {
-  color: var(--nav-text);
+  color: var(--axn-text);
   font-weight: 600;
 }
 .axn-gs-footer-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .axn-gs-footer .ant-select { flex: 1; min-width: 0; }
 .axn-gs-footer .ant-select .ant-select-selector {
   border-radius: 6px !important;
   font-size: var(--fs-meta);
   border-color: transparent !important;
-  background: color-mix(in srgb, var(--nav-text) 4%, transparent) !important;
+  background: color-mix(in srgb, var(--axn-text) 4%, transparent) !important;
   box-shadow: none !important;
 }
 .axn-gs-footer .ant-select:hover .ant-select-selector {
-  background: color-mix(in srgb, var(--nav-text) 7%, transparent) !important;
+  background: color-mix(in srgb, var(--axn-text) 7%, transparent) !important;
 }
 .axn-gs-footer .axn-gs-nav-item {
   font-size: var(--fs-meta);
-  gap: 8px;
+  gap: var(--space-2);
   height: 30px;
-  padding-inline: 8px;
+  padding-inline: var(--space-2);
   border-radius: 6px;
 }
-.axn-gs-footer .axn-gs-nav-item .anticon { font-size: 14px; }
+.axn-gs-footer .axn-gs-nav-item svg.lucide { font-size: var(--icon-sm); }
 
 /* ── 过渡降级 ── */
 @media (prefers-reduced-motion: reduce) {
@@ -377,35 +379,35 @@
   .axn-gs-conv-action { transition: none; }
 }
 
-/* ── NavPages 工具类（与侧栏无关，保持原样） ── */
-.axn-np-section { padding: 8px 16px 16px; }
-.axn-np-col { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; max-width: 860px; }
-.axn-np-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; max-width: 1100px; }
-.axn-np-grid-wide { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-top: 12px; max-width: 1100px; }
-.axn-np-flex-row { display: flex; align-items: center; gap: 8px; }
+/* ── NavPages 工具类（间距/字号/宽度已按 token 收敛） ── */
+.axn-np-section { padding: var(--space-2) var(--space-4) var(--space-4); }
+.axn-np-col { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-3); max-width: var(--measure-form); }
+.axn-np-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: var(--space-3); max-width: var(--measure-wide); }
+.axn-np-grid-wide { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-3); margin-top: var(--space-3); max-width: var(--measure-wide); }
+.axn-np-flex-row { display: flex; align-items: center; gap: var(--space-2); }
 .axn-np-flex-1 { flex: 1; min-width: 0; }
-.axn-np-header { display: flex; align-items: baseline; gap: 12px; padding: 16px 16px 4px; flex-wrap: wrap; }
-.axn-np-meta { font-size: var(--fs-meta); color: var(--nav-muted); margin-top: 2px; }
-.axn-np-meta-nowrap { font-size: var(--fs-meta); color: var(--nav-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.axn-np-label { color: var(--nav-muted); margin-bottom: 4px; }
+.axn-np-header { display: flex; align-items: baseline; gap: var(--space-3); padding: var(--space-4) var(--space-4) var(--space-1); flex-wrap: wrap; }
+.axn-np-meta { font-size: var(--fs-meta); color: var(--axn-muted); margin-top: var(--space-0-5); }
+.axn-np-meta-nowrap { font-size: var(--fs-meta); color: var(--axn-muted); margin-top: var(--space-0-5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.axn-np-label { color: var(--axn-muted); margin-bottom: var(--space-1); }
 .axn-np-fs12 { font-size: var(--fs-meta); }
 .axn-np-fs13 { font-size: var(--fs-body); }
-.axn-np-fs14 { font-size: 14px; }
-.axn-np-fs16 { font-size: 16px; }
-.axn-np-margin-input { margin: 8px 0 12px; max-width: 860px; }
+.axn-np-fs14 { font-size: var(--fs-lead); }
+.axn-np-fs16 { font-size: var(--fs-h3); }
+.axn-np-margin-input { margin: var(--space-2) 0 var(--space-3); max-width: var(--measure-form); }
 .axn-np-search { width: 220px; }
-.axn-np-mt8 { margin-top: 8px; }
-.axn-np-mt10 { margin-top: 12px; }
-.axn-np-mb12 { margin-bottom: 12px; }
+.axn-np-mt8 { margin-top: var(--space-2); }
+.axn-np-mt10 { margin-top: var(--space-3); }
+.axn-np-mb12 { margin-bottom: var(--space-3); }
 .axn-np-mla { margin-left: auto; }
-.axn-np-desc { font-size: var(--fs-body); color: var(--nav-muted); line-height: var(--lh-normal); }
-.axn-np-title-sm { margin: 0; font-size: 16px; }
-.axn-np-icon-huge { font-size: 22px; color: var(--nav-primary); flex-shrink: 0; }
-.axn-np-icon-med { font-size: 20px; color: var(--nav-primary); }
-.axn-np-icon-med-mt { font-size: 20px; color: var(--nav-primary); margin-top: 2px; }
+.axn-np-desc { font-size: var(--fs-body); color: var(--axn-muted); line-height: var(--lh-normal); }
+.axn-np-title-sm { margin: 0; font-size: var(--fs-h3); }
+.axn-np-icon-huge { font-size: var(--fs-h1); color: var(--axn-primary); flex-shrink: 0; }
+.axn-np-icon-med { font-size: var(--icon-lg); color: var(--axn-primary); }
+.axn-np-icon-med-mt { font-size: var(--icon-lg); color: var(--axn-primary); margin-top: var(--space-0-5); }
 .axn-np-icon-gray { color: var(--axn-faint); }
 .axn-np-text-sm { font-size: var(--fs-meta); flex-shrink: 0; }
 .axn-np-k-title { font-size: var(--fs-body); font-weight: 600; }
 /* --axn-warning (#B45309) = 5.02:1；旧值 #d48806 仅 2.87:1 */
-.axn-np-k-notice { font-size: var(--fs-body); color: var(--axn-warning); margin-top: 2px; }
+.axn-np-k-notice { font-size: var(--fs-body); color: var(--axn-warning); margin-top: var(--space-0-5); }
 .axn-np-full-span { grid-column: 1 / -1; }

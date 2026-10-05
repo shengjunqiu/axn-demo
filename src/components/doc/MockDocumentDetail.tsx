@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Input, message } from 'antd';
+// message 反馈走 AntdApp.useApp()：antd v5 静态方法不消费 ConfigProvider 主题，会退回默认 token。
+// useApp() 在 <App> 之外（如直接渲染本组件的单元测试）返回空实现，故调用点用可选链避免抛错。
+import { App as AntdApp, Input } from 'antd';
 import {
   FileText,
 } from 'lucide-react'
@@ -13,6 +15,7 @@ export default function MockDocumentDetail({ scope, document, onClose, onOpenLib
   onDirtyChange?: (dirty: boolean) => void;
   onOpenLibrary?: () => void;
 }) {
+  const { message } = AntdApp.useApp();
   // 未保存的工作副本存在 store 里（按会话作用域 + 文档 id），离开详情页不丢，保存或放弃才清除。
   const savedWorking = useMockDocumentStore((s) => s.libraries[scope]?.working[document.id]);
   const [editing, setEditing] = useState(() => savedWorking !== undefined);
@@ -34,12 +37,12 @@ export default function MockDocumentDetail({ scope, document, onClose, onOpenLib
   useEffect(() => () => { onDirtyChange?.(false); }, [onDirtyChange]);
   const save = () => {
     if (!working.title.trim() || working.sections.some(([heading, body]) => !heading.trim() || !body.trim())) {
-      message.warning('请填写文书标题、章节标题和正文后保存'); return;
+      message.warning?.('请填写文书标题、章节标题和正文后保存'); return;
     }
-    onSave(working); setEditing(false); onDirtyChange?.(false); message.success('修改已保存在当前会话');
+    onSave(working); setEditing(false); onDirtyChange?.(false); message.success?.('修改已保存在当前会话');
   };
   // 取消编辑保留本次编辑内容（工作副本在 store 里，再次进入编辑可继续），放弃修改才真正丢弃。
-  const discard = () => { useMockDocumentStore.getState().clearWorking(scope, document.id); setEditing(false); onDirtyChange?.(false); message.info('已放弃未保存修改'); };
+  const discard = () => { useMockDocumentStore.getState().clearWorking(scope, document.id); setEditing(false); onDirtyChange?.(false); message.info?.('已放弃未保存修改'); };
   return <div className="doc-detail-view">
     <DocumentDetailToolbar title={document.title} subtitle={`${category} · ${document.date} · ${editing ? '编辑中 · 保存后生效' : '当前会话版本'}`} editing={editing} dirty={dirty} onBack={onClose} onOpenLibrary={onOpenLibrary}
       onEdit={() => setEditing(true)} onSave={save} onCancel={() => setEditing(false)} onDiscard={discard} />

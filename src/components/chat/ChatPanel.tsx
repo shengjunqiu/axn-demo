@@ -249,7 +249,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
           key: m.messageId,
           role: 'system',
           content: m.text ?? '',
-          styles: { content: { fontSize: 'var(--fs-body)', color: 'var(--chat-muted)' } },
+          styles: { content: { fontSize: 'var(--fs-body)', color: 'var(--axn-muted)' } },
         };
       }
       return { key: m.messageId, role: 'ai', content: m.text ?? '', avatar: AVATAR };
@@ -259,7 +259,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   const hasMessages = items.length > 0;
 
   return (
-    <div className="axn-chat-page" style={{ '--chat-primary': token.colorPrimary, '--chat-primary-bg': token.colorPrimaryBg, '--chat-border': token.colorBorderSecondary, '--chat-muted': token.colorTextSecondary, '--chat-faint': token.colorTextTertiary, '--chat-text': token.colorText, '--chat-surface': token.colorBgContainer, '--chat-soft': token.colorFillAlter, '--chat-warning': token.colorWarning, '--chat-success': token.colorSuccess, '--chat-error': token.colorError }}>
+    <div className="axn-chat-page">
           {/* 会话头：左侧收起侧边栏 + 标题 */}
       <div className="axn-chat-head">
         <div className="axn-chat-head-row">

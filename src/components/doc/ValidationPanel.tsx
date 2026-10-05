@@ -3,7 +3,8 @@
  * 支持一键「采用建议」（自动重校核）。同时导出共享的重新校核入口与状态标签。
  */
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Button, Empty, Space, Tag, Tooltip, Typography, message } from 'antd';
+// message 反馈走 AntdApp.useApp()：antd v5 静态方法不消费 ConfigProvider 主题，会退回默认 token。
+import { App as AntdApp, Alert, Button, Empty, Space, Tag, Tooltip, Typography } from 'antd';
 import { useDocumentStore } from '@/store/documentStore';
 import { useDemoStore } from '@/store/demoStore';
 import { applySuggestion, RULE_TITLES } from '@/services/validation';
@@ -141,6 +142,7 @@ export default function ValidationPanel({ documentId }: ValidationPanelProps) {
     return reportId ? (s.reports[reportId] ?? null) : null;
   });
   const [busy, setBusy] = useState(false);
+  const { message } = AntdApp.useApp();
 
   const blocks = useMemo(() => (report ? report.issues.filter((i) => i.level === 'block') : []), [report]);
   const warnings = useMemo(() => (report ? report.issues.filter((i) => i.level === 'warning') : []), [report]);

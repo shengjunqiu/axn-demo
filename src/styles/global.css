@@ -41,11 +41,68 @@ body {
   --axn-success-text: color-mix(in srgb, var(--axn-success) 72%, #000);
   --axn-error-text: color-mix(in srgb, var(--axn-error) 72%, #000);
 
+  /* ===== 语义色：品牌自定义，来自 antd token 之外 =====
+   * 仅用于数据可视化的固定语义（图例 / 地图）与公文要害标记，
+   * 不参与 antd 主题派生，故不受换主题影响，直接定值。 */
+  --axn-legend-team: #52c41a; /* 图例·队伍 */
+  --axn-legend-event: #ff8c1f; /* 图例·事件 */
+  --axn-legend-station: #722ed1; /* 图例·站点 */
+  --axn-map-active: #fa541c; /* 地图·当前选中 */
+  --axn-map-route: #2e7d0e; /* 地图·常态连线 */
+  --axn-map-selected: #73d13d; /* 地图·高亮 */
+  --axn-critical: #d0021b; /* 公文·要害标记（比 colorError 更重的红） */
+
   /* 字号尺度：12px 仅用于标签/元信息；正文一律 ≥13px */
   --fs-caption: 11px;
   --fs-meta: 12px;
   --fs-body: 13px;
   --fs-lead: 14px;
+
+  /* 标题层级：正文 4 档之上再加 6 档。相邻档保持 ≥2px 差，
+   * h1(22) 与 display(30) 之间刻意留大间隙 —— 页面大标题与区块标题要拉开层级。 */
+  --fs-h4: 15px; /* 卡片/面板小标题 */
+  --fs-h3: 16px; /* 区块标题 */
+  --fs-h2: 18px; /* 页面内主区块标题 */
+  --fs-h1: 22px; /* 页面标题 */
+  --fs-display: 30px; /* 大数字 / 概览标题 */
+  --fs-hero: clamp(28px, 2.7vw, 38px); /* 首屏主标题，随视口缩放 */
+
+  /* ===== 间距尺度：2px 精度栅格 =====
+   * 所有间距必须落在此栅格上，禁止裸写 px。
+   * 命名沿用 step 记法（--space-2 = 8px），与主流设计系统对齐。 */
+  --space-px: 1px;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-2-5: 10px;
+  --space-3: 12px;
+  --space-3-5: 14px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ===== 图标尺寸 =====
+   * lucide 图标默认 1em（跟随 font-size）。需要独立定尺寸时用这 5 档，
+   * 与字号解耦，避免「改文字大小顺手改坏图标」。 */
+  --icon-xs: 12px;
+  --icon-sm: 14px;
+  --icon-md: 16px; /* 默认：与正文字号对齐 */
+  --icon-lg: 20px;
+  --icon-xl: 30px;
+
+  /* ===== 内容宽度：按阅读/操作场景分级 =====
+   * 单栏正文约 60–75 字符最易读，prose/doc 收在 720–760；
+   * 表单含多列控件略宽；对话与宽表格按容器上限放开。 */
+  --measure-prose: 720px; /* 长文正文 */
+  --measure-doc: 760px; /* 公文纸面 */
+  --measure-form: 860px; /* 表单/设置 */
+  --measure-chat: 880px; /* 对话正文 */
+  --measure-wide: 1100px; /* 宽表格/看板 */
 
   /* 圆角系统 */
   --radius-sm: 4px;
@@ -107,6 +164,28 @@ body {
   --focus-offset: 2px;
 }
 
+/* ===== 减弱动效（无障碍）=====
+ * 系统开启「减弱动态效果」时把 duration token 全部归零，
+ * 所有引用 token 的 transition 随即变瞬时，无需逐选择器手写。
+ * 注意归零只覆盖 transition；animation 由各组件自身的局部 reduce 规则处理，故不在此处处理。 */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instant: 0ms;
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+    --transition-fast: 0ms;
+    --transition-normal: 0ms;
+    --transition-slow: 0ms;
+  }
+}
+
+/* ===== 响应式断点（仅文档；CSS 变量不能用于 @media 条件）=====
+ * 基础尺度四档，全站只允许用这几个字面量，禁止再出现 1000 / 1200 等近似值：
+ *   sm 640px / md 768px / lg 1024px / xl 1280px
+ * 唯一例外：侧栏抽屉在「md 之下」启用，写作 max-width: 767px（即 768px 的下沿；
+ * 写成 768px 会让 768px 正好落入抽屉态）。App.tsx 的 matchMedia 必须用同一个值。 */
+
 /* ===== 图标衔接：lucide-react ← @ant-design/icons =====
  * 全站图标已由 @ant-design/icons 迁移至 lucide-react。
  * antd 原生 .anticon 的契约是：display:inline-flex + vertical-align:-0.125em + 1em 尺寸
@@ -138,11 +217,12 @@ svg.lucide {
   overflow: hidden;
   background: var(--axn-surface);
   --shell-line: var(--axn-border);
+  --shell-sidebar-width: 260px;
 }
 
 .axn-shell-sidebar {
-  flex: 0 0 260px;
-  width: 260px;
+  flex: 0 0 var(--shell-sidebar-width);
+  width: var(--shell-sidebar-width);
   min-width: 0;
   border-right: 1px solid var(--shell-line);
   overflow: hidden;
@@ -162,12 +242,12 @@ svg.lucide {
   flex-shrink: 0;
   background: color-mix(in srgb, var(--axn-warning) 10%, var(--axn-surface));
   border-bottom: 1px solid color-mix(in srgb, var(--axn-warning) 25%, var(--axn-surface));
-  padding: 8px 16px;
+  padding: var(--space-2) var(--space-4);
   font-size: var(--fs-body);
   color: var(--axn-warning-text);
 }
 
-/* 助理区：默认宽栏（对话），打开文书写后为两列；<=1000px 时文书占满主区 */
+/* 助理区：默认宽栏（对话），打开文书写后为两列；≤1024px 时文书占满主区 */
 .axn-assistant {
   flex: 1 1 auto;
   min-height: 0;
@@ -193,21 +273,97 @@ svg.lucide {
   flex-direction: column;
 }
 
-@media (max-width: 1000px) {
-  /* 窄屏不为三列挤压：文书视图独占主区宽度 */
+@media (max-width: 1280px) {
+  /* 二级断点：助手区两列收窄对话列下限 */
+  .axn-assistant--split {
+    grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  /* 窄屏不为三列挤压：文书视图独占主区宽度（侧栏仍常驻，见下方 767px 块） */
   .axn-assistant--split {
     grid-template-columns: minmax(0, 1fr);
   }
   .axn-assistant--split > .axn-chat-pane {
     display: none;
   }
+  .axn-assistant--split > .axn-workspace-pane {
+    border-left: none;
+  }
+}
+
+/* 手机/平板竖屏：侧栏改为抽屉式定位，默认移出视口，靠 .is-open 展开。
+   阈值取 767px 而不是 1024px：在 980~1024px 这类宽度下，常驻 260px 侧栏仍能
+   留出 >700px 主区，是可用布局，过早抽成抽屉会白丢常驻导航。
+   ⚠ App.tsx 的 useMediaQuery('(max-width: 767px)') 必须与此阈值保持一致，
+   否则 JS 的抽屉状态与 CSS 的抽屉定位会脱节。 */
+@media (max-width: 767px) {
+  .axn-shell-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 60;
+    flex: 0 0 auto;
+    width: var(--shell-sidebar-width);
+    transform: translateX(-100%);
+    /* 关闭态必须 visibility:hidden：光靠 translateX(-100%) 只是移出视口，
+       侧栏仍在无障碍树与 Tab 顺序里，键盘用户能 Tab 进看不见的导航。
+       关闭时把可见性延迟到滑动动画结束，打开时立即生效，动画不受影响。 */
+    visibility: hidden;
+    transition: transform var(--transition-normal), visibility 0s linear var(--transition-normal);
+    box-shadow: none;
+  }
+  .axn-shell-sidebar.is-open {
+    transform: none;
+    box-shadow: var(--shadow-lg);
+    visibility: visible;
+    transition: transform var(--transition-normal), visibility 0s;
+  }
+
+  .axn-shell-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(var(--shadow-rgb), .32);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-normal);
+  }
+  .axn-shell-backdrop.is-open { opacity: 1; pointer-events: auto; }
+
+  .axn-shell-navtoggle {
+    position: fixed;
+    top: var(--space-2-5);
+    left: var(--space-2-5);
+    z-index: 70;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--axn-border);
+    border-radius: var(--radius-md);
+    background: var(--axn-surface);
+    color: var(--axn-muted);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: color var(--transition-fast), border-color var(--transition-fast);
+  }
+  .axn-shell-navtoggle:hover { color: var(--axn-primary); border-color: var(--axn-primary); }
+  .axn-shell-navtoggle:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+  /* 抽屉展开时收起汉堡按钮：它 z-index(70) 高于侧栏(60)，不收会压在抽屉品牌区之上。
+     用 visibility 而非 display:none，保留节点让关闭后能把焦点还给它。 */
+  .axn-shell-navtoggle.is-open { visibility: hidden; }
 }
 
 /* 安小能对话滚动区 */
 .chat-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 16px 8px;
+  padding: var(--space-4) var(--space-4) var(--space-2);
 }
 
 /* antd Sider 内容区撑满高度（对话列固定视口高度的关键） */
@@ -223,8 +379,8 @@ svg.lucide {
 /* 事实绑定芯片（编辑器内） */
 .fact-chip {
   display: inline-block;
-  padding: 0 6px;
-  margin: 0 2px;
+  padding: 0 var(--space-1-5);
+  margin: 0 var(--space-0-5);
   border-radius: 4px;
   background: var(--axn-primary-bg);
   color: var(--axn-primary-text);
@@ -244,8 +400,8 @@ svg.lucide {
 /* 派生值芯片 */
 .derived-chip {
   display: inline-block;
-  padding: 0 6px;
-  margin: 0 2px;
+  padding: 0 var(--space-1-5);
+  margin: 0 var(--space-0-5);
   border-radius: 4px;
   background: var(--axn-soft);
   color: var(--axn-primary-text);
@@ -271,39 +427,39 @@ svg.lucide {
     display: block !important;
     position: absolute;
     inset: 0;
-    padding: 32px 44px;
+    padding: var(--space-8) 44px;
     background: #fff;
     color: #000;
-    font-size: 14px;
+    font-size: var(--fs-lead);
     line-height: var(--lh-relaxed);
   }
   .print-root .print-doc-title {
     text-align: center;
-    font-size: 22px;
+    font-size: var(--fs-h1);
     font-weight: 700;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
   }
   .print-root .print-doc-meta {
     text-align: center;
-    color: #444;
+    color: var(--axn-muted);
     font-size: var(--fs-meta);
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
   }
   .print-root h3.print-section-title {
-    font-size: 15px;
+    font-size: var(--fs-h4);
     font-weight: 700;
-    margin: 16px 0 6px;
+    margin: var(--space-4) 0 var(--space-1-5);
   }
   .print-root p.print-para {
-    margin: 4px 0;
+    margin: var(--space-1) 0;
     text-indent: 2em;
   }
   .print-root .print-footer {
-    margin-top: 28px;
+    margin-top: var(--space-7);
     color: var(--axn-muted);
     font-size: var(--fs-meta);
     border-top: 1px solid var(--axn-border);
-    padding-top: 8px;
+    padding-top: var(--space-2);
   }
 }
 
@@ -314,13 +470,13 @@ svg.lucide {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--space-6);
   background: var(--axn-canvas);
 }
 
 .axn-error-details {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--measure-prose);
   font-size: var(--fs-meta);
   color: var(--axn-muted);
 }
@@ -330,7 +486,7 @@ svg.lucide {
 }
 
 .axn-error-details pre {
-  margin: 8px 0 0;
+  margin: var(--space-2) 0 0;
   max-height: 240px;
   overflow: auto;
   white-space: pre-wrap;
