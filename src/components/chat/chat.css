@@ -31,7 +31,7 @@
 .axn-question-item:disabled { color: var(--axn-muted); cursor: not-allowed; opacity: .6; }
 .axn-question-item:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
 .axn-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: 0 var(--space-2); border: 0; background: transparent; flex: 0 0 auto; min-width: 0; max-width: var(--measure-chat); margin: 0 0 var(--space-2); width: 100%; box-sizing: border-box; }
-/* 快捷任务 chips 全部平铺（原「更多任务」Dropdown 浮层已下线）。 */
+/* 快捷任务 chips 全部平铺，不再有「更多任务」收纳浮层（原手写浮层与 .axn-more-tasks 规则已删）。 */
 .axn-assistant--split .axn-composer { padding: var(--space-3) var(--space-3) var(--space-3); }
 .axn-chip.ant-btn { height: 27px; padding: 0 var(--space-2); border: 1px solid color-mix(in srgb, var(--axn-primary) 30%, var(--axn-surface)); background: var(--axn-primary-bg); color: var(--axn-primary-text); border-radius: 7px; font-size: var(--fs-meta); box-shadow: none; transition: background .16s, border-color .16s, color .16s; }
 .axn-chip.ant-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--axn-primary) 16%, var(--axn-surface)); color: var(--axn-primary-text); border-color: color-mix(in srgb, var(--axn-primary) 52%, var(--axn-surface)); }
