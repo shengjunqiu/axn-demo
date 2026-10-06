@@ -61,17 +61,14 @@ for (const { width, height, name } of DESKTOPS) {
   });
 }
 
-test('新建任务与新建对话都显示知识库引导问题', async ({ page }) => {
+test('新建对话显示知识库引导问题', async ({ page }) => {
   await page.goto('/');
   const questions = page.getByTestId('home-chat-recommend').locator('.axn-question-item');
-  // 新建任务
-  await page.getByTestId('new-task-btn').click();
-  await expect(page.locator('.axn-gs-conversation.is-active')).toContainText('新的应急对话');
+  // 新建对话（「新建任务」工作模式入口已下线，原「新建任务」分支随之移除）
+  await page.getByTestId('new-conversation-btn').click();
+  await expect(page.locator('.axn-gs-conversation.is-active')).toContainText('新的对话');
   await expect(questions).toHaveCount(4);
   await expect(questions.first()).toBeVisible();
-  // 新建应急对话
-  await page.getByTestId('new-conversation-btn').click();
-  await expect(questions).toHaveCount(4);
   // 问题取自知识库原文，点击后应命中对应答案
   await questions.first().click();
   await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);

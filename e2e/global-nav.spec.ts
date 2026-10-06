@@ -10,9 +10,10 @@ async function openNav(page: Page, label: string) {
   await page.locator('.axn-gs-nav-item', { hasText: label }).first().click();
 }
 
-/** 新建任务：改版后是侧栏置顶的实心按钮（不再是导航项）。 */
-async function newTask(page: Page) {
-  await page.getByTestId('new-task-btn').click();
+/** 新建对话：侧栏置顶的实心按钮（不再是导航项）。「新建任务」工作模式入口已按下线标注移除，
+ *  原依赖该按钮的用例改走本 helper。 */
+async function newConversation(page: Page) {
+  await page.getByTestId('new-conversation-btn').click();
 }
 
 async function sendInChat(page: Page, text: string) {
@@ -51,31 +52,31 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('.axn-global-sidebar')).toBeVisible();
 });
 
-test('1. 新建任务 → 直接创建空白对话并激活（无弹窗，标注 vibe_1790652706390）', async ({ page }) => {
+test('1. 新建对话 → 直接创建空白对话并激活（无弹窗，标注 vibe_1790652706390）', async ({ page }) => {
   const before = await page.locator('.axn-gs-conversation').count();
-  await newTask(page);
+  await newConversation(page);
   await page.waitForTimeout(400);
   const after = await page.locator('.axn-gs-conversation').count();
   expect(after).toBe(before + 1);
-  await expect(page.locator('.axn-gs-conversation.is-active').first()).toContainText('新的应急对话');
-  // 对话区头部出现关联灾情选择，当前为未关联
-  await expect(page.getByTestId('chat-link-incident')).toBeVisible();
-  await expect(page.getByText('空白对话（未关联事件）').first()).toBeVisible();
+  await expect(page.locator('.axn-gs-conversation.is-active').first()).toContainText('新的对话');
+  // 对话区出现关联灾情选择，当前为未关联；未开始对话（无消息）时头部不显示事件标题（标注 vibe_1791303121889）
+  await expect(page.getByTestId('chat-link-incident')).toContainText('未关联事件');
+  await expect(page.getByTestId('header-event')).toHaveCount(0);
 });
 
 test('2. 对话区内关联灾情 → 切换事件上下文与共享 session', async ({ page }) => {
-  await newTask(page);
+  await newConversation(page);
   await page.getByTestId('chat-link-incident').click();
   await page.locator('.ant-select-item-option', { hasText: '清河段堤防险情' }).click();
   await page.waitForTimeout(500);
-  // 头部上下文切到关联事件
-  await expect(page.getByTestId('header-event')).toContainText('清河段堤防险情', { timeout: 10000 });
-  await expect(page.getByText('空白对话（未关联事件）')).toHaveCount(0);
+  // 上下文切到关联事件：无消息时由关联灾情选择器承载，头部事件标题不显示（标注 vibe_1791303121889）
+  await expect(page.getByTestId('chat-link-incident')).toContainText('清河段堤防险情');
+  await expect(page.getByTestId('header-event')).toHaveCount(0);
   // 取消关联 → 回到未关联（专属虚拟事件）
   await page.getByTestId('chat-link-incident').click();
   await page.locator('.ant-select-item-option', { hasText: '未关联事件' }).click();
   await page.waitForTimeout(500);
-  await expect(page.getByText('空白对话（未关联事件）').first()).toBeVisible({ timeout: 10000 });
+  await expect(page.getByTestId('chat-link-incident')).toContainText('未关联事件');
 });
 
 test('3. 搜索"南堤"→过滤；清空→恢复', async ({ page }) => {
@@ -98,7 +99,9 @@ test('4. 收藏功能已按标注移除（无入口、无星标；删除入口�
   await expect(page.locator('.axn-gs-conv-action [aria-label*="收藏"]')).toHaveCount(0);
   await expect(page.locator('.axn-gs-conv-favorite')).toHaveCount(0);
   // 保留删除覆盖（图标已由 antd 迁到 lucide，故用可访问名断言，不依赖图标 class）
-  await expect(first.locator('.axn-gs-conv-actions button')).toHaveCount(1);
+  // 会话行操作现为「置顶 + 删除」两个（置顶按标注加入；收藏入口已按上列断言确认不存在）
+  await expect(first.locator('.axn-gs-conv-actions button')).toHaveCount(2);
+  await expect(first.locator('.axn-gs-conv-action--pin')).toHaveCount(1);
   await expect(first.getByRole('button', { name: /^删除对话/ })).toHaveCount(1);
 });
 

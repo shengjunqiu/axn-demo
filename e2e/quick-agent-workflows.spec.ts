@@ -26,8 +26,9 @@ test('快捷任务在智能体卡片内展示执行过程和模拟结果', async
 
 test('空白对话提示关联灾情，关联后可正常生成摘要', async ({ page }) => {
   await page.goto('/');
-  await page.getByTestId('new-task-btn').click();
-  await expect(page.getByText('空白对话（未关联事件）').first()).toBeVisible();
+  await page.getByTestId('new-conversation-btn').click();
+  // 无消息时头部不显示事件标题，未关联状态由关联灾情选择器承载（标注 vibe_1791303121889）
+  await expect(page.getByTestId('chat-link-incident')).toContainText('未关联事件');
   await clickQuickTask(page, '生成灾情摘要');
   const card = page.getByTestId('agent-summon-card').last();
   await expect(card).toContainText('当前对话尚未关联有效灾情');
@@ -38,6 +39,8 @@ test('空白对话提示关联灾情，关联后可正常生成摘要', async ({
   await clickQuickTask(page, '生成灾情摘要');
   await expect(page.getByTestId('agent-summon-card').last()).toContainText('任务已完成，执行过程与结果如下', { timeout: 20000 });
   await expect(page.getByTestId('agent-summon-card').last()).toContainText('人员伤亡情况');
+  // 有消息后头部事件标题回归（无消息时不显示）
+  await expect(page.getByTestId('header-event')).toContainText('清河段堤防险情');
 });
 
 test('五类智能体均有入口，方案与评估可执行并展示结果', async ({ page }) => {
