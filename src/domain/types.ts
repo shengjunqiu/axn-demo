@@ -162,7 +162,10 @@ export interface TemplateDef {
 
 export interface Actor {
   actorId: string;
+  /** 身份标签（值班员/指挥员）；签发人等审计记录用的是它，不要与 userName 混用。 */
   name: string;
+  /** 模拟用户姓名，仅用于侧栏展示。 */
+  userName: string;
   role: 'duty' | 'commander';
   orgId: string;
   isSimulated: boolean;

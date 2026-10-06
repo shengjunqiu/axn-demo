@@ -155,7 +155,7 @@ test.describe('安小能主线（要情全链路）', () => {
     // 12. 提交送审 → 切指挥员 → 签发 → 锁定
     await docCard.getByRole('button', { name: '提交送审' }).click();
     await expect(docCard.getByText('待签发')).toBeVisible({ timeout: 15000 });
-    await page.getByLabel('切换角色').click();
+    await page.getByTestId('account-settings').click();
     await page.getByTitle('指挥员').click();
     await docCard.getByRole('button', { name: /签\s*发/ }).click();
     await expect(docCard.getByText('已签发')).toBeVisible({ timeout: 15000 });

@@ -1,8 +1,8 @@
 /**
  * 全局导航 + 对话历史管理侧栏（UI 改版）：
  * 区域：品牌（左上，保留安小能身份与模拟环境标识）/ 一级功能导航（含独立「文书库」）/
- * 新建（新建任务=工作模式、新建应急对话=对话模式）/ 搜索 / 历史会话 / 底部工具区
- * （当前事件、角色切换、设置）。
+ * 新建（新建任务=工作模式、新建应急对话=对话模式）/ 搜索 / 历史会话 / 底部账户区
+ * （当前用户头像 + 名称 + 设置菜单：切换用户身份、对话与通知设置）。
  * 改版要点：原全宽业务页头移除，其承载项下移至侧栏底部；折叠与收藏功能保持移除状态。
  * 全部数据为模拟数据。
  */
@@ -23,7 +23,7 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react'
-import { App as AntdApp, Button, Divider, Drawer, Empty, Input, Popconfirm, Radio, Select } from 'antd';
+import { App as AntdApp, Avatar, Button, Divider, Drawer, Dropdown, Empty, Input, Popconfirm, Radio } from 'antd';
 import type { Conversation, ConversationSettings, NavPage } from '@/domain/types';
 import {
   GROUP_LABEL,
@@ -133,10 +133,9 @@ export default function GlobalSidebar() {
   const deleteConversation = useConversationStore((s) => s.deleteConversation);
   const actorId = useDemoStore((s) => s.actorId);
   const setActor = useDemoStore((s) => s.setActor);
+  const actor = useDemoStore((s) => s.getActor());
   const globalBanner = useDemoStore((s) => s.globalBanner);
-  const currentEventId = useDemoStore((s) => s.currentEventId);
   const scope = useActiveScope();
-  const session = useSessionStore((s) => s.sessions[s.sessionByConversation[activeConversationId ?? ''] ?? '']);
   const setMode = useWorkspaceStore((s) => s.setMode);
 
   const [keyword, setKeyword] = useState('');
@@ -305,24 +304,50 @@ export default function GlobalSidebar() {
         )}
       </div>
 
-      {/* 6. 底部工具区：当前事件 / 角色 / 设置 */}
+      {/*
+       * 6. 底部账户区：左侧当前用户（头像 + 两行：上行模拟用户名、下行身份），右侧设置按钮。
+       * 设置按钮承载两项：切换用户身份（原底部角色下拉）与对话与通知设置（原底部入口），
+       * 避免底部堆叠多个入口。（关联事件改在对话区头部显示，不占侧栏）
+       */}
       <div className="axn-gs-footer">
-        <div className="axn-gs-event" data-testid="header-event">
-          当前事件：<strong>{session ? session.title : currentEventId}</strong>
+        <div className="axn-gs-account">
+          <Avatar className="axn-gs-account-avatar" size={28}>
+            {actor.userName.slice(0, 1)}
+          </Avatar>
+          <span className="axn-gs-account-meta">
+            <span className="axn-gs-account-name">
+              {actor.userName}
+            </span>
+            <span className="axn-gs-account-identity">
+              {actor.name}
+            </span>
+          </span>
+          <Dropdown
+            trigger={['click']}
+            placement="topRight"
+            menu={{
+              selectable: true,
+              selectedKeys: [actorId],
+              items: [
+                {
+                  type: 'group',
+                  label: '切换用户身份',
+                  children: actors.map((a) => ({ key: a.actorId, label: <span title={a.name}>{a.name}</span> })),
+                },
+                { type: 'divider' },
+                { key: 'conversation-settings', icon: <Settings size={14} />, label: '对话与通知设置' },
+              ],
+              onClick: ({ key }) => {
+                if (key === 'conversation-settings') setSettingsOpen(true);
+                else setActor(key);
+              },
+            }}
+          >
+            <button className="axn-gs-account-settings" data-testid="account-settings" aria-label="用户与设置" title="用户与设置">
+              <Settings size={15} />
+            </button>
+          </Dropdown>
         </div>
-        <div className="axn-gs-footer-row">
-          <Select
-            size="small"
-            value={actorId}
-            onChange={setActor}
-            aria-label="切换角色"
-            options={actors.map((a) => ({ value: a.actorId, label: `${a.name} · ${a.role === 'duty' ? '值班员' : '指挥员'}`, title: a.name }))}
-          />
-        </div>
-        <button className="axn-gs-nav-item" onClick={() => setSettingsOpen(true)}>
-          <Settings />
-          <span>对话与通知设置</span>
-        </button>
       </div>
 
       {/*

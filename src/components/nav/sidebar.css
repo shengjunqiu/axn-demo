@@ -329,49 +329,74 @@
   flex-shrink: 0;
   background: var(--axn-soft);
   border-top: 1px solid color-mix(in srgb, var(--axn-text) 9%, transparent);
-  padding: var(--space-3) var(--space-2-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  padding: var(--space-2-5);
 }
-.axn-gs-event {
-  font-size: var(--fs-meta);
-  line-height: var(--lh-snug);
-  color: var(--axn-muted);
-  overflow-wrap: anywhere;
-}
-.axn-gs-event strong {
-  color: var(--axn-text);
-  font-weight: 600;
-}
-.axn-gs-footer-row {
+/* 账户行：头像 + 名称在左（名称吃剩余宽度并省略），设置按钮贴右。 */
+.axn-gs-account {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
+  padding: 0 var(--space-1);
 }
-.axn-gs-footer .ant-select { flex: 1; min-width: 0; }
-.axn-gs-footer .ant-select .ant-select-selector {
-  border-radius: 6px !important;
+.axn-gs-account-avatar.ant-avatar {
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--axn-primary) 14%, transparent);
+  color: var(--axn-primary);
+  font-weight: 600;
+}
+.axn-gs-account-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+.axn-gs-account-name,
+.axn-gs-account-identity {
+  overflow: hidden;
+  line-height: var(--lh-snug);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.axn-gs-account-name {
+  color: var(--axn-text);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  letter-spacing: -.005em;
+}
+.axn-gs-account-identity {
+  color: var(--axn-muted);
   font-size: var(--fs-meta);
-  border-color: transparent !important;
-  background: color-mix(in srgb, var(--axn-text) 4%, transparent) !important;
-  box-shadow: none !important;
 }
-.axn-gs-footer .ant-select:hover .ant-select-selector {
-  background: color-mix(in srgb, var(--axn-text) 7%, transparent) !important;
-}
-.axn-gs-footer .axn-gs-nav-item {
-  font-size: var(--fs-meta);
-  gap: var(--space-2);
+.axn-gs-account-settings {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
   height: 30px;
-  padding-inline: var(--space-2);
+  padding: 0;
+  border: none;
   border-radius: 6px;
+  background: transparent;
+  color: var(--axn-muted);
+  cursor: pointer;
+  transition: background .12s var(--ease-out), color .12s var(--ease-out);
 }
-.axn-gs-footer .axn-gs-nav-item svg.lucide { font-size: var(--icon-sm); }
+.axn-gs-account-settings:hover {
+  background: color-mix(in srgb, var(--axn-text) 7%, transparent);
+  color: var(--axn-text);
+}
+.axn-gs-account-settings:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
 
 /* ── 过渡降级 ── */
 @media (prefers-reduced-motion: reduce) {
   .axn-gs-nav-item,
+  .axn-gs-account-settings,
   .axn-gs-conversation,
   .axn-gs-conv-actions,
   .axn-gs-new-btn.ant-btn,

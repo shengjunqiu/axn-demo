@@ -51,7 +51,7 @@ test.describe('值班日报', () => {
     await expect(dailyCard.getByText(/无问题|阻断 0/)).toBeVisible({ timeout: 20000 });
     await dailyCard.getByRole('button', { name: '提交送审' }).click();
     await expect(page.locator('.doc-card', { hasText: '值班日报' }).filter({ hasText: '待签发' }).first()).toBeVisible({ timeout: 15000 });
-    await page.getByLabel('切换角色').click();
+    await page.getByTestId('account-settings').click();
     await page.getByTitle('指挥员').click();
     await page.locator('.doc-card', { hasText: '值班日报' }).filter({ hasText: '待签发' }).first().getByRole('button', { name: /签\s*发/ }).click();
     await expect(page.locator('.doc-card', { hasText: '值班日报' }).filter({ hasText: '已签发' }).first()).toBeVisible({ timeout: 15000 });

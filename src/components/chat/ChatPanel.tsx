@@ -270,7 +270,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             onClick={toggleSidebar}
             aria-label={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
           />
-          <Text strong className="axn-cp-title">
+          <Text strong className="axn-cp-title" data-testid="header-event">
             {eventTitle}
           </Text>
         </div>

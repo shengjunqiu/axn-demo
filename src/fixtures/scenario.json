@@ -22,6 +22,7 @@
     {
       "actorId": "actor-demo-duty",
       "name": "值班员",
+      "userName": "张明远",
       "role": "duty",
       "orgId": "org-demo-001",
       "isSimulated": true
@@ -29,6 +30,7 @@
     {
       "actorId": "actor-demo-commander",
       "name": "指挥员",
+      "userName": "李国强",
       "role": "commander",
       "orgId": "org-demo-001",
       "isSimulated": true
