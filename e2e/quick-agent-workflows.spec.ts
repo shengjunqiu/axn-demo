@@ -45,11 +45,9 @@ test('空白对话提示关联灾情，关联后可正常生成摘要', async ({
 
 test('五类智能体均有入口，方案与评估可执行并展示结果', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: '更多任务', exact: true }).click();
   for (const id of ['agent-situation', 'agent-resource', 'agent-plan', 'agent-doc', 'agent-eval']) {
     await expect(page.locator(`.axn-chips [data-agent-id="${id}"]`).first()).toBeVisible();
   }
-  await page.keyboard.press('Escape');
   await clickQuickTask(page, '生成救援方案');
   const plan = page.getByTestId('agent-summon-card').filter({ hasText: '救援方案生成智能体' }).last();
   await expect(plan).toHaveClass(/is-running/);

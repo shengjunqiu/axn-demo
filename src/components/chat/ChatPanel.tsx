@@ -2,19 +2,18 @@ import { generateWorkSummary, submitWorkSummaryImprovement } from '@/services/wo
 /**
  * 安小能对话工作流（UI 改版）：会话头（标题 + 关联灾情）+ 消息流（Bubble.List）
  * + 圆角一体化输入区（快捷任务 chips 位于输入框上方）+ 补录表单。
- * 首页引导问题取自已接入知识库的 qa.json；输入区常驻 3 个常用任务 chips，其余收进「更多任务」浮层。
+ * 首页引导问题取自已接入知识库的 qa.json；输入区把全部快捷任务 chips 平铺展示，文书生成类三项相邻成组。
  * 会话跟随演示事件切换（ensureSessionForConversation）；消息与任务状态全部订阅 sessionStore，不本地复制。
  * 本界面为模拟数据演示（规则意图识别，不接真实大模型）。
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useSessionTasks } from '@/hooks/useSessionTasks';
 import {
-  ChevronDown,
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react'
-import { Alert, App as AntdApp, Button, Input, Popover, Select, Space, Tag, Tooltip, Typography, theme } from 'antd';
+import { Alert, App as AntdApp, Button, Input, Select, Space, Tag, Tooltip, Typography, theme } from 'antd';
 import { Bubble, Sender } from '@ant-design/x';
 import type { BubbleItemType } from '@ant-design/x';
 import { useConversationStore } from '@/store/conversationStore';
@@ -41,10 +40,8 @@ export interface ChatPanelProps {
 
 const AVATAR = <div className="axn-chat-avatar">安</div>;
 
-// 输入区常驻 3 个常用任务，其余收进「更多任务」浮层（任务全集见 seed/agentQuickTasks）
-const PRIMARY_LABELS = ['生成灾情摘要', '查询周边救援资源', '生成应急要情'];
-const PRIMARY_TASKS = AGENT_QUICK_TASKS.filter(({ label }) => PRIMARY_LABELS.includes(label));
-const MORE_TASKS = AGENT_QUICK_TASKS.filter(({ label }) => !PRIMARY_LABELS.includes(label));
+// 快捷任务全部平铺在输入框上方（任务全集见 seed/agentQuickTasks）
+// 顺序沿用该目录（按智能体分组），「文书生成智能体」三项天然相邻成组：应急要情 / 值班日报 / 工作总结
 
 export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelProps) {
   const { token } = theme.useToken();
@@ -62,16 +59,6 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
 
   const [input, setInput] = useState('');
   const [clarifyValue, setClarifyValue] = useState('');
-  const [moreOpen, setMoreOpen] = useState(false);
-
-  // 「更多任务」浮层：切换范围时收起，打开时支持 Esc 关闭
-  useEffect(() => { setMoreOpen(false); }, [scope]);
-  useEffect(() => {
-    if (!moreOpen) return;
-    const onEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setMoreOpen(false); };
-    window.addEventListener('keydown', onEscape);
-    return () => window.removeEventListener('keydown', onEscape);
-  }, [moreOpen]);
 
   // 事件切换/重置后确保会话存在并跟随当前事件
   useEffect(() => {
@@ -393,56 +380,23 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         </div>
       )}
 
-      {/* 快捷任务 chips：位于输入框上方 */}
+      {/* 快捷任务 chips：全部平铺在输入框上方，文书生成类三项相邻成组 */}
       <div className="axn-cp-chips-wrap">
         <div className="axn-chips">
-        {PRIMARY_TASKS.map(({ label, agentName, agentId }) => (
-          <Button
-            key={label}
-            size="small"
-            className="axn-chip"
-            title={agentName}
-            data-agent-id={agentId}
-            disabled={!session || busy}
-            onClick={() => { void handleQuickTask(label); }}
-          >
-            {label}
-          </Button>
-        ))}
-        <Popover
-          trigger="click"
-          placement="topRight"
-          open={moreOpen}
-          onOpenChange={setMoreOpen}
-          getPopupContainer={(trigger) => trigger.parentElement ?? document.body}
-          content={
-            <div className="axn-more-tasks" role="group" aria-label="更多快捷任务" data-testid="quick-task-menu">
-              {MORE_TASKS.map(({ label, agentName, agentId }) => (
-                <Button
-                  key={label}
-                  type="text"
-                  title={agentName}
-                  data-agent-id={agentId}
-                  disabled={!session || busy}
-                  onClick={() => { setMoreOpen(false); void handleQuickTask(label); }}
-                >
-                  {label}
-                </Button>
-              ))}
-            </div>
-          }
-        >
-          <Button
-            size="small"
-            className="axn-chip"
-            aria-label="更多任务"
-            aria-expanded={moreOpen}
-            disabled={!session || busy}
-          >
-            更多任务 <ChevronDown />
-          </Button>
-        </Popover>
-      </div>
+          {AGENT_QUICK_TASKS.map(({ label, agentName, agentId }) => (
+            <Button
+              key={label}
+              size="small"
+              className="axn-chip"
+              title={agentName}
+              data-agent-id={agentId}
+              disabled={!session || busy}
+              onClick={() => { void handleQuickTask(label); }}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
       </div>
       {/* 圆角一体化输入区：关联灾情与发送/语音按钮同在输入框右下角 */}
       <div className="axn-composer">

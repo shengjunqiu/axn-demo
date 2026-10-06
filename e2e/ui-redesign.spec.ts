@@ -260,26 +260,24 @@ test('精简分屏保留未发送输入，关闭后恢复首页', async ({ page 
   await expect(page.getByTestId('document-workspace')).toHaveCount(0);
 });
 
-test('三个常用任务与更多任务均可操作，菜单支持键盘退出并遵守运行状态', async ({ page }) => {
+test('七个快捷任务全部平铺在输入框上方，文书生成类相邻成组并遵守运行状态', async ({ page }) => {
   await page.goto('/');
   const chips = page.locator('.axn-chips');
-  await expect(chips.getByRole('button')).toHaveCount(4);
-  const more = page.getByRole('button', { name: '更多任务', exact: true });
-  await more.focus();
-  await page.keyboard.press('Enter');
-  await expect(page.getByTestId('quick-task-menu')).toBeVisible();
-  for (const name of ['生成灾情摘要', '查询周边救援资源', '生成救援方案', '生成应急要情', '生成值班日报', '生成工作总结', '评估救援效果']) {
+  const labels = ['生成灾情摘要', '查询周边救援资源', '生成救援方案', '生成应急要情', '生成值班日报', '生成工作总结', '评估救援效果'];
+  await expect(chips.getByRole('button')).toHaveCount(labels.length);
+  for (const name of labels) {
     await expect(chips.getByRole('button', { name, exact: true })).toBeVisible();
   }
-  await page.screenshot({ path: 'artifacts/ui-polish/more-tasks.png' });
-  await page.keyboard.press('Escape');
-  await expect(more).toHaveAttribute('aria-expanded', 'false');
-  await expect(page.getByTestId('quick-task-menu')).toBeHidden();
+  // 文书生成智能体的三项必须相邻（放在一起）
+  const docTasks = ['生成应急要情', '生成值班日报', '生成工作总结'];
+  const rendered = await chips.getByRole('button').allTextContents();
+  const firstDoc = rendered.indexOf(docTasks[0]);
+  expect(rendered.slice(firstDoc, firstDoc + docTasks.length)).toEqual(docTasks);
+  await page.screenshot({ path: 'artifacts/ui-polish/quick-tasks.png' });
   await clickQuickTask(page, '生成值班日报');
-  await expect(more).toBeDisabled();
+  await expect(chips.getByRole('button', { name: '生成值班日报', exact: true })).toBeDisabled();
   await expect(chips.getByRole('button', { name: '生成灾情摘要', exact: true })).toBeDisabled();
   await expect(page.getByTestId('document-generation-card').last()).toContainText('红头文书已生成', { timeout: 20000 });
   await expect(page.getByTestId('mock-redhead-document')).toContainText('防汛值守日报（新生成）');
-  await expect(more).toBeEnabled();
-  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await expect(chips.getByRole('button', { name: '生成值班日报', exact: true })).toBeEnabled();
 });
