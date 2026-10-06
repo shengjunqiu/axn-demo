@@ -144,6 +144,8 @@ interface ConversationState {
   /** 在对话界面内切换关联灾情：绑定事件共享 session；取消关联则回到会话专属虚拟事件 */
   linkConversationToEvent: (conversationId: string, eventId: string | undefined) => void;
   deleteConversation: (conversationId: string) => void;
+  /** 置顶/取消置顶：仅切换 pinned（视图属性，不碰 updatedAt，取消置顶后回到原时间分组）。 */
+  toggleConversationPin: (conversationId: string) => void;
   updateConversation: (conversationId: string, patch: Partial<Omit<Conversation, 'id' | 'createdAt'>>) => void;
   setActiveNav: (nav: NavPage) => void;
   updateSettings: (patch: Partial<ConversationSettings>) => void;
@@ -216,6 +218,19 @@ export const useConversationStore = create<ConversationState>()((set, get) => ({
     if (nextActive) syncBusinessContext(get().conversations[nextActive]);
   },
 
+  toggleConversationPin: (conversationId) => {
+    set((s) => {
+      const conversation = s.conversations[conversationId];
+      if (!conversation) return s;
+      return {
+        conversations: {
+          ...s.conversations,
+          [conversationId]: { ...conversation, pinned: !conversation.pinned },
+        },
+      };
+    });
+  },
+
   updateConversation: (conversationId, patch) => {
     set((s) => {
       const conversation = s.conversations[conversationId];
@@ -275,9 +290,11 @@ function dayBoundary(offsetDays: number): number {
   return base.getTime();
 }
 
-export type ConversationGroup = 'today' | 'yesterday' | 'earlier';
+export type ConversationGroup = 'pinned' | 'today' | 'yesterday' | 'earlier';
 
 export function groupOf(conversation: Conversation): ConversationGroup {
+  // 置顶优先：置顶会话固定归入「置顶」分组，不按更新时间落到今天/昨天/更早。
+  if (conversation.pinned) return 'pinned';
   const t = new Date(conversation.updatedAt).getTime();
   if (t >= dayBoundary(0)) return 'today';
   if (t >= dayBoundary(1)) return 'yesterday';
@@ -285,18 +302,11 @@ export function groupOf(conversation: Conversation): ConversationGroup {
 }
 
 export const GROUP_LABEL: Record<ConversationGroup, string> = {
+  pinned: '置顶',
   today: '今天',
   yesterday: '昨天',
   earlier: '更早',
 };
-
-export function formatConversationTime(conversation: Conversation): string {
-  const group = groupOf(conversation);
-  const d = new Date(conversation.updatedAt);
-  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  if (group === 'today') return hm;
-  return `${d.getMonth() + 1}月${d.getDate()}日 ${hm}`;
-}
 
 /** 模糊匹配：标题 / 摘要 / 事件名 / 事件或任务编码（大小写不敏感）。 */
 export function matchConversation(conversation: Conversation, keyword: string): boolean {

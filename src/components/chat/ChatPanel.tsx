@@ -193,6 +193,22 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
     });
   };
 
+  // 关联灾情选择器：与发送/语音按钮同排，位于其左侧
+  const incidentSelect = (
+    <Tooltip title="关联后使用该事件的业务资料，对话消息保持独立">
+      <Select
+        size="small"
+        variant="borderless"
+        className="axn-cp-select"
+        value={linkValue}
+        onChange={handleLinkChange}
+        options={linkOptions}
+        aria-label="关联灾情"
+        data-testid="chat-link-incident"
+      />
+    </Tooltip>
+  );
+
   const items: BubbleItemType[] = useMemo(() => {
     const messages = session?.messages ?? [];
     const summonedTasks = new Set(messages.filter(message => message.kind === 'agent' && message.taskId && tasks[message.taskId]).map(message => message.taskId));
@@ -270,9 +286,13 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             onClick={toggleSidebar}
             aria-label={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
           />
-          <Text strong className="axn-cp-title" data-testid="header-event">
-            {eventTitle}
-          </Text>
+          {/* 对话未开始（无消息）时不显示事件标题：此时上下文由下方「关联灾情」选择器承载，
+              标题只是重复（标注 vibe_1791303121889）。首条消息出现后标题回归。 */}
+          {hasMessages && (
+            <Text strong className="axn-cp-title" data-testid="header-event">
+              {eventTitle}
+            </Text>
+          )}
         </div>
       </div>
 
@@ -320,7 +340,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
               <Text className="axn-home-greeting" type="secondary">您好，我是安小能（演示）</Text>
             </div>
             <Typography.Paragraph className="axn-home-copy">
-              梳理灾情、查询救援资源、生成工作文书。把信息整理交给安小能。
+              你可以问我问题，让我帮你写公文，执行任务
             </Typography.Paragraph>
 
             <div className="axn-home-block" data-testid="home-chat-recommend">
@@ -424,22 +444,9 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         </Popover>
       </div>
       </div>
-      {/* 圆角一体化输入区：关联灾情在输入框上方 */}
+      {/* 圆角一体化输入区：关联灾情与发送/语音按钮同在输入框右下角 */}
       <div className="axn-composer">
         <div className="axn-composer-shell">
-          <div className="axn-cp-select-row">
-            <Tooltip title="关联后使用该事件的业务资料，对话消息保持独立">
-              <Select
-                size="small"
-                className="axn-cp-select"
-                value={linkValue}
-                onChange={handleLinkChange}
-                options={linkOptions}
-                aria-label="关联灾情"
-                data-testid="chat-link-incident"
-              />
-            </Tooltip>
-          </div>
           <Sender
             value={input}
             onChange={(v) => setInput(v)}
@@ -448,12 +455,15 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             onCancel={() => {
               if (runningTask) cancelTask(runningTask.taskId);
             }}
-            suffix={(_, { components: { SendButton, SpeechButton } }) => (
+            suffix={(_, { components: { LoadingButton, SendButton, SpeechButton } }) => (
               <>
-                <SpeechButton />
-                <SendButton />
+                {incidentSelect}
+                {/* 空输入→语音，有文字→发送，运行中→停止（可取消当前任务）
+                    同一位置同一动作槽：语音按钮与发送按钮同形（实心圆形主色容器）。 */}
+                {runningTask != null ? <LoadingButton /> : input.trim() ? <SendButton /> : <SpeechButton variant="solid" color="primary" shape="circle" />}
               </>
             )}
+            autoSize={{ minRows: 3, maxRows: 6 }}
             placeholder={
               session ? '向安小能发送指令，Enter 发送' : '会话初始化中…'
             }

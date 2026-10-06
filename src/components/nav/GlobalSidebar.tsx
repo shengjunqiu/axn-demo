@@ -1,7 +1,7 @@
 /**
  * 全局导航 + 对话历史管理侧栏（UI 改版）：
  * 区域：品牌（左上，保留安小能身份与模拟环境标识）/ 一级功能导航（含独立「文书库」）/
- * 新建（新建任务=工作模式、新建应急对话=对话模式）/ 搜索 / 历史会话 / 底部账户区
+ * 新建（新建对话=对话模式；「新建任务」工作模式入口暂时下线）/ 搜索 / 历史会话 / 底部账户区
  * （当前用户头像 + 名称 + 设置菜单：切换用户身份、对话与通知设置）。
  * 改版要点：原全宽业务页头移除，其承载项下移至侧栏底部；折叠与收藏功能保持移除状态。
  * 全部数据为模拟数据。
@@ -12,10 +12,11 @@ import { NAV_PATH } from './navRoutes';
 import {
   Bot,
   Clock,
-  FilePlus,
+  // FilePlus, // 恢复「新建任务」按钮时一并取回
   FlaskConical,
   FolderOpen,
   LayoutGrid,
+  Pin,
   Plus,
   RotateCcw,
   Search,
@@ -23,11 +24,10 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react'
-import { App as AntdApp, Avatar, Button, Divider, Drawer, Dropdown, Empty, Input, Popconfirm, Radio } from 'antd';
+import { App as AntdApp, Avatar, Button, Divider, Drawer, Dropdown, Empty, Input, Popconfirm, Radio, Tooltip } from 'antd';
 import type { Conversation, ConversationSettings, NavPage } from '@/domain/types';
 import {
   GROUP_LABEL,
-  formatConversationTime,
   groupOf,
   matchConversation,
   useConversationStore,
@@ -36,7 +36,6 @@ import {
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { useActiveScope, useWorkspaceStore, type WorkMode } from '@/store/workspaceStore';
-import { eventDisplayName } from '@/services/factLookup';
 import { resetDemoData } from '@/store/resetDemo';
 import { actors } from '@/seed/scenario';
 import './sidebar.css';
@@ -131,6 +130,7 @@ export default function GlobalSidebar() {
   const selectConversation = useConversationStore((s) => s.selectConversation);
   const createConversation = useConversationStore((s) => s.createConversation);
   const deleteConversation = useConversationStore((s) => s.deleteConversation);
+  const toggleConversationPin = useConversationStore((s) => s.toggleConversationPin);
   const actorId = useDemoStore((s) => s.actorId);
   const setActor = useDemoStore((s) => s.setActor);
   const actor = useDemoStore((s) => s.getActor());
@@ -163,11 +163,11 @@ export default function GlobalSidebar() {
     [modal, scope],
   );
 
-  // 新建：新建任务 → 工作模式；新建应急对话 → 对话模式（一次操作决定实际模式）。
+  // 新建对话 → 对话模式（handleNew 亦支持工作模式，其入口见下方注释）。
   const handleNew = (mode: WorkMode) => {
-    const samePrefix = Object.values(conversations).filter((c) => c.title.startsWith('新的应急对话')).length;
+    const samePrefix = Object.values(conversations).filter((c) => c.title.startsWith('新的对话')).length;
     const conversation = createConversation({
-      title: samePrefix === 0 ? '新的应急对话' : `新的应急对话 ${samePrefix + 1}`,
+      title: samePrefix === 0 ? '新的对话' : `新的对话 ${samePrefix + 1}`,
       type: mode === 'work' ? 'daily' : 'general',
       status: 'active',
     });
@@ -199,7 +199,7 @@ export default function GlobalSidebar() {
       arr.push(c);
       map.set(g, arr);
     }
-    return (['today', 'yesterday', 'earlier'] as ConversationGroup[])
+    return (['pinned', 'today', 'yesterday', 'earlier'] as ConversationGroup[])
       .map((g) => ({ group: g, items: map.get(g) ?? [] }))
       .filter((entry) => entry.items.length > 0);
   }, [filtered]);
@@ -220,6 +220,9 @@ export default function GlobalSidebar() {
 
       {/* 2. 新建：主要动作置顶，紧跟品牌 */}
       <div className="axn-gs-new">
+        {/* 「新建任务」（工作模式入口）暂时下线：handleNew('work') 与工作模式实现全部保留，
+            取消本段注释即可恢复（同时取回顶部 FilePlus 图标导入）。 */}
+        {/*
         <Button
           className="axn-gs-new-btn axn-gs-new-btn--solid"
           type="default"
@@ -229,14 +232,15 @@ export default function GlobalSidebar() {
         >
           新建任务
         </Button>
+        */}
         <Button
-          className="axn-gs-new-btn axn-gs-new-btn--ghost"
+          className="axn-gs-new-btn axn-gs-new-btn--solid"
           type="default"
           icon={<Plus />}
-          onClick={() => guardDirty('新建应急对话', () => handleNew('chat'))}
+          onClick={() => guardDirty('新建对话', () => handleNew('chat'))}
           data-testid="new-conversation-btn"
         >
-          新建应急对话
+          新建对话
         </Button>
       </div>
 
@@ -297,6 +301,7 @@ export default function GlobalSidebar() {
                     })
                   }
                   onDelete={() => guardDirty('删除会话', () => deleteConversation(c.id))}
+                  onTogglePin={() => toggleConversationPin(c.id)}
                 />
               ))}
             </div>
@@ -371,11 +376,13 @@ function ConversationRow({
   active,
   onSelect,
   onDelete,
+  onTogglePin,
 }: {
   conversation: Conversation;
   active: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  onTogglePin: () => void;
 }) {
   return (
     <div
@@ -396,6 +403,19 @@ function ConversationRow({
       <div className="axn-gs-conversation-title">
         <span className="axn-gs-conv-title-text">{conversation.title}</span>
         <div className="axn-gs-conv-actions" onClick={(e) => e.stopPropagation()}>
+          <Tooltip title={conversation.pinned ? '取消置顶' : '置顶对话'}>
+            <button
+              className="axn-gs-conv-action axn-gs-conv-action--pin"
+              aria-label={`${conversation.pinned ? '取消置顶' : '置顶'}对话 ${conversation.title}`}
+              aria-pressed={conversation.pinned ? 'true' : 'false'}
+              onClick={(e) => {
+                e.stopPropagation();
+                onTogglePin();
+              }}
+            >
+              <Pin />
+            </button>
+          </Tooltip>
           <Popconfirm
             title="删除该对话？"
             description="仅移除会话条目，不影响事件业务数据。"
@@ -417,12 +437,6 @@ function ConversationRow({
             </button>
           </Popconfirm>
         </div>
-      </div>
-      <div className="axn-gs-conversation-sub">
-        <span className="axn-gs-conv-summary">
-          {conversation.summary ?? (conversation.eventId ? eventDisplayName(conversation.eventId) : '模拟会话')}
-        </span>
-        <span className="axn-gs-conv-time">{formatConversationTime(conversation)}</span>
       </div>
     </div>
   );

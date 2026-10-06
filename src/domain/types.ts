@@ -675,6 +675,8 @@ export interface Conversation {
   status: ConversationStatus;
   createdAt: string;
   updatedAt: string;
+  /** 置顶：侧栏单独「置顶」分组；置顶会话不再落入今天/昨天/更早。 */
+  pinned?: boolean;
 }
 
 /** 一级导航页；'library' 为本次 UI 改版新增的独立文书库入口。 */

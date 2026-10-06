@@ -251,40 +251,18 @@
 }
 .axn-gs-conversation:hover .axn-gs-conv-title-text,
 .axn-gs-conversation:focus-within .axn-gs-conv-title-text {
-  padding-right: 22px;
+  padding-right: 46px;
 }
 
-.axn-gs-conversation-sub {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--fs-meta);
-  color: var(--axn-muted);
-  line-height: var(--lh-snug);
-}
-.axn-gs-conv-summary {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-  opacity: .9;
-}
-.axn-gs-conv-time {
-  font-size: var(--fs-caption);
-  color: var(--axn-muted);
-  opacity: .65;
-  flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 删除按钮：仅悬停时出现，标题已预留 22px 右侧留白，无需底色遮挡 */
+/* 行内操作（置顶 / 删除）：仅悬停或键盘聚焦时出现，标题已预留 46px 右侧留白，无需底色遮挡 */
 .axn-gs-conv-actions {
   position: absolute;
-  top: 5px;
+  top: 50%;
   right: 6px;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
+  gap: 2px;
   opacity: 0;
   pointer-events: none;
   transition: opacity .12s var(--ease-out);
@@ -311,6 +289,11 @@
 .axn-gs-conv-action:hover {
   background: color-mix(in srgb, var(--axn-error) 10%, transparent);
   color: var(--axn-error);
+}
+/* 置顶按钮：悬停用主色（删除按钮保留上面的危险色） */
+.axn-gs-conv-action--pin:hover {
+  background: color-mix(in srgb, var(--axn-primary) 12%, transparent);
+  color: var(--axn-primary);
 }
 .axn-gs-conversation:focus-visible,
 .axn-gs-conv-action:focus-visible {

@@ -128,6 +128,8 @@ body {
   --dur-fast: 120ms;
   --dur-base: 180ms;
   --dur-slow: 260ms;
+  /* 比 slow 再长一档：块级入场（整行/整卡/答案）专用，让「结果长出来」的过程看得见 */
+  --dur-slower: 440ms;
 
   /* 组合过渡：所有过渡都应引用这三个，禁止裸写 ease */
   --transition-fast: var(--dur-fast) var(--ease-out);
@@ -174,6 +176,7 @@ body {
     --dur-fast: 0ms;
     --dur-base: 0ms;
     --dur-slow: 0ms;
+    --dur-slower: 0ms;
     --transition-fast: 0ms;
     --transition-normal: 0ms;
     --transition-slow: 0ms;
