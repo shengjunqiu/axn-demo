@@ -42,7 +42,7 @@ for (const entry of ['分类按钮', '对话输入', '快捷操作']) {
       await expect(card).toContainText(text);
     }
     const doc = page.getByTestId('mock-redhead-document');
-    await expect(doc).toContainText('存在问题与反思');
+    await expect(doc).toContainText('深刻启示');
     await expect(doc).toContainText('下一步工作');
     await expect(doc).toContainText(answer);
     await expect(doc).not.toContainText('模拟补充 · 已确认');

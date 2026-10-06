@@ -30,7 +30,7 @@ test('文书库：分类浏览、样稿与生成回写', async ({ page }) => {
     await category.locator('.doc-sample-row').first().click();
     await expect(page.getByTestId('document-workspace')).toBeVisible();
     await expect(page.getByTestId('mock-redhead-document')).toBeVisible();
-    await expect(page.locator('.axn-redhead-org')).toHaveText('应急管理');
+    await expect(page.locator('.axn-redhead-org')).toHaveText('中国安能建设集团有限公司');
     await closeWorkspace(page);
     // 分类生成 → 生成中自动打开工作区 → 完成后回写该分类
     await openLibrary(page);
@@ -40,7 +40,7 @@ test('文书库：分类浏览、样稿与生成回写', async ({ page }) => {
       await page.getByRole('textbox', { name: '下一步改进措施' }).fill('完善通信保障和人员轮换机制。');
       await page.getByRole('button', { name: '提交并生成工作总结' }).click();
     }
-    await expect(page.getByTestId('mock-redhead-document')).toContainText('新生成');
+    await expect(page.getByTestId('document-toolbar')).toContainText('新生成');
     await closeWorkspace(page);
     await openLibrary(page);
     await expect(category.locator('.doc-sample-row')).toHaveCount(3);
@@ -80,8 +80,8 @@ test('聊天文书快捷操作无需补录即可生成右侧模拟红头文书',
     await expect(workflow).toContainText('正在调用文书生成智能体…');
     await expect(workflow).toContainText('正在生成文书…');
     await expect(panel).toContainText('正在生成文书');
-    await expect(panel.getByTestId('mock-redhead-document')).toContainText(`${title}（新生成）`);
-    await expect(panel.locator('.axn-redhead-org')).toHaveText('应急管理');
+    await expect(panel.getByTestId('document-toolbar')).toContainText(`${title}（新生成）`);
+    await expect(panel.locator('.axn-redhead-org')).toHaveText('中国安能建设集团有限公司');
     await expect(workflow).toContainText('红头文书已生成');
     await expect(workflow).toContainText('要素齐备，已确认（模拟）');
     await expect(panel.getByTestId('mock-redhead-document')).not.toContainText('文书要素（模拟收集）');

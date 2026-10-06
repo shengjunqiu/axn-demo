@@ -84,7 +84,7 @@ test('文书库打开 → 工作区显示 → 关闭回宽对话 → 同份重�
   expect(title.length).toBeGreaterThan(0);
   await rows.first().click();
   await expect(page.getByTestId('document-workspace')).toBeVisible();
-  await expect(page.getByTestId('mock-redhead-document')).toContainText(title);
+  await expect(page.getByTestId('document-toolbar')).toContainText(title);
 
   // 关闭 → 宽对话（无文书列），数据保留
   await page.getByTestId('workspace-close-btn').click();
@@ -94,8 +94,8 @@ test('文书库打开 → 工作区显示 → 关闭回宽对话 → 同份重�
   // 同一预览重开：仍是同一份模拟稿，不触发重新生成
   await openLibrary(page);
   await page.getByTestId('document-library').locator('.doc-sample-row').filter({ hasText: title }).first().click();
-  await expect(page.getByTestId('mock-redhead-document')).toContainText(title);
-  await expect(page.getByTestId('mock-redhead-document')).not.toContainText('（新生成）');
+  await expect(page.getByTestId('document-toolbar')).toContainText(title);
+  await expect(page.getByTestId('document-toolbar')).not.toContainText('（新生成）');
 });
 
 test('生成文书自动打开工作区；关闭后同一完成不再自动弹出；产物可显式打开', async ({ page }) => {
@@ -110,7 +110,7 @@ test('生成文书自动打开工作区；关闭后同一完成不再自动弹�
   // 已完成的模拟文书预览可显式重开；真实草稿重开由业务主线覆盖
   await page.getByRole('button', { name: '查看文书', exact: true }).last().click();
   await expect(page.getByTestId('document-workspace')).toBeVisible();
-  await expect(page.getByTestId('mock-redhead-document')).toContainText('新生成');
+  await expect(page.getByTestId('document-toolbar')).toContainText('新生成');
 });
 
 test('待补充的工作总结在刷新后恢复到文书工作区', async ({ page }) => {
@@ -144,7 +144,7 @@ test('迟到的 A 会话完成不会在 B 会话打开文书', async ({ page }) 
   await expect(page.getByTestId('document-generation-card').last()).toContainText('红头文书已生成');
   await expect(page.getByTestId('document-workspace')).toHaveCount(0);
   await page.getByRole('button', { name: '查看文书', exact: true }).last().click();
-  await expect(page.getByTestId('mock-redhead-document')).toContainText('新生成');
+  await expect(page.getByTestId('document-toolbar')).toContainText('新生成');
 });
 
 test('未保存编辑：关闭需确认，取消保留、放弃丢弃', async ({ page }) => {
@@ -240,7 +240,7 @@ test('从聊天预览切换文书时取消保留编辑、确认后切换（工�
   await expect(title).toHaveValue('切换前未保存标题');
   await page.getByRole('button', { name: '查看文书', exact: true }).first().click();
   await page.getByRole('button', { name: '打开并保留修改' }).click();
-  await expect(page.getByTestId('mock-redhead-document')).toContainText('防汛值守日报（新生成）');
+  await expect(page.getByTestId('document-toolbar')).toContainText('防汛值守日报（新生成）');
   await expect(title).toHaveCount(0);
 });
 
@@ -278,6 +278,6 @@ test('七个快捷任务全部平铺在输入框上方，文书生成类相邻�
   await expect(chips.getByRole('button', { name: '生成值班日报', exact: true })).toBeDisabled();
   await expect(chips.getByRole('button', { name: '生成灾情摘要', exact: true })).toBeDisabled();
   await expect(page.getByTestId('document-generation-card').last()).toContainText('红头文书已生成', { timeout: 20000 });
-  await expect(page.getByTestId('mock-redhead-document')).toContainText('防汛值守日报（新生成）');
+  await expect(page.getByTestId('document-toolbar')).toContainText('防汛值守日报（新生成）');
   await expect(chips.getByRole('button', { name: '生成值班日报', exact: true })).toBeEnabled();
 });

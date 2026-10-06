@@ -116,9 +116,9 @@ test.describe('安小能主线（要情全链路）', () => {
     await docCard.getByRole('button', { name: /编\s*辑/ }).click();
     const editorDrawer = page.locator('.ant-drawer', { hasText: '工作副本' }).last();
     await expect(editorDrawer).toBeVisible();
-    // 定位到“五、下一步工作”段落末尾（避免把矛盾句混入其他事实段，导致建议替换时波及无关绑定）
-    const nextStepPara = editorDrawer.locator('.ProseMirror p', { hasText: '持续跟踪险情发展' }).first();
-    await nextStepPara.click();
+    // 定位到“四、重点、难点及采取的措施”叙述段末尾（避免把矛盾句混入其他事实段，导致建议替换时波及无关绑定）
+    const measuresPara = editorDrawer.locator('.ProseMirror p', { hasText: '控制渗流通道' }).first();
+    await measuresPara.click();
     // 保持在可校核的叙述段内新增正文，避免跳到文末知识引用的原子节点后。
     await page.keyboard.press('End');
     await page.keyboard.press('Enter');
