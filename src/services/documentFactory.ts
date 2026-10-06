@@ -127,7 +127,7 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
   const sections: DocumentSection[] = [
     {
       id: 'basic',
-      heading: '一、基本情况',
+      heading: '一、灾（险）情概述',
       paragraphs: [
         para('basic-1', 'fact-line', [
           textRun('发生时间：'),
@@ -151,27 +151,43 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
           factRun(latestId.replace('waterLevel', 'observedAt')),
           textRun(' 观测）。'),
         ] : [textRun('当前事件无水情监测依据。')]),
-      ],
-    },
-    {
-      id: 'impact',
-      heading: '二、当前影响',
-      paragraphs: [
-        para('impact-1', 'fact-line', [
+        para('basic-4', 'fact-line', [
           textRun('影响范围：'),
           factRun(refs.impactScope),
-          textRun('。'),
-        ]),
-        para('impact-2', 'fact-line', [
-          textRun('人员伤亡情况：'),
+          textRun('。人员伤亡情况：'),
           factRun(refs.casualty),
           textRun('。'),
         ]),
       ],
     },
     {
+      id: 'forces',
+      heading: '二、投入力量及组织指挥',
+      paragraphs: (() => {
+        const forcesRole: 'fact-line' | 'narrative' = candidates.length ? 'fact-line' : 'narrative';
+        const delimit = (index: number) => index ? [textRun('、')] : [];
+        const forceRuns: InlineRun[] = candidates.length
+          ? [
+              textRun('拟预置候选队伍：'),
+              ...candidates.flatMap((id, index) => [...delimit(index), factRun(teamById.get(id)?.factRefs.name ?? '')]),
+              textRun('；合计 '),
+              derivedRun('candidate_team_count', ' 支'),
+              textRun('，合计人员 '),
+              derivedRun('candidate_people_count', ' 人'),
+              textRun('、挖掘机 '),
+              derivedRun('candidate_excavator_count', ' 台'),
+              textRun('（以上为候选，尚未形成调派命令）。'),
+            ]
+          : [textRun('候选力量待确认。')];
+        return [
+          para('forces-1', forcesRole, forceRuns),
+          para('forces-2', 'narrative', [textRun('组织指挥：现场处置由属地防汛指挥机构统一组织（模拟）；力量使用以正式命令为准，本节仅登记候选队伍。')]),
+        ];
+      })(),
+    },
+    {
       id: 'response',
-      heading: '三、响应及处置进展',
+      heading: '三、处置行动及战果',
       paragraphs: [
         para('response-1', 'fact-line', [
           textRun('现场处置状态：'),
@@ -190,34 +206,19 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
       ],
     },
     {
-      id: 'forces',
-      heading: '四、力量情况',
-      paragraphs: (() => {
-        const forcesRole: 'fact-line' | 'narrative' = candidates.length ? 'fact-line' : 'narrative';
-        const delimit = (index: number) => index ? [textRun('、')] : [];
-        const forceRuns: InlineRun[] = candidates.length
-          ? [
-              textRun('拟预置候选队伍：'),
-              ...candidates.flatMap((id, index) => [...delimit(index), factRun(teamById.get(id)?.factRefs.name ?? '')]),
-              textRun('；合计 '),
-              derivedRun('candidate_team_count', ' 支'),
-              textRun('，合计人员 '),
-              derivedRun('candidate_people_count', ' 人'),
-              textRun('、挖掘机 '),
-              derivedRun('candidate_excavator_count', ' 台'),
-              textRun('（以上为候选，尚未形成调派命令）。'),
-            ]
-          : [textRun('候选力量待确认。')];
-        return [para('forces-1', forcesRole, forceRuns)];
-      })(),
+      id: 'others',
+      heading: '四、重点、难点及采取的措施',
+      paragraphs: [
+        para('others-1', 'narrative', [
+          textRun('重点、难点：控制渗流通道、防止堤身进一步掏空；夜间作业、取土场地受限。采取的措施：分段施工、加密水位与位移监测、预置抢险物资与备用电源。具体措施以专业人员审核意见为准。'),
+        ]),
+      ],
     },
     {
-      id: 'next',
-      heading: '五、下一步工作',
+      id: 'other-info',
+      heading: '五、其他重要情况',
       paragraphs: [
-        para('next-1', 'narrative', [
-          textRun('持续跟踪险情发展，核实待核实事项并动态更新本报告；具体处置措施以专业人员审核意见为准。'),
-        ]),
+        para('other-info-1', 'narrative', [textRun('暂无其他重要情况，后续进展按程序续报；报送、抄送与承办信息见第六节。')]),
       ],
     },
     {
@@ -229,6 +230,7 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
           reportingUnitFactId ? factRun(reportingUnitFactId) : textRun('（待补录）'),
           textRun('。'),
         ]),
+        para('report-2', 'narrative', [textRun('抄送：相关成员单位（模拟）；承办：值班室（模拟）。')]),
       ],
     },
     {
@@ -242,8 +244,8 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
     },
   ];
   if (proposal) {
-    const next = sections.find((section) => section.id === 'next') as DocumentSection;
-    next.paragraphs.push(
+    const measures = sections.find((section) => section.id === 'others') as DocumentSection;
+    measures.paragraphs.push(
       para('proposal-version', 'reference', [textRun(`已采纳建议：${proposal.title}（版本 ${proposal.version}，模拟、待专业审核）。`)]),
       ...proposal.sections.map((section) => para(`proposal-${section.id}`, 'narrative', [textRun(`${section.title}：${section.text}`)])),
       ...proposal.riskNotes.map((note, index) => para(`proposal-risk-${index}`, 'narrative', [textRun(`建议风险提示：${note}`)])),
@@ -289,8 +291,8 @@ function composeDailyContent(sessionId: string): DocumentContent {
 
   const sections: DocumentSection[] = [
     {
-      id: 'shift-overview',
-      heading: '一、班次概况',
+      id: 'attendance',
+      heading: '一、人员在位情况',
       paragraphs: [
         para('shift-1', 'fact-line', [
           textRun('班次 '),
@@ -303,11 +305,12 @@ function composeDailyContent(sessionId: string): DocumentContent {
           factRun(latestClockFactId()),
           textRun('（模拟时钟，非完整日终数据）。'),
         ]),
+        para('attendance-1', 'narrative', [textRun('值班人员在位情况以值守表报送数据为准；值班员、值班电话及所属单位值班室在岗情况列为待核实事项（模拟数据源未接入值守表）。')]),
       ],
     },
     {
-      id: 'stats',
-      heading: '二、接报统计',
+      id: 'rescue',
+      heading: '二、应急救援情况',
       paragraphs: [
         para('stats-1', 'fact-line', [
           textRun('本班次接报 '),
@@ -318,41 +321,34 @@ function composeDailyContent(sessionId: string): DocumentContent {
           derivedRun('daily_controlled_count', ' 起'),
           textRun('。'),
         ]),
-      ],
-    },
-    {
-      id: 'key-events',
-      heading: '三、重点事件',
-      paragraphs: keyEvents.length ? keyEvents : [para('daily-key-empty', 'narrative', [textRun('本班次无接报事件。')])],
-    },
-    {
-      id: 'monitor',
-      heading: '四、监测摘要',
-      paragraphs: [
+        ...(keyEvents.length ? keyEvents : [para('daily-key-empty', 'narrative', [textRun('本班次无接报事件。')])]),
+        ...eventIds.map((eid, i) => {
+          const inc = incidentById.get(eid);
+          if (!inc) return para(`daily-progress-${i}`, 'fact-line', [textRun(`事件 ${eid} 未找到`)]);
+          return para(`daily-progress-${i}`, 'fact-line', [
+            textRun(`${String(factById.get(inc.factRefs.title)?.value ?? eid)}：`),
+            factRun(inc.factRefs.incidentDescription),
+          ]);
+        }),
         para('monitor-1', 'fact-line', [
           textRun('清河段模拟测站最新水位 '),
-          factRun(latestWaterLevelFactId(shiftEventIds(shift.shiftId).find((id) => latestWaterLevelFactId(id)) ?? '') ?? ''),
+          factRun(latestWaterLevelFactId(eventIds.find((id) => latestWaterLevelFactId(id)) ?? '') ?? ''),
           textRun('（'),
-          factRun((latestWaterLevelFactId(shiftEventIds(shift.shiftId).find((id) => latestWaterLevelFactId(id)) ?? '') ?? '').replace('waterLevel', 'observedAt')),
+          factRun((latestWaterLevelFactId(eventIds.find((id) => latestWaterLevelFactId(id)) ?? '') ?? '').replace('waterLevel', 'observedAt')),
           textRun(' 观测）；水情趋势详见工作台监测摘要。'),
         ]),
       ],
     },
     {
-      id: 'progress',
-      heading: '五、处置进展',
-      paragraphs: eventIds.map((eid, i) => {
-        const inc = incidentById.get(eid);
-        if (!inc) return para(`daily-progress-${i}`, 'fact-line', [textRun(`事件 ${eid} 未找到`)]);
-        return para(`daily-progress-${i}`, 'fact-line', [
-          textRun(`${String(factById.get(inc.factRefs.title)?.value ?? eid)}：`),
-          factRun(inc.factRefs.incidentDescription),
-        ]);
-      }),
+      id: 'publicity',
+      heading: '三、舆情上访情况',
+      paragraphs: [
+        para('publicity-1', 'narrative', [textRun('本班次未发现相关舆情与上访情况（模拟）；核查结论以宣传、信访部门反馈为准。')]),
+      ],
     },
     {
       id: 'handover',
-      heading: '六、交接事项',
+      heading: '四、交接事项',
       paragraphs: [
         para('handover-1', 'fact-line', [
           handOverFactId
@@ -363,7 +359,7 @@ function composeDailyContent(sessionId: string): DocumentContent {
     },
     {
       id: 'daily-report',
-      heading: '七、填报单位',
+      heading: '五、填报单位',
       paragraphs: [
         para('daily-report-1', 'fact-line', [
           textRun('填报单位：'),

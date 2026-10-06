@@ -27,7 +27,9 @@ export default function MockDocumentDetail({ scope, document, onClose, onOpenLib
     else store.setWorking(scope, next);
   };
   const displayed = editing ? working : document;
-  const category = DOCUMENT_CATEGORIES.find(item => item.code === document.code)?.name ?? '文书';
+  const category = DOCUMENT_CATEGORIES.find(item => item.code === document.code);
+  const categoryName = category?.name ?? '文书';
+  const redhead = category?.redhead;
   const dirty = !sameMockDocument(working, document);
   const sectionChange = (index: number, part: 0 | 1, value: string) => applyWorking({
     ...working, sections: working.sections.map((section, i) => i === index ? (part === 0 ? [value, section[1]] : [section[0], value]) : section),
@@ -44,24 +46,44 @@ export default function MockDocumentDetail({ scope, document, onClose, onOpenLib
   // 取消编辑保留本次编辑内容（工作副本在 store 里，再次进入编辑可继续），放弃修改才真正丢弃。
   const discard = () => { useMockDocumentStore.getState().clearWorking(scope, document.id); setEditing(false); onDirtyChange?.(false); message.info?.('已放弃未保存修改'); };
   return <div className="doc-detail-view">
-    <DocumentDetailToolbar title={document.title} subtitle={`${category} · ${document.date} · ${editing ? '编辑中 · 保存后生效' : '当前会话版本'}`} editing={editing} dirty={dirty} onBack={onClose} onOpenLibrary={onOpenLibrary}
+    <DocumentDetailToolbar title={document.title} subtitle={`${categoryName} · ${document.date} · ${editing ? '编辑中 · 保存后生效' : '当前会话版本'}`} editing={editing} dirty={dirty} onBack={onClose} onOpenLibrary={onOpenLibrary}
       onEdit={() => setEditing(true)} onSave={save} onCancel={() => setEditing(false)} onDiscard={discard} />
     {editing && dirty && <div className="doc-dirty-note" data-testid="mock-dirty-note">有未保存修改 · 「取消编辑」保留内容，「放弃修改」丢弃，保存后写入当前会话文书库</div>}
     <div className="doc-detail-scroll">
       {editing && <div className="doc-edit-notice">编辑标题与正文，完成后点击“保存修改”。</div>}
       <article className={`axn-redhead-paper ${editing ? 'doc-paper-editing' : ''}`} data-testid="mock-redhead-document">
-        <div className="axn-redhead-org">应急管理</div>
-        <div className="axn-redhead-no">{document.number}（模拟）</div>
+        {redhead?.platform && <div className="axn-redhead-platform">{redhead.platform}</div>}
+        <div className="axn-redhead-org">{redhead?.org ?? '中国安能建设集团有限公司'}</div>
+        <div className="axn-redhead-type">{redhead?.type ?? categoryName}</div>
+        {redhead?.showNumber !== false && <div className="axn-redhead-no">{document.number}（模拟）</div>}
+        <div className="axn-redhead-metabar">
+          <span>{document.date}</span>
+          <span>{redhead?.tail === 'duty' ? '审　阅：×××' : '签　发：×××'}</span>
+        </div>
         <div className="axn-redhead-rule" />
-        {editing ? <Input className="doc-edit-title" aria-label="文书标题" value={working.title} onChange={event => applyWorking({ ...working, title: event.target.value })} /> : <h2 className="doc-redhead-subject">{displayed.title}</h2>}
-        <div className="axn-redhead-meta-row"><span>编制单位：市应急指挥中心（模拟）</span><span>{document.date}</span></div>
+        {editing && <Input className="doc-edit-title" aria-label="文书标题" value={working.title} onChange={event => applyWorking({ ...working, title: event.target.value })} />}
+        {!editing && redhead?.showTitle !== false && <h2 className="doc-redhead-subject">{displayed.title}</h2>}
         <div className="axn-redhead-body">{displayed.sections.map(([heading, body], index) => heading === '文书要素（模拟收集）' ? null : <section key={index}>
           {editing ? <><Input className="doc-edit-heading" aria-label={`第${index + 1}节标题`} value={heading} onChange={event => sectionChange(index, 0, event.target.value)} /><Input.TextArea aria-label={`第${index + 1}节正文`} autoSize={{ minRows: 3 }} value={body} onChange={event => sectionChange(index, 1, event.target.value)} /></> : <><h3>{heading}</h3><p>{body}</p></>}
         </section>)}</div>
-        <div className="doc-document-signature"><p>应急管理</p><p>{document.date}</p></div>
-        <div className="axn-redhead-foot"><span>报送：有关单位（模拟）</span><span>模拟样稿 · 仅供评估</span></div>
+        {redhead?.tail === 'duty' && <div className="axn-redhead-tail axn-redhead-tail-duty">
+          <span>值班员：×××</span>
+          <span>值班电话：×××-××××××××</span>
+        </div>}
+        {redhead?.tail === 'brief' && <div className="axn-redhead-tail axn-redhead-tail-brief">
+          <p>报送：集团应急指挥中心（模拟）。</p>
+          <p>抄送：集团领导，副总师级以上管理人员，总部各部门（模拟）。</p>
+          <p>承办：应急指挥中心（模拟）&emsp;&emsp;编辑：×××&emsp;电话：×××-××××××××</p>
+        </div>}
+        {redhead?.tail === 'report' && <div className="axn-redhead-tail axn-redhead-tail-report">
+          <p className="axn-redhead-sign-org">{redhead.org}</p>
+          <p className="axn-redhead-sign-date">{document.date}</p>
+          <p className="axn-redhead-contact">（联系人：×××&emsp;电话：×××-××××××××）</p>
+        </div>}
+        <div className="axn-redhead-pageno">— 1 —</div>
+        <div className="axn-redhead-mock">模拟样稿 · 仅供评估</div>
       </article>
-      <div className="doc-reading-footer"><FileText /> {category} · 红头格式<span>{displayed.sections.reduce((count, section) => count + section.join('').length, displayed.title.length)} 字</span></div>
+      <div className="doc-reading-footer"><FileText /> {categoryName} · 红头格式<span>{displayed.sections.reduce((count, section) => count + section.join('').length, displayed.title.length)} 字</span></div>
     </div>
   </div>;
 }

@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { NAV_PATH } from '@/components/nav/navRoutes';
 // message 反馈走 AntdApp.useApp()：antd v5 静态方法不消费 ConfigProvider 主题，会退回默认 token。
-import { App as AntdApp, Button, Empty, Skeleton, Space, Spin, Tag, Tooltip, Typography } from 'antd';
+import { App as AntdApp, Button, Skeleton, Space, Spin, Tag, Tooltip, Typography } from 'antd';
 import { useDocumentStore } from '@/store/documentStore';
 import { useDemoStore } from '@/store/demoStore';
 import { useConversationStore } from '@/store/conversationStore';
@@ -367,7 +367,8 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
 
   const renderDraftPaper = (draft: DocumentDraft) => (
     <article className="doc-card doc-detail-paper axn-redhead-paper" data-testid="draft-paper">
-      <div className="axn-redhead-org">应急管理</div>
+      <div className="axn-redhead-org">中国安能建设集团有限公司</div>
+      <div className="axn-redhead-type">{templateByCode.get(draft.templateCode)?.name ?? '文 书'}</div>
       <div className="axn-redhead-no">文书草稿（模拟）</div>
       <div className="axn-redhead-rule" />
       <Tag color="blue">{templateByCode.get(draft.templateCode)?.name}</Tag>
@@ -482,7 +483,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
                   </span>
                   <span className="doc-library-copy">
                     <strong>{category.name}</strong>
-                    <span>{mockDocuments.filter((doc) => doc.code === category.code).length} 份文书</span>
+                    <span className="doc-count-pill">{mockDocuments.filter((doc) => doc.code === category.code).length} 份文书</span>
                   </span>
                   <Button
                     className="doc-create-button"
@@ -502,7 +503,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
                         <span>{doc.title}</span>
                         <small>{doc.date}<span className="doc-file-status">模拟稿</span></small>
                       </span>
-                      <ChevronRight className="doc-file-arrow" />
+                      <ChevronRight className="doc-file-arrow" aria-hidden />
                     </button>
                   ))}
                 </div>
@@ -510,14 +511,12 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
             ))}
           </div>
 
-          <div className="doc-library-drafts">
-            <div className="doc-library-heading"><div><h3>业务草稿 <span>{drafts.length}</span></h3><p>由对话任务生成，可校核、送审、签发和导出（模拟数据）</p></div></div>
-            {drafts.length === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无文书草稿；可在对话中指令生成，或从上方分类生成模拟样稿" />
-            ) : (
-              drafts.map((draft) => renderDraftActions(draft))
-            )}
-          </div>
+          {drafts.length > 0 && (
+            <div className="doc-library-drafts">
+              <div className="doc-library-heading"><div><h3>业务草稿 <span>{drafts.length}</span></h3><p>由对话任务生成，可校核、送审、签发和导出（模拟数据）</p></div></div>
+              {drafts.map((draft) => renderDraftActions(draft))}
+            </div>
+          )}
         </div>
       )}
 
