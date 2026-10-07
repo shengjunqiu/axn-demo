@@ -128,8 +128,8 @@ test('5. 菜单切换不丢 active 会话', async ({ page }) => {
   const activeTitle = await page.locator('.axn-gs-conversation.is-active .axn-gs-conv-title-text').first().textContent();
   await openNav(page, '知识库');
   await expect(page.getByTestId('knowledge-page')).toBeVisible();
-  await openNav(page, '智能体与 Skill');
-  await expect(page.getByTestId('agents-page')).toBeVisible();
+  await openNav(page, '文书库');
+  await expect(page.getByTestId('document-library-page')).toBeVisible();
   await openNav(page, '智能助理');
   await expect(page.locator('.axn-gs-conversation.is-active .axn-gs-conv-title-text').first()).toHaveText(activeTitle ?? '');
 });
@@ -176,11 +176,23 @@ test('10. 折叠功能已按标注移除（无折叠按钮，侧栏固定宽度�
   expect(width).toBeGreaterThan(200);
 });
 
+test('10b. 「应急项目 / 智能体与 Skill / 定时任务」侧栏入口已隐藏', async ({ page }) => {
+  for (const label of ['应急项目', '智能体与 Skill', '定时任务']) {
+    await expect(page.locator('.axn-gs-nav-item', { hasText: label })).toHaveCount(0);
+  }
+  // 保留的入口仍在
+  for (const label of ['文书库', '智能助理', '知识库']) {
+    await expect(page.locator('.axn-gs-nav-item', { hasText: label })).toHaveCount(1);
+  }
+});
+
 test('11. 智能体与 Skill / 定时任务 / 知识库导航页可访问，文书库导航独立成页', async ({ page }) => {
-  await openNav(page, '智能体与 Skill');
+  // 侧栏入口已按下线标注隐藏，页面本身仍可通过深链直达。
+  // 应用用 HashRouter，深链形式为 /#/agents
+  await page.goto('/#/agents');
   await expect(page.getByTestId('agents-page')).toBeVisible();
   await expect(page.getByText('态势感知智能体')).toBeVisible();
-  await openNav(page, '定时任务');
+  await page.goto('/#/schedules');
   await expect(page.getByTestId('schedules-page')).toBeVisible();
   await expect(page.getByText('每日值班日报')).toBeVisible();
   await openNav(page, '知识库');
