@@ -126,8 +126,7 @@ test('4b. 删除对话（Popconfirm 确认 → 条目移除 → active 切换）
 
 test('5. 菜单切换不丢 active 会话', async ({ page }) => {
   const activeTitle = await page.locator('.axn-gs-conversation.is-active .axn-gs-conv-title-text').first().textContent();
-  await openNav(page, '知识库');
-  await expect(page.getByTestId('knowledge-page')).toBeVisible();
+  // 侧栏仅保留「文书库 / 智能助理」两个入口（其余除深链外已隐藏）。
   await openNav(page, '文书库');
   await expect(page.getByTestId('document-library-page')).toBeVisible();
   await openNav(page, '智能助理');
@@ -176,12 +175,12 @@ test('10. 折叠功能已按标注移除（无折叠按钮，侧栏固定宽度�
   expect(width).toBeGreaterThan(200);
 });
 
-test('10b. 「应急项目 / 智能体与 Skill / 定时任务」侧栏入口已隐藏', async ({ page }) => {
-  for (const label of ['应急项目', '智能体与 Skill', '定时任务']) {
+test('10b. 「应急项目 / 智能体与 Skill / 定时任务 / 知识库」侧栏入口已隐藏', async ({ page }) => {
+  for (const label of ['应急项目', '智能体与 Skill', '定时任务', '知识库']) {
     await expect(page.locator('.axn-gs-nav-item', { hasText: label })).toHaveCount(0);
   }
   // 保留的入口仍在
-  for (const label of ['文书库', '智能助理', '知识库']) {
+  for (const label of ['文书库', '智能助理']) {
     await expect(page.locator('.axn-gs-nav-item', { hasText: label })).toHaveCount(1);
   }
 });
@@ -195,7 +194,7 @@ test('11. 智能体与 Skill / 定时任务 / 知识库导航页可访问，文�
   await page.goto('/#/schedules');
   await expect(page.getByTestId('schedules-page')).toBeVisible();
   await expect(page.getByText('每日值班日报')).toBeVisible();
-  await openNav(page, '知识库');
+  await page.goto('/#/knowledge');
   await expect(page.getByTestId('knowledge-page')).toBeVisible();
   await openNav(page, '文书库');
   await expect(page.getByTestId('document-library-page')).toBeVisible();

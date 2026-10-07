@@ -13,7 +13,7 @@ import {
   // Bot, // 恢复「智能体与 Skill」侧栏入口时一并取回
   // Clock, // 恢复「定时任务」侧栏入口时一并取回
   // FilePlus, // 恢复「新建任务」按钮时一并取回
-  FlaskConical,
+  // FlaskConical, // 恢复「知识库」侧栏入口时一并取回
   FolderOpen,
   // LayoutGrid, // 恢复「应急项目」侧栏入口时一并取回
   Pin,
@@ -45,13 +45,13 @@ type NavKey = NavPage;
 const NAV: { key: NavKey; label: string; icon: React.ReactNode }[] = [
   { key: 'library', label: '文书库', icon: <FolderOpen /> },
   { key: 'assistant', label: '智能助理', icon: <Sparkles /> },
-  { key: 'knowledge', label: '知识库', icon: <FlaskConical /> },
-  // 「应急项目」「智能体与 Skill」「定时任务」三个入口按下线标注从侧栏隐藏：
-  // 页面（NavPages）与路由（/projects、/agents、/schedules）全部保留，深链直达仍可用；
-  // 取消下列注释并取回对应图标导入（LayoutGrid / Bot / Clock）即可恢复侧栏入口。
+  // 「应急项目」「智能体与 Skill」「定时任务」「知识库」四个入口按下线标注从侧栏隐藏：
+  // 页面（NavPages）与路由（/projects、/agents、/schedules、/knowledge）全部保留，深链直达仍可用；
+  // 取消下列注释并取回对应图标导入（LayoutGrid / Bot / Clock / FlaskConical）即可恢复侧栏入口。
   // { key: 'projects', label: '应急项目', icon: <LayoutGrid /> },
   // { key: 'agents', label: '智能体与 Skill', icon: <Bot /> },
   // { key: 'schedules', label: '定时任务', icon: <Clock /> },
+  // { key: 'knowledge', label: '知识库', icon: <FlaskConical /> },
 ];
 
 /** 对话与通知设置（轻量展示，需求 2.6）+ 演示数据重置入口（现场一键回到初始场景）。 */

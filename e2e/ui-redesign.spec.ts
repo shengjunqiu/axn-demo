@@ -203,7 +203,7 @@ test('未保存修改在导航、会话和关联事件切换时受到保护', as
   const title = page.getByRole('textbox', { name: '文书标题', exact: true });
   await page.getByRole('button', { name: '在线编辑', exact: true }).click();
   await title.fill('保护中的工作副本');
-  await page.locator('.axn-gs-nav-item', { hasText: '知识库' }).click();
+  await page.locator('.axn-gs-nav-item', { hasText: '文书库' }).click();
   await page.getByRole('button', { name: '继续编辑' }).click();
   await expect(title).toHaveValue('保护中的工作副本');
   await page.locator('.axn-gs-conversation', { hasText: '漳河镇' }).first().click();
@@ -213,7 +213,7 @@ test('未保存修改在导航、会话和关联事件切换时受到保护', as
   await page.getByTitle('未关联事件（空白对话）', { exact: true }).click();
   await page.getByRole('button', { name: '继续编辑' }).click();
   await expect(title).toHaveValue('保护中的工作副本');
-  await page.locator('.axn-gs-nav-item', { hasText: '知识库' }).click();
+  await page.locator('.axn-gs-nav-item', { hasText: '文书库' }).click();
   await page.getByRole('button', { name: /^继\s*续$/ }).click();
   // 四条切换路径（导航 / 会话 / 关联事件 / 再导航）都只解除编辑态，不回滚工作副本
   await openFirstSample(page);
