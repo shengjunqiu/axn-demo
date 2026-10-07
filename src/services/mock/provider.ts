@@ -35,6 +35,13 @@ import {
 } from '../documentFactory.js';
 import { ensureQaLoaded, getQaItem, matchQa, qaStatusLabel } from '../qaKnowledge.js';
 
+/**
+ * 未命中任何演示意图（输入框自由文本）时的默认回复。
+ * taskRunner 在创建任务前就直接回复这句，不发任务卡、不展示「意图识别」步骤。
+ */
+export const UNKNOWN_REPLY_TEXT =
+  '安小能暂未接入真实功能，你可以点击推荐问题或快捷任务来体验演示效果。';
+
 export class TaskFault extends Error {
   constructor(
     public errorCode: string,
@@ -280,7 +287,10 @@ async function* runIntent(req: Ctx, signal: AbortSignal): AsyncIterable<TaskEven
       yield { type: 'completed' };
       break;
     default:
-      yield* runUnknown(req, signal, paceMs);
+      // 正常不会走到：taskRunner 已对 unknown 意图直接回复默认文案（不发任务卡）。
+      // 保留为兑底，避免任何异常路径下安小能“失语”。
+      yield { type: 'text_delta', text: UNKNOWN_REPLY_TEXT };
+      yield { type: 'completed', summary: '默认回复' };
   }
 }
 
@@ -641,7 +651,9 @@ async function* runQaKnowledge(req: Ctx, signal: AbortSignal, paceMs: number): A
   await ensureQaLoaded();
   const item = getQaItem(qaId);
   if (!item) {
-    yield* runUnknown(req, signal, paceMs);
+    // 语料缺项：不假装成知识回答，直接给默认回复。
+    yield { type: 'text_delta', text: UNKNOWN_REPLY_TEXT };
+    yield { type: 'completed', summary: '默认回复' };
     return;
   }
   const a = item.answer;
@@ -973,18 +985,6 @@ async function* runFillField(
     useSessionStore.getState().setPendingClarification(req.sessionId, null);
   }
   yield { type: 'completed', summary: `${fieldLabel(field)}已确认` };
-}
-
-async function* runUnknown(req: Ctx, signal: AbortSignal, paceMs: number): AsyncIterable<TaskEvent> {
-  yield { type: 'step_started', stepId: 'u1', name: '意图识别（规则匹配）', inputSummary: '未命中已知任务' };
-  await sleep(paceMs, signal);
-  assertActive(req);
-  yield { type: 'step_completed', stepId: 'u1', outputSummary: '转入兜底应答' };
-  yield {
-    type: 'text_delta',
-    text: '这个问题超出了当前能力范围（规则模拟，不接真实大模型）。我可以：\n· 汇总灾情摘要\n· 查询周边救援资源，并支持“谁最快能到”等追问\n· 选择/移除候选力量、形成处置建议\n· 生成应急要情 / 值班日报并进入编辑校核\n您可以试试上面的示例。',
-  };
-  yield { type: 'completed', summary: '兜底应答' };
 }
 
 export const mockProvider: AssistantProvider = {

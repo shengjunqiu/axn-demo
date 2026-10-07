@@ -4,7 +4,7 @@
 import type { TaskEvent } from '@/domain/types';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
-import { mockProvider, recognize, TaskFault } from './mock/provider.js';
+import { mockProvider, recognize, TaskFault, UNKNOWN_REPLY_TEXT } from './mock/provider.js';
 import { ensureQaLoaded } from './qaKnowledge.js';
 
 import { registerRun, isActiveRun, finishRun, invalidateRun } from './taskRuns.js';
@@ -67,6 +67,17 @@ export async function sendMessage(sessionId: string, options: SendOptions): Prom
       role: 'assistant',
       kind: 'text',
       text: '当前有任务正在执行（模拟）。可先发送“停止”取消，或等待完成后重试。',
+      taskId: null,
+    });
+    return '';
+  }
+  // 未命中任何演示意图（输入框自由文本）：只回一句默认文案，不建任务卡、不展示意图识别步骤。
+  if (recognized.intent === 'unknown') {
+    sessionStore.appendMessage(sessionId, {
+      sessionId,
+      role: 'assistant',
+      kind: 'text',
+      text: UNKNOWN_REPLY_TEXT,
       taskId: null,
     });
     return '';

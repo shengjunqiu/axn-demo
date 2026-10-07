@@ -117,6 +117,19 @@ describe('任务链路', () => {
     }
   }, 10000);
 
+  it('输入框自由文本未命中演示意图时只回默认文案（不建任务卡、无意图识别步骤）', async () => {
+    const sessionId = sessionIdFor();
+    const tasksBefore = Object.keys(useSessionStore.getState().tasks).length;
+    await sendMessage(sessionId, { text: '今天天气怎么样' });
+    const session = useSessionStore.getState().sessions[sessionId];
+    const last = session.messages.at(-1);
+    expect(last?.role).toBe('assistant');
+    expect(last?.kind).toBe('text');
+    expect(last?.text).toBe('安小能暂未接入真实功能，你可以点击推荐问题或快捷任务来体验演示效果。');
+    expect(session.messages.filter((m) => m.kind === 'task')).toHaveLength(0);
+    expect(Object.keys(useSessionStore.getState().tasks)).toHaveLength(tasksBefore);
+  });
+
   it('取消任务后状态为 cancelled，不再产出新步骤', async () => {
     useDemoStore.getState().setPace('normal');
     const sessionId = sessionIdFor();
