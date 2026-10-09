@@ -17,6 +17,15 @@ import { resourceAllowed } from '@/services/factLookup';
 
 const { Text } = Typography;
 
+export interface SchematicOverlayMarker {
+  id: string;
+  /** 与建设场景演示资源 kind 对齐（含宾馆/加油站等影响目标）。 */
+  kind: 'team' | 'warehouse' | 'equipment' | 'hospital' | 'hotel' | 'gasStation' | 'supportUnit' | 'expert' | 'school';
+  x: number;
+  y: number;
+  name: string;
+}
+
 export interface SchematicMapProps {
   /** 高亮（描边）的资源 id，一般是候选力量 */
   highlightIds?: string[];
@@ -24,6 +33,10 @@ export interface SchematicMapProps {
   selectedResourceId?: string | null;
   /** 点击标记或空白处回调（传 null 表示取消选择） */
   onSelectResourceId?: (id: string | null) => void;
+  /** 最近一次查询结果 id（授权台账）；为空时仍展示事件周边全部授权资源。 */
+  resultIds?: string[];
+  /** 建设场景演示叠加点位（分布示意，不走授权台账）。 */
+  overlayMarkers?: SchematicOverlayMarker[];
 }
 
 interface MarkerEntity {
@@ -37,6 +50,8 @@ export default function SchematicMap({
   highlightIds = [],
   selectedResourceId = null,
   onSelectResourceId,
+  resultIds,
+  overlayMarkers = [],
 }: SchematicMapProps) {
   const { token } = theme.useToken();
   const eventId = useDemoStore(s => s.currentEventId);
@@ -46,19 +61,24 @@ export default function SchematicMap({
     return <Alert type="error" showIcon title="态势示意数据不可用（模拟数据缺失）" />;
   }
   const viewBoxStr = `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`;
+  const inResult = (id: string) => !resultIds || resultIds.length === 0 || resultIds.includes(id);
 
-  const teamMarkers: MarkerEntity[] = [...teamById.values()].filter(t => resourceAllowed(t.resourceId, eventId)).map((t) => ({
-    id: t.resourceId,
-    x: t.schematicPosition.x,
-    y: t.schematicPosition.y,
-    name: factText(t.factRefs.name) || t.resourceId,
-  }));
-  const warehouseMarkers: MarkerEntity[] = [...warehouseById.values()].filter(w => resourceAllowed(w.resourceId, eventId)).map((w) => ({
-    id: w.resourceId,
-    x: w.schematicPosition.x,
-    y: w.schematicPosition.y,
-    name: factText(w.factRefs.name) || w.resourceId,
-  }));
+  const teamMarkers: MarkerEntity[] = [...teamById.values()]
+    .filter((t) => resourceAllowed(t.resourceId, eventId) && inResult(t.resourceId))
+    .map((t) => ({
+      id: t.resourceId,
+      x: t.schematicPosition.x,
+      y: t.schematicPosition.y,
+      name: factText(t.factRefs.name) || t.resourceId,
+    }));
+  const warehouseMarkers: MarkerEntity[] = [...warehouseById.values()]
+    .filter((w) => resourceAllowed(w.resourceId, eventId) && inResult(w.resourceId))
+    .map((w) => ({
+      id: w.resourceId,
+      x: w.schematicPosition.x,
+      y: w.schematicPosition.y,
+      name: factText(w.factRefs.name) || w.resourceId,
+    }));
   const incidentMarkers: MarkerEntity[] = [...incidentById.values()].filter(i => i.eventId === eventId).map((i) => ({
     id: i.eventId,
     x: i.schematicPosition.x,
@@ -150,6 +170,50 @@ export default function SchematicMap({
             </g>
           );
         })}
+
+        {/* 建设场景演示叠加点位（分布示意） */}
+        {overlayMarkers.map((m) => {
+          const highlighted = highlightIds.includes(m.id);
+          const selected = selectedResourceId === m.id;
+          const fill = m.kind === 'hospital' || m.kind === 'school' || m.kind === 'hotel'
+            ? 'var(--axn-legend-station)'
+            : m.kind === 'equipment' || m.kind === 'warehouse' || m.kind === 'gasStation'
+              ? token.colorPrimary
+              : 'var(--axn-legend-team)';
+          const shape = m.kind === 'team' || m.kind === 'expert' || m.kind === 'supportUnit'
+            ? 'team'
+            : m.kind === 'hospital' || m.kind === 'school'
+              ? 'hospital'
+              : 'site';
+          return (
+            <g key={`overlay-${m.id}`} onClick={pickMarker(m.id)}>
+              <title>{`${m.name}（建设场景示意 · 模拟）`}</title>
+              {highlighted && <circle cx={m.x} cy={m.y} r={16} fill="none" stroke={token.colorPrimary} strokeWidth={1.2} opacity={0.55} />}
+              {shape === 'team' ? (
+                <rect data-testid={`map-marker-${m.id}`} x={m.x - 8} y={m.y - 8} width={16} height={16} rx={3} fill={selected ? 'var(--axn-map-selected)' : fill} stroke={selected ? 'var(--axn-map-active)' : token.colorBgContainer} strokeWidth={selected ? 3 : 1.5} />
+              ) : shape === 'hospital' ? (
+                <polygon
+                  data-testid={`map-marker-${m.id}`}
+                  points={`${m.x},${m.y - 9} ${m.x + 9},${m.y} ${m.x},${m.y + 9} ${m.x - 9},${m.y}`}
+                  fill={fill}
+                  stroke={selected ? 'var(--axn-map-active)' : token.colorBgContainer}
+                  strokeWidth={selected ? 3 : 1.5}
+                />
+              ) : (
+                <polygon
+                  data-testid={`map-marker-${m.id}`}
+                  points={`${m.x},${m.y - 10} ${m.x - 9},${m.y + 7} ${m.x + 9},${m.y + 7}`}
+                  fill={fill}
+                  stroke={selected ? 'var(--axn-map-active)' : token.colorPrimaryActive}
+                  strokeWidth={selected ? 3 : 1.5}
+                />
+              )}
+              <text x={m.x} y={m.y + 22} fontSize={11} textAnchor="middle" fill="#334155">
+                {m.name}
+              </text>
+            </g>
+          );
+        })}
       </svg>
 
       <Space size={6} wrap className="axn-legend" align="center">
@@ -161,13 +225,13 @@ export default function SchematicMap({
           <span className="axn-legend-swatch axn-legend-swatch--team" /> 队伍
         </span>
         <span className="axn-legend-item">
-          <span className="axn-legend-swatch axn-legend-swatch--warehouse" /> 仓库
+          <span className="axn-legend-swatch axn-legend-swatch--warehouse" /> 仓库/装备
         </span>
         <span className="axn-legend-item">
           <span className="axn-legend-swatch axn-legend-swatch--event" /> 事件
         </span>
         <span className="axn-legend-item">
-          <span className="axn-legend-swatch axn-legend-swatch--station" /> 水位站
+          <span className="axn-legend-swatch axn-legend-swatch--station" /> 水位站/医院
         </span>
         <Text type="secondary" className="axn-legend-text">
           {schematicMap?.distanceRule ?? '图上位置不用于算公里数或 ETA。'}

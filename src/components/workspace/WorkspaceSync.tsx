@@ -37,6 +37,26 @@ export default function WorkspaceSync() {
         }
       }
 
+      // 四智能体材料/方案：scenario_sections 物化为 mock 红头文书后自动打开右侧工作区。
+      const agentTask = Object.values(tasks)
+        .filter((t) => t.sessionId === scope && t.eventId === session.eventId
+          && ['summary', 'proposal', 'evaluation', 'resource_query'].includes(t.intent))
+        .sort((a, b) => b.seq - a.seq)[0];
+      if (agentTask) {
+        const token = `agent-material:${agentTask.taskId}:${agentTask.attemptId}`;
+        const scenario = agentTask.artifacts.find((a) => a.payload.kind === 'scenario_sections');
+        const mockId = scenario?.payload.kind === 'scenario_sections' ? scenario.payload.documentId : null;
+        const pending = ['queued', 'running', 'waiting_input'].includes(agentTask.status);
+        const signature = `${token}:${pending ? 'pending' : mockId ?? agentTask.status}`;
+        if (observed.current.get(`agent:${scope}`) !== signature) {
+          observed.current.set(`agent:${scope}`, signature);
+          if (pending) workspace.autoOpen(scope, token, { kind: 'generating' });
+          else if (mockId && libraries[scope]?.documents.some((d) => d.id === mockId)) {
+            workspace.autoOpen(scope, token, { kind: 'mock', id: mockId });
+          } else workspace.finish(scope, token);
+        }
+      }
+
       const message = session.messages.filter((m) => m.documentWorkflow).at(-1);
       const workflow = message?.documentWorkflow;
       if (message && workflow) {

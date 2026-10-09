@@ -24,6 +24,7 @@ import { generateWorkSummary } from '@/services/workSummaryWorkflow';
 import { shiftEventIds, formatFactValue } from '@/services/factLookup';
 import { templateByCode } from '@/seed/scenario';
 import { DOCUMENT_CATEGORIES } from '@/seed/mockDocuments';
+import { isHiddenPrototypeAction } from '@/seed/prototypeVisibility';
 import type { DocumentDraft, ValidationReport } from '@/domain/types';
 import MockDocumentDetail from '@/components/doc/MockDocumentDetail';
 import DocumentDetailToolbar from '@/components/doc/DocumentDetailToolbar';
@@ -117,7 +118,8 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
   const [sourceOpen, setSourceOpen] = useState(false);
 
   const library = useMockDocumentStore((s) => s.libraries[libraryScope] ?? EMPTY_LIBRARY);
-  const { documents: mockDocuments, generatingCode } = library;
+  const { generatingCode } = library;
+  const mockDocuments = library.documents.filter(d => !isHiddenPrototypeAction(`${d.code} ${d.title}`));
   const selectedMock = selection?.kind === 'mock' ? mockDocuments.find((d) => d.id === selection.id) ?? null : null;
 
   /** 打开文书：显式切换到助理页并写入选择状态（库/对话预览共用同一入口，不触发重新生成）。 */
@@ -132,6 +134,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
 
   const generateMock = useCallback(
     (code: string) => {
+      if (isHiddenPrototypeAction(code)) return;
       navigate(NAV_PATH.assistant);
       if (code === 'WORK_SUMMARY' && sessionId) {
         void generateWorkSummary(sessionId);
@@ -145,6 +148,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
   const drafts = useMemo(
     () => Object.values(draftsMap)
       .filter((draft) => !HIDDEN_DEMO_DRAFT_IDS.has(draft.documentId))
+      .filter((draft) => !isHiddenPrototypeAction(`${draft.templateCode} ${draft.title}`))
       .filter((draft) => (draft.scopeKind === 'event'
         ? draft.eventId === currentEventId
         : !!draft.shiftId && shiftEventIds(draft.shiftId).includes(currentEventId)))
@@ -475,7 +479,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
           </div>
 
           <div className="doc-category-grid">
-            {DOCUMENT_CATEGORIES.map((category) => (
+            {DOCUMENT_CATEGORIES.filter(category => !isHiddenPrototypeAction(category.code)).map((category) => (
               <section className="doc-category" key={category.code}>
                 <div className="doc-library-row">
                   <span className={`doc-category-icon doc-category-icon--${category.code}`}>

@@ -1,8 +1,19 @@
 import { expect, type Page } from '@playwright/test';
 
-/** 通过输入框上方的快捷任务 chip 发起任务（全部 chip 常驻平铺，不再有「更多任务」浮层）。 */
+/**
+ * 通过输入框上方快捷任务发起：优先点关键推荐 chip；
+ * 若不在主推区，则打开「更多动作」折叠菜单再点选。
+ */
 export async function clickQuickTask(page: Page, label: string) {
-  const chip = page.locator('.axn-chips').getByRole('button', { name: label, exact: true });
-  await expect(chip).toBeVisible();
-  await chip.click();
+  const chips = page.locator('.axn-chips');
+  const chip = chips.getByRole('button', { name: label, exact: true });
+  if (await chip.count()) {
+    await expect(chip).toBeVisible();
+    await chip.click();
+    return;
+  }
+  await chips.getByTestId('chip-more-actions').click();
+  const item = page.getByRole('menuitem', { name: new RegExp(`^${label}`) });
+  await expect(item).toBeVisible();
+  await item.click();
 }

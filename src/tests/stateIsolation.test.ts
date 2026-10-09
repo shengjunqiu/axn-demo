@@ -10,6 +10,7 @@ import { buildSnapshot } from '@/services/snapshot';
 import { createDailyDocument } from '@/services/documentFactory';
 import { documentFactScope, resolveDocumentFact } from '@/services/documentFactScope';
 import { incidentById, shift } from '@/seed/scenario';
+import { vueDemoResourceIdsForEvent } from '@/seed/vueDemoResources';
 import type { TaskEvent } from '@/domain/types';
 
 const A = 'evt-demo-001';
@@ -228,8 +229,21 @@ describe('D06 / explicit fact scope', () => {
     }
     const resources = await sendMessage(sid, { text: '查询周边救援资源' });
     await settle();
-    expect(task(resources).artifacts).toEqual([]);
-    expect(useSessionStore.getState().sessions[sid].lastResourceResultIds).toEqual([]);
+    // 无授权台账时可用本事件演示资源填表/示意，但不得混入 A 的台账队伍或跨事件 ETA。
+    const demoIds = vueDemoResourceIdsForEvent(B);
+    expect(demoIds.length).toBeGreaterThan(0);
+    for (const item of task(resources).artifacts) {
+      if (item.payload.kind === 'resources') {
+        expect(item.payload.resourceIds).toEqual(demoIds);
+        expect(item.payload.resourceIds).not.toEqual(expect.arrayContaining(['team-001', 'team-002']));
+      }
+      if (item.payload.kind === 'scenario_sections') {
+        expect(item.payload.table?.rows.length).toBeGreaterThan(0);
+        expect(JSON.stringify(item.payload)).not.toContain('一号工程应急救援队');
+        expect(JSON.stringify(item.payload)).not.toContain('fact-team-001');
+      }
+    }
+    expect(useSessionStore.getState().sessions[sid].lastResourceResultIds).toEqual(demoIds);
   });
 
   it('A fact is rejected after switching to B and remains correct on returning to A', () => {

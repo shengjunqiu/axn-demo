@@ -10,7 +10,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { NAV_PATH } from './navRoutes';
 import {
-  // Bot, // 恢复「智能体与 Skill」侧栏入口时一并取回
+  Bot,
   // Clock, // 恢复「定时任务」侧栏入口时一并取回
   // FilePlus, // 恢复「新建任务」按钮时一并取回
   // FlaskConical, // 恢复「知识库」侧栏入口时一并取回
@@ -45,11 +45,11 @@ type NavKey = NavPage;
 const NAV: { key: NavKey; label: string; icon: React.ReactNode }[] = [
   { key: 'library', label: '文书库', icon: <FolderOpen /> },
   { key: 'assistant', label: '智能助理', icon: <Sparkles /> },
-  // 「应急项目」「智能体与 Skill」「定时任务」「知识库」四个入口按下线标注从侧栏隐藏：
+  // 「应急项目」「定时任务」「知识库」三个入口按下线标注从侧栏隐藏：
   // 页面（NavPages）与路由（/projects、/agents、/schedules、/knowledge）全部保留，深链直达仍可用；
-  // 取消下列注释并取回对应图标导入（LayoutGrid / Bot / Clock / FlaskConical）即可恢复侧栏入口。
+  // 取消下列注释并取回对应图标导入（LayoutGrid / Clock / FlaskConical）即可恢复侧栏入口。
   // { key: 'projects', label: '应急项目', icon: <LayoutGrid /> },
-  // { key: 'agents', label: '智能体与 Skill', icon: <Bot /> },
+  { key: 'agents', label: '智能体与 Skill', icon: <Bot /> },
   // { key: 'schedules', label: '定时任务', icon: <Clock /> },
   // { key: 'knowledge', label: '知识库', icon: <FlaskConical /> },
 ];
@@ -192,7 +192,7 @@ export default function GlobalSidebar() {
     () => Object.values(conversations).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
     [conversations],
   );
-  const filtered = useMemo(() => list.filter((c) => matchConversation(c, keyword)), [list, keyword]);
+  const filtered = useMemo(() => list.filter((c) => !/值班|值守/.test(c.title) && matchConversation(c, keyword)), [list, keyword]);
 
   const groups = useMemo(() => {
     const map = new Map<ConversationGroup, Conversation[]>();

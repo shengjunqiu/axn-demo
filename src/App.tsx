@@ -39,6 +39,8 @@ const DocumentWorkspace = lazy(() => import('@/components/workspace/DocumentWork
 const ResourcePanel = lazy(() => import('@/components/workspace/ResourcePanel'));
 const KnowledgePanel = lazy(() => import('@/components/workspace/KnowledgePanel'));
 const NavPageContent = lazy(() => import('@/components/nav/NavPages').then(m => ({ default: m.NavPageContent })));
+const DisasterEventsPage = lazy(() => import('@/components/events/DisasterEventsPage'));
+const OriginalSystemWorkspace = lazy(() => import('@/components/workspace/OriginalSystemWorkspace'));
 const PrintView = lazy(() => import('@/components/doc/PrintView'));
 
 /** 工作区抽屉目标（资源/知识面板由对话任务卡触发的抽屉承载）。 */
@@ -73,8 +75,13 @@ export default function AppRoot() {
     return !!scopeState && (scopeState.generating || scopeState.selection !== null);
   });
 
-  // 资源/知识面板抽屉（由对话任务卡触发）
+  // 资源/知识面板抽屉（由对话任务卡触发）；资源抽屉可指定默认 Tab（列表 / 态势地图）。
   const [panelDrawer, setPanelDrawer] = useState<'resource' | 'knowledge' | null>(null);
+  const [resourceDrawerTab, setResourceDrawerTab] = useState<'list' | 'map'>('list');
+  const openPanelDrawer = (target: 'resource' | 'knowledge', options?: { tab?: 'list' | 'map' }) => {
+    if (target === 'resource') setResourceDrawerTab(options?.tab ?? 'list');
+    setPanelDrawer(target);
+  };
 
   // URL 是导航的唯一权威；store 的 activeNav 只跟着 URL 走，用来驱动侧栏高亮。
   useUrlNavSync();
@@ -195,13 +202,19 @@ export default function AppRoot() {
           <Route path="/assistant" element={
             <div className={`axn-assistant${workspaceOpen ? ' axn-assistant--split' : ''}`}>
               <div className="axn-chat-pane">
-                <ChatPanel compact={workspaceOpen} onOpenDrawer={(target: 'resource' | 'knowledge') => setPanelDrawer(target)} />
+                <ChatPanel compact={workspaceOpen} onOpenDrawer={openPanelDrawer} />
               </div>
               {workspaceOpen && (
                 <div className="axn-workspace-pane">
                   <Suspense><DocumentWorkspace /></Suspense>
                 </div>
               )}
+            </div>
+          } />
+          <Route path="/events" element={<Suspense><DisasterEventsPage /></Suspense>} />
+          <Route path="/originalSystems/:system?" element={
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <Suspense><OriginalSystemWorkspace /></Suspense>
             </div>
           } />
           <Route path="/library" element={<Suspense><DocumentLibraryPage /></Suspense>} />
@@ -230,7 +243,7 @@ export default function AppRoot() {
       </main>
 
       <Drawer title="资源与态势（模拟）" size={760} open={panelDrawer === 'resource'} onClose={() => setPanelDrawer(null)} destroyOnHidden>
-        <Suspense>{panelDrawer === 'resource' && <ResourcePanel />}</Suspense>
+        <Suspense>{panelDrawer === 'resource' && <ResourcePanel initialTab={resourceDrawerTab} />}</Suspense>
       </Drawer>
       <Drawer title="建议与知识（模拟）" size={560} open={panelDrawer === 'knowledge'} onClose={() => setPanelDrawer(null)} destroyOnHidden>
         <Suspense>{panelDrawer === 'knowledge' && <KnowledgePanel />}</Suspense>

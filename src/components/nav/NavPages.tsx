@@ -3,17 +3,15 @@
  * 轻量展示页：企业级浅色卡片，全部数据为模拟数据。
  */
 import { useMemo, useState } from 'react';
+import SkillPlanningPage from '@/components/skills/SkillPlanningPage';
 import {
   BookOpen,
   Clock,
   FileCheck,
-  Flame,
   Heart,
-  Lightbulb,
   Network,
   Presentation,
   Search,
-  ShieldCheck,
   Wrench,
   Zap,
 } from 'lucide-react'
@@ -116,7 +114,7 @@ export function ProjectsPage() {
     <div className="axn-np-section" data-testid="projects-page">
       <PageHeader title="应急项目" sub="项目为业务组织维度；进入工作台后继续在智能助理中操作" extra={MOCK_TAG} />
       <div className="axn-np-col">
-        {PROJECTS.map((p) => (
+        {PROJECTS.filter(p => !/值班|值守/.test(p.name)).map((p) => (
           <Card key={p.projectId} size="small" styles={{ body: { display: 'flex', alignItems: 'center', gap: 14 } }}>
             <Presentation className="axn-np-icon-huge" />
             <div className="axn-np-flex-1">
@@ -146,109 +144,7 @@ export function ProjectsPage() {
 }
 
 /* ================= 智能体与 Skill ================= */
-
-interface AgentCard {
-  agentId: string;
-  name: string;
-  icon: React.ReactNode;
-  desc: string;
-  tasks: string[];
-  skills: string[];
-  status: '已接入（模拟）' | '规划中';
-}
-
-const AGENTS: AgentCard[] = [
-  {
-    agentId: 'agent-situation',
-    name: '态势感知智能体',
-    icon: <Flame />,
-    desc: '汇聚监测与人工补录数据，形成事件态势摘要，标注待核实信息。',
-    tasks: ['生成灾情摘要', '水位变化跟踪', '影响范围梳理'],
-    skills: ['灾情摘要生成', '数据待核实标注'],
-    status: '已接入（模拟）',
-  },
-  {
-    agentId: 'agent-resource',
-    name: '资源管理智能体',
-    icon: <Wrench />,
-    desc: '查询周边救援资源，按距离/预计到达排序，维护候选力量池。',
-    tasks: ['查询周边救援资源', '候选力量增删', '资源汇总统计'],
-    skills: ['资源检索', 'ETA 排序问答', '派生汇总'],
-    status: '已接入（模拟）',
-  },
-  {
-    agentId: 'agent-plan',
-    name: '救援方案生成智能体',
-    icon: <Lightbulb />,
-    desc: '基于态势与资源生成处置建议与依据引用，建议等级需人工确认。',
-    tasks: ['形成处置建议', '预置力量方案', '风险提示'],
-    skills: ['建议生成', '知识引用', '建议等级标注'],
-    status: '已接入（模拟）',
-  },
-  {
-    agentId: 'agent-doc',
-    name: '文书生成智能体',
-    icon: <FileCheck />,
-    desc: '按模板生成应急要情/值班日报草稿，支持事实绑定与来源溯源。',
-    tasks: ['生成应急要情', '生成值班日报', '缺项补录'],
-    skills: ['模板填充', '事实芯片', '来源锚点'],
-    status: '已接入（模拟）',
-  },
-  {
-    agentId: 'agent-eval',
-    name: '效果评估智能体',
-    icon: <ShieldCheck />,
-    desc: '对比救援目标与实际进展，评估响应时效、人员救助和处置成效，识别剩余风险。',
-    tasks: ['评估救援效果', '阶段成效复盘', '改进建议'],
-    skills: ['目标完成率分析', '响应时效评估', '剩余风险识别'],
-    status: '已接入（模拟）',
-  },
-];
-
-export function AgentsPage() {
-  return (
-    <div className="axn-np-section" data-testid="agents-page">
-      <PageHeader
-        title="智能体与 Skill"
-        sub="能力展示页；智能助理已默认协同以上能力，无需手动选择即可直接工作"
-        extra={MOCK_TAG}
-      />
-      <Alert
-        className="axn-np-margin-input"
-        type="info"
-        showIcon
-        title="以下智能体能力已内置于智能助理工作流（模拟实现），此处仅展示能力说明，不作为使用前置条件。"
-      />
-      <div className="axn-np-grid">
-        {AGENTS.map((a) => (
-          <Card key={a.agentId} size="small" title={<Space size={8}>{a.icon}<span>{a.name}</span></Space>} extra={<Tag color={a.status === '规划中' ? 'default' : 'geekblue'}>{a.status}</Tag>}>
-            <div className="axn-np-desc">{a.desc}</div>
-            <div className="axn-np-mt10 axn-np-fs12">
-              <div className="axn-np-label">典型任务</div>
-              <Space size={4} wrap>
-                {a.tasks.map((t) => (
-                  <Tag key={t} className="axn-np-fs12">
-                    {t}
-                  </Tag>
-                ))}
-              </Space>
-            </div>
-            <div className="axn-np-mt8 axn-np-fs12">
-              <div className="axn-np-label">示例 Skill</div>
-              <Space size={4} wrap>
-                {a.skills.map((s) => (
-                  <Tag key={s} color="blue" className="axn-np-fs12">
-                    {s}
-                  </Tag>
-                ))}
-              </Space>
-            </div>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-}
+export { default as AgentsPage } from '@/components/skills/SkillPlanningPage';
 
 /* ================= 定时任务 ================= */
 
@@ -272,7 +168,7 @@ export function SchedulesPage() {
     <div className="axn-np-section" data-testid="schedules-page">
       <PageHeader title="定时任务" sub="模拟环境中的定时任务，不执行真实调度" extra={MOCK_TAG} />
       <div className="axn-np-col">
-        {SCHEDULES.map((s) => (
+        {SCHEDULES.filter(s => !/值班|值守/.test(s.name)).map((s) => (
           <Card key={s.scheduleId} size="small" styles={{ body: { display: 'flex', alignItems: 'center', gap: 14 } }}>
             <Clock className="axn-np-icon-med" />
             <div className="axn-np-flex-1">
@@ -409,7 +305,7 @@ export function NavPageContent({ page }: { page: NavPage }) {
     case 'projects':
       return <ProjectsPage />;
     case 'agents':
-      return <AgentsPage />;
+      return <SkillPlanningPage />;
     case 'schedules':
       return <SchedulesPage />;
     case 'knowledge':

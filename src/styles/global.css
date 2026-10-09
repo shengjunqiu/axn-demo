@@ -497,6 +497,14 @@ svg.lucide {
   font-size: var(--fs-caption);
 }
 
+/*
+ * Ant Design 6：隐藏页签面板类名为 .ant-tabs-content-hidden。
+ * 业务侧若对 .ant-tabs-content 设 display:flex 会盖掉默认隐藏，此处统一兜底。
+ */
+.ant-tabs-content-hidden {
+  display: none !important;
+}
+
 /* 长文本与滚动约束 */
 .ellipsis-2 {
   display: -webkit-box;

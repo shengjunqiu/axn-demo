@@ -21,10 +21,14 @@ async function sendInChat(page: Page, text: string) {
   await page.keyboard.press('Enter');
 }
 
-/** 打开“资源与态势”抽屉（资源/知识页签已按标注移除，改为对话任务卡触发的抽屉）。 */
+/** 打开“资源与态势”抽屉并切到资源列表 Tab（表格仅在该 Tab 可见时可点）。 */
 async function openResourceDrawer(page: Page) {
-  await page.getByRole('button', { name: '查看资源与态势' }).first().click();
-  await expect(page.locator('.ant-drawer', { hasText: '资源与态势（模拟）' })).toBeVisible();
+  await page.getByRole('button', { name: '查看资源列表' }).first().click();
+  const drawer = page.locator('.ant-drawer', { hasText: '资源与态势（模拟）' });
+  await expect(drawer).toBeVisible();
+  await drawer.getByRole('tab', { name: '资源列表' }).click();
+  // antd Table 会拆成表头/表体两张 table，断言落在含数据行的那张。
+  await expect(page.getByTestId('resource-tab-list').getByRole('table').filter({ hasText: '一号工程应急救援队' })).toBeVisible();
 }
 
 async function closeDrawer(page: Page) {
@@ -36,11 +40,12 @@ async function closeDrawer(page: Page) {
 async function ensureResourceTable(page: Page) {
   await sendInChat(page, '查询周边救援资源');
   await openResourceDrawer(page);
-  await expect(page.locator('table tr', { hasText: '一号工程应急救援队' }).first()).toBeVisible({ timeout: 30000 });
+  await expect(page.getByTestId('resource-tab-list').getByRole('table').filter({ hasText: '一号工程应急救援队' })).toBeVisible({ timeout: 30000 });
 }
 
 async function checkFirstCandidate(page: Page) {
-  await page.locator('table tr', { hasText: '一号工程应急救援队' }).first().locator('span.ant-checkbox').click();
+  const row = page.getByTestId('resource-tab-list').getByRole('table').filter({ hasText: '一号工程应急救援队' }).locator('tr', { hasText: '一号工程应急救援队' }).first();
+  await row.locator('span.ant-checkbox').click();
   // 候选区以 Tag 呈现所选力量；出现一号队 Tag 即候选已生效
   await expect(page.locator('.axn-candidate-zone').getByText('一号工程应急救援队')).toBeVisible({ timeout: 10000 });
   // 关闭抽屉，避免遮罩阻挡后续对话/侧栏操作
@@ -69,14 +74,30 @@ test('2. 对话区内关联灾情 → 切换事件上下文与共享 session', a
   await page.getByTestId('chat-link-incident').click();
   await page.locator('.ant-select-item-option', { hasText: '清河段堤防险情' }).click();
   await page.waitForTimeout(500);
-  // 上下文切到关联事件：无消息时由关联灾情选择器承载，头部事件标题不显示（标注 vibe_1791303121889）
+  // 切换后安小能提示已关联；提示消息出现后头部事件标题同步显示
   await expect(page.getByTestId('chat-link-incident')).toContainText('清河段堤防险情');
-  await expect(page.getByTestId('header-event')).toHaveCount(0);
-  // 取消关联 → 回到未关联（专属虚拟事件）
+  await expect(page.getByText(/已切换关联灾情为「清河段堤防险情」/)).toBeVisible();
+  await expect(page.getByText('【当前状态】')).toBeVisible();
+  await expect(page.getByTestId('event-next-steps')).toBeVisible();
+  await expect(page.getByTestId('event-next-steps-task-查询周边救援资源')).toBeVisible();
+  await expect(page.getByTestId('event-next-steps-task-生成救援方案')).toBeVisible();
+  await expect(page.getByTestId('open-event-timeline')).toBeVisible();
+  await page.getByTestId('open-event-timeline').click();
+  await expect(page.getByTestId('event-timeline-drawer')).toBeVisible();
+  await expect(page.getByTestId('event-timeline-drawer')).toContainText('水位监测');
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('header-event')).toContainText('清河段堤防险情');
+  // 下一步建议按钮可触发快捷任务；完成后任务卡继续给出后续建议
+  await page.getByTestId('event-next-steps-task-查询周边救援资源').click();
+  await expect(page.getByTestId('task-next-steps')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByTestId('task-next-steps-task-生成周边资源报告')).toBeVisible();
+  await expect(page.getByTestId('task-next-steps-task-生成救援方案')).toBeVisible();
+  // 取消关联 → 回到未关联（专属虚拟事件）并提示
   await page.getByTestId('chat-link-incident').click();
   await page.locator('.ant-select-item-option', { hasText: '未关联事件' }).click();
   await page.waitForTimeout(500);
   await expect(page.getByTestId('chat-link-incident')).toContainText('未关联事件');
+  await expect(page.getByText('已取消关联灾情')).toBeVisible();
 });
 
 test('3. 搜索"南堤"→过滤；清空→恢复', async ({ page }) => {
@@ -126,7 +147,7 @@ test('4b. 删除对话（Popconfirm 确认 → 条目移除 → active 切换）
 
 test('5. 菜单切换不丢 active 会话', async ({ page }) => {
   const activeTitle = await page.locator('.axn-gs-conversation.is-active .axn-gs-conv-title-text').first().textContent();
-  // 侧栏仅保留「文书库 / 智能助理」两个入口（其余除深链外已隐藏）。
+  // 侧栏保留「文书库 / 智能助理 / 智能体与 Skill」入口。
   await openNav(page, '文书库');
   await expect(page.getByTestId('document-library-page')).toBeVisible();
   await openNav(page, '智能助理');
@@ -175,22 +196,22 @@ test('10. 折叠功能已按标注移除（无折叠按钮，侧栏固定宽度�
   expect(width).toBeGreaterThan(200);
 });
 
-test('10b. 「应急项目 / 智能体与 Skill / 定时任务 / 知识库」侧栏入口已隐藏', async ({ page }) => {
-  for (const label of ['应急项目', '智能体与 Skill', '定时任务', '知识库']) {
+test('10b. 「智能体与 Skill」恢复，其他规划外入口继续隐藏', async ({ page }) => {
+  for (const label of ['应急项目', '定时任务', '知识库']) {
     await expect(page.locator('.axn-gs-nav-item', { hasText: label })).toHaveCount(0);
   }
   // 保留的入口仍在
-  for (const label of ['文书库', '智能助理']) {
+  for (const label of ['文书库', '智能助理', '智能体与 Skill']) {
     await expect(page.locator('.axn-gs-nav-item', { hasText: label })).toHaveCount(1);
   }
 });
 
 test('11. 智能体与 Skill / 定时任务 / 知识库导航页可访问，文书库导航独立成页', async ({ page }) => {
-  // 侧栏入口已按下线标注隐藏，页面本身仍可通过深链直达。
+  // 智能体目录有侧栏入口；其他页面仍可通过深链直达。
   // 应用用 HashRouter，深链形式为 /#/agents
   await page.goto('/#/agents');
   await expect(page.getByTestId('agents-page')).toBeVisible();
-  await expect(page.getByText('态势感知智能体')).toBeVisible();
+  await expect(page.getByRole('button', { name: '态势感知智能体 灾情研判 · 9 项', exact: true })).toBeVisible();
   await page.goto('/#/schedules');
   await expect(page.getByTestId('schedules-page')).toBeVisible();
   await expect(page.getByText('每日值班日报')).toBeVisible();

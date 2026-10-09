@@ -683,7 +683,7 @@ export default function DocumentEditor({ documentId, open, onClose, onDirtyChang
   return (
     <Drawer
       title={draft ? `编辑文书 · ${draft.title}` : '编辑文书'}
-      width={880}
+      size={880}
       open={open}
       onClose={requestClose}
       destroyOnHidden

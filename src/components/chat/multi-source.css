@@ -1,0 +1,12 @@
+.axn-multi-source { margin: 12px 0; padding: 14px; border: 1px solid var(--axn-border); border-radius: 10px; background: var(--axn-surface, #fff); }
+.axn-ms-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.axn-ms-counts { margin: 12px 0; font-size: 13px; }
+.axn-ms-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.axn-ms-grid .ant-card-head { padding: 0 12px; }
+.axn-ms-grid .ant-card-body { padding: 12px; }
+.axn-ms-grid .ant-card-head-title { font-size: 13px; }
+.axn-ms-grid p { margin: 0 0 6px; font-size: 12px; }
+.axn-ms-preview { font-size: 12px; line-height: 1.6; }
+.axn-ms-foot { margin-top: 10px; font-size: 12px; color: var(--axn-muted); }
+.axn-ms-record { margin-top: 16px; overflow-wrap: anywhere; }
+@media(max-width:480px) { .axn-ms-grid { grid-template-columns: 1fr; } .axn-ms-heading { align-items: flex-start; } }

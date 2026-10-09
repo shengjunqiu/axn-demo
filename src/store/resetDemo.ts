@@ -13,6 +13,7 @@ import { useSessionStore } from './sessionStore';
 import { useWorkspaceStore } from './workspaceStore';
 
 export function resetDemoData(): void {
+  window.localStorage.removeItem('anneng-demo:v1:original-materials');
   useSessionStore.getState().resetAll();
   useConversationStore.getState().resetAll();
   useWorkspaceStore.getState().resetAll();

@@ -22,9 +22,11 @@ test('文书库：分类浏览、样稿与生成回写', async ({ page }) => {
   await openLibrary(page);
   const library = page.getByTestId('document-library');
   await expect(library.getByRole('heading', { name: '文书库' })).toBeVisible();
-  await expect(library.locator('.doc-library-row')).toHaveCount(4);
-  await expect(library.locator('.doc-sample-row')).toHaveCount(8);
-  for (const name of ['值班日报', '应急要情', '会议纪要', '工作总结']) {
+  // 值班日报、会议纪要入口暂时隐藏；智能体物化文种仍展示分类行
+  await expect(library.getByText('会议纪要', { exact: true })).toHaveCount(0);
+  await expect(library.getByText('值班日报', { exact: true })).toHaveCount(0);
+  await expect(library.locator('.doc-sample-row')).toHaveCount(4);
+  for (const name of ['应急要情', '工作总结']) {
     const category = library.locator('.doc-category').filter({ hasText: name });
     // 点开样稿 → 回到助理页并展示右侧文书工作区
     await category.locator('.doc-sample-row').first().click();
@@ -71,7 +73,7 @@ test('文书库：分类浏览、样稿与生成回写', async ({ page }) => {
 test('聊天文书快捷操作无需补录即可生成右侧模拟红头文书', async ({ page }) => {
   await page.goto('/');
   const panel = page.locator('.doc-center');
-  for (const [name, title] of [['值班日报', '防汛值守日报'], ['应急要情', '重点河段险情处置要情']]) {
+  for (const [name, title] of [['应急要情', '重点河段险情处置要情']]) {
     await clickQuickTask(page, `生成${name}`);
     const workflow = page.getByTestId('document-generation-card').last();
     await expect(workflow).toContainText('正在整理已收集的文书要素');

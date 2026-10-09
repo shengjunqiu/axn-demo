@@ -20,6 +20,50 @@
   height: 100%;
 }
 
+.axn-resource-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--space-4);
+}
+
+/*
+ * Ant Design 6 Tabs DOM：body-holder / body / content（原 content-holder / content / tabpane）。
+ * 勿对全部 .ant-tabs-content 设 display:flex，否则会盖过 .ant-tabs-content-hidden 的 display:none。
+ */
+.axn-resource-tabs .ant-tabs-body-holder,
+.axn-resource-tabs .ant-tabs-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.axn-resource-tabs .ant-tabs-content:not(.ant-tabs-content-hidden) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.axn-resource-tabs .ant-tabs-content-hidden {
+  display: none !important;
+}
+
+.axn-resource-tab-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: var(--space-3);
+}
+
+.axn-resource-map-hint {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: var(--fs-meta);
+}
+
 .axn-knowledge-panel {
   display: flex;
   flex-direction: column;

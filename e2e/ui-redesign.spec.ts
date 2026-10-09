@@ -210,7 +210,8 @@ test('未保存修改在导航、会话和关联事件切换时受到保护', as
   await page.getByRole('button', { name: '继续编辑' }).click();
   await expect(title).toHaveValue('保护中的工作副本');
   await page.getByTestId('chat-link-incident').click();
-  await page.getByTitle('未关联事件（空白对话）', { exact: true }).click();
+  // 选项悬浮详情改用 Tooltip，不再依赖原生 title 属性
+  await page.locator('.ant-select-item-option', { hasText: '未关联事件' }).click();
   await page.getByRole('button', { name: '继续编辑' }).click();
   await expect(title).toHaveValue('保护中的工作副本');
   await page.locator('.axn-gs-nav-item', { hasText: '文书库' }).click();
@@ -260,23 +261,22 @@ test('精简分屏保留未发送输入，关闭后恢复首页', async ({ page 
   await expect(page.getByTestId('document-workspace')).toHaveCount(0);
 });
 
-test('七个快捷任务全部平铺在输入框上方，文书生成类相邻成组并遵守运行状态', async ({ page }) => {
+test('快捷任务按场景推荐平铺，其余收入更多动作并遵守运行状态', async ({ page }) => {
   await page.goto('/');
   const chips = page.locator('.axn-chips');
-  const labels = ['生成灾情摘要', '查询周边救援资源', '生成救援方案', '生成应急要情', '生成值班日报', '生成工作总结', '评估救援效果'];
-  await expect(chips.getByRole('button')).toHaveCount(labels.length);
-  for (const name of labels) {
+  // 默认演示事件处于「救援中 / 实施救援」：主推含方案与文书
+  for (const name of ['生成救援方案', '生成应急要情', '生成值班日报', '核对资源状态']) {
     await expect(chips.getByRole('button', { name, exact: true })).toBeVisible();
   }
-  // 文书生成智能体的三项必须相邻（放在一起）
-  const docTasks = ['生成应急要情', '生成值班日报', '生成工作总结'];
-  const rendered = await chips.getByRole('button').allTextContents();
-  const firstDoc = rendered.indexOf(docTasks[0]);
-  expect(rendered.slice(firstDoc, firstDoc + docTasks.length)).toEqual(docTasks);
+  await expect(chips.getByTestId('chip-more-actions')).toBeVisible();
+  await chips.getByTestId('chip-more-actions').click();
+  await expect(page.getByRole('menuitem', { name: /^生成灾情摘要/ })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: /^评估救援效果/ })).toBeVisible();
+  await page.keyboard.press('Escape');
   await page.screenshot({ path: 'artifacts/ui-polish/quick-tasks.png' });
   await clickQuickTask(page, '生成值班日报');
   await expect(chips.getByRole('button', { name: '生成值班日报', exact: true })).toBeDisabled();
-  await expect(chips.getByRole('button', { name: '生成灾情摘要', exact: true })).toBeDisabled();
+  await expect(chips.getByTestId('chip-more-actions')).toBeDisabled();
   await expect(page.getByTestId('document-generation-card').last()).toContainText('红头文书已生成', { timeout: 20000 });
   await expect(page.getByTestId('document-toolbar')).toContainText('防汛值守日报（新生成）');
   await expect(chips.getByRole('button', { name: '生成值班日报', exact: true })).toBeEnabled();

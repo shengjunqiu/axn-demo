@@ -113,3 +113,22 @@ describe('sameMockDocument', () => {
     expect(sameMockDocument(base, { ...base, sections: base.sections.map((s, i) => (i === 0 ? ([s[0], '改了正文'] as const) : s)) })).toBe(false);
   });
 });
+
+describe('模拟文书提交到原系统', () => {
+  it('工具栏可打开确认框并写回 handoff 回执', async () => {
+    const onSave = vi.fn();
+    mount(onSave);
+
+    fireEvent.click(screen.getByTestId('submit-to-original-btn'));
+    expect(screen.getByText('确认提交到原系统')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('transfer-check'));
+    fireEvent.click(screen.getByTestId('confirm-submit-original'));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    const saved = onSave.mock.calls[0][0] as typeof DOCUMENT;
+    expect(saved.handoff?.status).toBe('uploaded');
+    expect(saved.handoff?.target?.length).toBeGreaterThan(0);
+    expect(saved.handoff?.receiptId).toMatch(/^AXN-RCPT-/);
+  });
+});

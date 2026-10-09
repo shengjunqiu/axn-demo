@@ -54,11 +54,12 @@ test.describe('安小能主线（要情全链路）', () => {
     // 2. 资源查询（任务卡显示结果概要；队伍明细在资源与态势抽屉）
     await sendChat(page, '查询周边救援资源');
     await waitTaskDone(page, '查询周边救援资源');
-    await page.getByRole('button', { name: '查看资源与态势' }).first().click();
+    await page.getByRole('button', { name: '查看资源列表' }).first().click();
     await expect(page.locator('.ant-drawer', { hasText: '资源与态势（模拟）' })).toBeVisible();
-    await expect(page.locator('.ant-table, table').getByText('一号工程应急救援队').first()).toBeVisible();
-    await expect(page.locator('.ant-table, table').getByText('二号应急救援队').first()).toBeVisible();
-    await expect(page.locator('svg').first()).toBeVisible(); // 本地 SVG 态势图
+    await expect(page.getByTestId('resource-tab-list').getByText('一号工程应急救援队').first()).toBeVisible();
+    await expect(page.getByTestId('resource-tab-list').getByText('二号应急救援队').first()).toBeVisible();
+    await page.getByRole('tab', { name: '态势地图' }).click();
+    await expect(page.getByTestId('resource-tab-map').locator('svg').first()).toBeVisible(); // 本地 SVG 态势图
     await shot('02-resources');
     await page.keyboard.press('Escape'); // 关抽屉，避免遮罩挡对话输入
 
@@ -68,7 +69,8 @@ test.describe('安小能主线（要情全链路）', () => {
     await expect(etaCard.getByText('一号工程应急救援队').first()).toBeVisible();
 
     // 4. 勾选前两支候选 → 汇总 2 支 / 64 人 / 7 台（重新打开资源抽屉）
-    await page.getByRole('button', { name: '查看资源与态势' }).first().click();
+    await page.getByRole('button', { name: /查看资源列表|查看态势地图/ }).first().click();
+    await page.getByRole('tab', { name: '资源列表' }).click();
     await page.locator('table tr', { hasText: '一号工程应急救援队' }).first().locator('span.ant-checkbox').click();
     await page.locator('table tr', { hasText: '二号应急救援队' }).first().locator('span.ant-checkbox').click();
     await expect(page.locator('.axn-derived-value', { hasText: '64' }).first()).toBeVisible();

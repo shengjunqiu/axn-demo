@@ -1,3 +1,5 @@
+import { useConversationStore } from '@/store/conversationStore';
+import { vueDemoResourceById } from '@/seed/vueDemoResources';
 /**
  * 建议与知识页（T-010 UI 部分）：处置建议卡（含采纳/取消采纳）+ 会话内知识产物聚合 + 知识卡。
  * 数据源：session.selectedProposalId → store.proposals；knowledge artifact.chunkIds → knowledgeById；
@@ -5,11 +7,12 @@
  */
 import { useMemo } from 'react';
 import { useSessionTasks } from '@/hooks/useSessionTasks';
-import { Alert, Button, Card, Empty, Space, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Empty, Space, Tag, Tooltip, Typography } from 'antd';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { sendMessage } from '@/services/taskRunner';
 import { resetDemoData } from '@/store/resetDemo';
+import { exportMaterial } from '@/services/prototypeExports';
 import { factText, knowledgeById, teamById } from '@/seed/scenario';
 import './workspace.css';
 
@@ -17,7 +20,8 @@ const { Text, Paragraph } = Typography;
 
 export default function KnowledgePanel() {
   const currentEventId = useDemoStore((s) => s.currentEventId);
-  const session = useSessionStore((s) => s.sessions[s.sessionByEvent[currentEventId] ?? '']);
+  const conversationId = useConversationStore(s => s.activeConversationId);
+  const session = useSessionStore((s) => s.sessions[s.sessionByConversation[conversationId ?? ''] ?? s.sessionByEvent[currentEventId] ?? '']);
   const tasks = useSessionTasks(session);
   // 展示优先级：已采纳建议 > 本会话最近生成的建议（生成后即使未采纳也可查看/采纳）
   const latestProposalId = useMemo(() => {
@@ -148,7 +152,7 @@ export default function KnowledgePanel() {
               const boundTeamNames = (section.bindingResourceIds ?? [])
                 .map((id) => {
                   const team = teamById.get(id);
-                  return team ? factText(team.factRefs.name) || id : null;
+                  return team ? factText(team.factRefs.name) || id : vueDemoResourceById.get(id)?.name ?? null;
                 })
                 .filter((n): n is string => n != null);
               const showPlaceholder = section.id === 'resources' && boundTeamNames.length === 0;
@@ -234,6 +238,7 @@ export default function KnowledgePanel() {
                   />
                 );
               }
+              const isTactics = /战法|技战法|行动战法/.test(`${chunk.title}${chunk.category}${chunk.sourceLabel}`);
               return (
                 <Card key={chunk.chunkId} type="inner" size="small" style={{ marginBottom: 8 }}
                   title={
@@ -242,7 +247,18 @@ export default function KnowledgePanel() {
                       <Tag>{chunk.category}</Tag>
                       <Tag>{chunk.version}</Tag>
                       <Tag color="geekblue">{chunk.sourceLabel}</Tag>
+                      {isTactics && <Tag color="red">内部战法·仅授权人员查看·禁止下载</Tag>}
                     </Space>
+                  }
+                  extra={
+                    <Tooltip title={isTactics ? '行动战法仅限安能内部高层及应急救援事业部核心人员查看，不开放下载（演示）' : '演示导出，非正式档案'}>
+                      <Button size="small" disabled={isTactics} onClick={() => {
+                        if (isTactics) return;
+                        void exportMaterial(`${chunk.title}（模拟）`, [['标题', chunk.title], ['正文', chunk.content], ['边界', chunk.notice ?? '模拟知识条目']], 'Word');
+                      }}>
+                        {isTactics ? '禁止下载' : '导出摘要'}
+                      </Button>
+                    </Tooltip>
                   }
                 >
                   <Paragraph style={{ marginBottom: 4, fontSize: 13, whiteSpace: 'pre-wrap' }}>
@@ -250,7 +266,24 @@ export default function KnowledgePanel() {
                   </Paragraph>
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     {chunk.notice}
+                    {isTactics ? ' 行动战法涉密管控：禁止下载与对外转发。' : ''}
                   </Text>
+                  {session && /案例|历史|预案/.test(`${chunk.title}${chunk.category}`) && (
+                    <div style={{ marginTop: 8 }}>
+                      <Button
+                        size="small"
+                        type="link"
+                        disabled={busy || isTactics}
+                        onClick={() => {
+                          void sendMessage(session.sessionId, {
+                            text: `引用案例（模拟）：${chunk.title}。请结合本事件生成/修订救援方案，不写入他案人数与联系人。`,
+                          });
+                        }}
+                      >
+                        引用案例（模拟）
+                      </Button>
+                    </div>
+                  )}
                 </Card>
               );
             })

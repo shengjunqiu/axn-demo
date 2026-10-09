@@ -1,3 +1,4 @@
+import type { MultiSourceSnapshot } from './multiSource';
 /**
  * 安小能领域类型 —— 单一事实来源（主控维护，冻结契约）。
  * 所有业务时间使用带 +08:00 的 ISO 字符串；用户实际操作时间另存 performedAt。
@@ -181,6 +182,42 @@ export interface PendingClarification {
   taskId: string;
 }
 
+/** 聊天附件摘要（模拟 Word / 本机登记；不持久化二进制）。 */
+export interface ChatAttachment {
+  id: string;
+  name: string;
+  type?: string;
+  /** 模拟正文或可读文本截断；持久化时宜控制长度 */
+  content?: string;
+  eventId?: string | null;
+  eventName?: string;
+  simulated: boolean;
+  kind: string;
+  status: string;
+}
+
+export type AttachmentWorkflowKind = 'wrongEvent' | 'missing' | 'ambiguous' | 'mismatch';
+
+/** 附件用途确认（对齐 Vue assessInput → workflow 按钮）。 */
+export interface AttachmentWorkflow {
+  kind: AttachmentWorkflowKind;
+  attachment: ChatAttachment;
+  prompt: string;
+  stage: string;
+  eventId: string;
+  resolved: boolean;
+}
+
+/** 会话资料区条目（本机补充或已纳入的模拟附件元数据）。 */
+export interface SessionMaterial {
+  id: string;
+  name: string;
+  content: string;
+  status: string;
+  kind: '本次补充' | '模拟 Word 附件' | string;
+  selected: boolean;
+}
+
 export interface ChatMessage {
   messageId: string;
   sessionId: string;
@@ -192,6 +229,10 @@ export interface ChatMessage {
   agentId?: string;
   agentName?: string;
   agentRole?: string;
+  /** 用户消息携带的附件摘要（展示用）。 */
+  attachment?: ChatAttachment | null;
+  /** 助手消息：附件用途确认 workflow。 */
+  workflow?: AttachmentWorkflow | null;
   documentWorkflow?: {
     stage: 'collecting' | 'waiting_input' | 'calling' | 'generating' | 'completed' | 'interrupted';
     elements: { label: string; value: string }[];
@@ -200,8 +241,21 @@ export interface ChatMessage {
     reportSections?: [string, string][];
     documentId?: string;
   };
+  /** 关联灾情切换提示：携带事件 ID，用于「查看时间轴」等结构化动作。 */
+  eventBriefingEventId?: string | null;
   createdAt: string;
   performedAt: string;
+}
+
+/** 三场景交接包（演示）：研判 → 投送 → 实施，不改原系统状态。 */
+export interface ScenarioHandoffBundle {
+  fromScenario: 'situation' | 'forceDelivery' | 'rescueOps';
+  toScenario: 'situation' | 'forceDelivery' | 'rescueOps';
+  eventId: string;
+  versionLabel: string;
+  summary: string;
+  bullets: string[];
+  verified: 'draft' | 'user_confirmed';
 }
 
 export interface Session {
@@ -216,6 +270,14 @@ export interface Session {
   selectedProposalVersion: string | null;
   pendingClarification: PendingClarification | null;
   activeDocumentId: string | null;
+  /** 会话内演示阶段覆盖；空则回落事件种子阶段 */
+  eventStageOverride?: '待研判' | '力量投送中' | '救援中' | '待复盘' | '已归档' | null;
+  /** 已完成的流程动作键（归一后） */
+  completedFlowActions?: string[];
+  /** 最近一次场景交接上下文 */
+  handoffBundle?: ScenarioHandoffBundle | null;
+  /** 会话资料区：本机补充 / 纳入的模拟附件（无二进制） */
+  materials?: SessionMaterial[];
   createdAt: string;
 }
 
@@ -266,6 +328,7 @@ export interface TaskStep {
 }
 
 export interface SummaryArtifact {
+  multiSource?: MultiSourceSnapshot;
   kind: 'summary';
   eventId: string;
   rows: {
@@ -322,6 +385,24 @@ export interface ProposalArtifact {
   dataTime: string;
 }
 
+/** 建设场景分节结果（对齐 Vue 四智能体 conversationCapabilities 结果卡）。 */
+export interface ScenarioSectionsArtifact {
+  kind: 'scenario_sections';
+  capability: string;
+  agentId: string;
+  title: string;
+  summary: string;
+  sections: { title: string; text: string }[];
+  table?: { headers: string[]; rows: string[][] };
+  /** 多表展示（如态势报告：安全区域 / 可出动队伍 / 医院）。 */
+  tables?: { title: string; headers: string[]; rows: string[][] }[];
+  notice: string;
+  dataTime: string;
+  /** 已物化到右侧红头文书时填写，供「查看文书」与 WorkspaceSync 打开。 */
+  documentId?: string;
+  documentCode?: string;
+}
+
 export interface DocumentLinkArtifact {
   kind: 'document';
   documentId: string;
@@ -355,6 +436,7 @@ export type TaskArtifactPayload =
   | KnowledgeArtifact
   | QaKnowledgeArtifact
   | ProposalArtifact
+  | ScenarioSectionsArtifact
   | DocumentLinkArtifact
   | ClarificationPayload
   | ErrorArtifact;

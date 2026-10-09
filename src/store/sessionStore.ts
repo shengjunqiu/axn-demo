@@ -1,13 +1,17 @@
 import { create } from 'zustand';
 import { resourceAllowed, resolveFact } from '@/services/factLookup';
+import { vueDemoResourceById } from '@/seed/vueDemoResources';
 import { teamById } from '@/seed/scenario';
 import { invalidateAllRuns, isActiveRun } from '@/services/taskRuns';
+import { computeStageAdvance, normalizeCompletedAction, resolveSeedEventStage } from '@/services/agentFlow';
 import type {
   AgentTask,
+  AttachmentWorkflow,
   ChatMessage,
   PendingClarification,
   Proposal,
   Session,
+  SessionMaterial,
   TaskEvent,
   TaskStatus,
 } from '@/domain/types';
@@ -86,6 +90,7 @@ function rehydrate(): SessionPersist {
   }
   const sessions: Record<string, Session> = {};
   for (const [sessionId, session] of Object.entries(raw.sessions)) {
+    if (!session.materials) session.materials = [];
     const n = interruptedBySession.get(sessionId) ?? 0;
     sessions[sessionId] =
       n > 0
@@ -150,6 +155,10 @@ function emptySession(sessionId: string, eventId: string): Session {
     selectedProposalVersion: null,
     pendingClarification: null,
     activeDocumentId: null,
+    eventStageOverride: null,
+    completedFlowActions: [],
+    handoffBundle: null,
+    materials: [],
     createdAt: new Date().toISOString(),
   };
 }
@@ -175,6 +184,10 @@ interface SessionState {
   switchSession: (sessionId: string) => void;
   appendMessage: (sessionId: string, msg: Omit<ChatMessage, 'messageId' | 'createdAt' | 'performedAt'>) => ChatMessage;
   updateDocumentWorkflow: (sessionId: string, messageId: string, workflow: NonNullable<ChatMessage['documentWorkflow']>) => void;
+  updateAttachmentWorkflow: (sessionId: string, messageId: string, workflow: AttachmentWorkflow) => void;
+  addSessionMaterials: (sessionId: string, materials: SessionMaterial[]) => void;
+  toggleSessionMaterial: (sessionId: string, materialId: string, selected: boolean) => void;
+  removeSessionMaterial: (sessionId: string, materialId: string) => void;
   createTask: (input: { sessionId: string; eventId: string; userMessageId: string; intent: string; displayTitle: string; attempt: number }) => AgentTask;
   applyTaskEvent: (taskId: string, ev: TaskEvent, attemptId: string) => void;
   beginAttempt: (taskId: string) => AgentTask | undefined;
@@ -189,6 +202,8 @@ interface SessionState {
   selectProposal: (sessionId: string, proposalId: string | null) => void;
   getProposal: (proposalId: string) => ProposalRecord | undefined;
   setActiveDocument: (sessionId: string, documentId: string | null) => void;
+  /** 任务/文书成功后推进三场景演示阶段并写入交接包 */
+  recordFlowProgress: (sessionId: string, completedAction: string) => void;
   clearSessionRuntime: (sessionId: string) => void;
   resetAll: () => void;
 }
@@ -279,6 +294,64 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
     return { sessions: { ...state.sessions, [sessionId]: {
       ...session, messages: session.messages.map(message => message.messageId === messageId ? { ...message, documentWorkflow: workflow } : message),
     } } };
+  }),
+
+  updateAttachmentWorkflow: (sessionId, messageId, workflow) => set(state => {
+    const session = state.sessions[sessionId];
+    if (!session) return state;
+    return {
+      sessions: {
+        ...state.sessions,
+        [sessionId]: {
+          ...session,
+          messages: session.messages.map(message =>
+            message.messageId === messageId ? { ...message, workflow } : message,
+          ),
+        },
+      },
+    };
+  }),
+
+  addSessionMaterials: (sessionId, materials) => set(state => {
+    const session = state.sessions[sessionId];
+    if (!session || !materials.length) return state;
+    const existing = session.materials ?? [];
+    const seen = new Set(existing.map(m => m.id));
+    const next = [...existing];
+    for (const item of materials) {
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      next.push(item);
+    }
+    return { sessions: { ...state.sessions, [sessionId]: { ...session, materials: next } } };
+  }),
+
+  toggleSessionMaterial: (sessionId, materialId, selected) => set(state => {
+    const session = state.sessions[sessionId];
+    if (!session?.materials) return state;
+    return {
+      sessions: {
+        ...state.sessions,
+        [sessionId]: {
+          ...session,
+          materials: session.materials.map(m => (m.id === materialId ? { ...m, selected } : m)),
+        },
+      },
+    };
+  }),
+
+  removeSessionMaterial: (sessionId, materialId) => set(state => {
+    const session = state.sessions[sessionId];
+    if (!session?.materials) return state;
+    return {
+      sessions: {
+        ...state.sessions,
+        [sessionId]: {
+          ...session,
+          materials: session.materials.filter(m => m.id !== materialId || m.kind !== '本次补充'),
+        },
+      },
+    };
   }),
 
   createTask: ({ sessionId, eventId, userMessageId, intent, displayTitle, attempt }) => {
@@ -428,6 +501,11 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
       }
       return { tasks: { ...s.tasks, [taskId]: next }, sessions };
     });
+    // 成功完成后推进三场景演示阶段（在 set 外调用，避免嵌套 set 竞态）
+    const after = get().tasks[taskId];
+    if (ev.type === 'completed' && after && (after.status === 'succeeded' || after.status === 'partial')) {
+      get().recordFlowProgress(after.sessionId, after.displayTitle);
+    }
   },
 
   setTaskStatus: (taskId, status) => {
@@ -475,10 +553,16 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
       if (!session) return s;
       const merged = [...session.candidateResourceIds];
       for (const id of resourceIds) {
+        if (merged.includes(id)) continue;
         const team = teamById.get(id);
         if (team && resourceAllowed(id, session.eventId)
-          && resolveFact(team.factRefs.status, { kind: 'event', eventId: session.eventId })?.value === 'available'
-          && !merged.includes(id)) merged.push(id);
+          && resolveFact(team.factRefs.status, { kind: 'event', eventId: session.eventId })?.value === 'available') {
+          merged.push(id);
+          continue;
+        }
+        // 建设场景演示叠加资源：仅允许标记为 selectable 的项进入候选（仍 ≠ 已调派）。
+        const demo = vueDemoResourceById.get(id);
+        if (demo && demo.eventId === session.eventId && demo.selectable) merged.push(id);
       }
       if (merged.length === session.candidateResourceIds.length) return s;
       return { sessions: { ...s.sessions, [sessionId]: { ...session, candidateResourceIds: merged, selectedProposalId: null, selectedProposalVersion: null } } };
@@ -568,6 +652,35 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
     });
   },
 
+  recordFlowProgress: (sessionId, completedAction) => {
+    set((s) => {
+      const session = s.sessions[sessionId];
+      if (!session || !incidentById.get(session.eventId)) return s;
+      const key = normalizeCompletedAction(completedAction);
+      if (!key) return s;
+      const currentStage = session.eventStageOverride ?? resolveSeedEventStage(session.eventId);
+      const completed = [...(session.completedFlowActions ?? [])];
+      if (!completed.includes(key)) completed.push(key);
+      const { nextStage, handoff, advanced } = computeStageAdvance(
+        currentStage,
+        key,
+        session.eventId,
+        completed.length,
+      );
+      return {
+        sessions: {
+          ...s.sessions,
+          [sessionId]: {
+            ...session,
+            completedFlowActions: completed,
+            eventStageOverride: advanced && nextStage ? nextStage : session.eventStageOverride,
+            handoffBundle: handoff ?? session.handoffBundle,
+          },
+        },
+      };
+    });
+  },
+
   clearSessionRuntime: (sessionId) => {
     set((s) => {
       const session = s.sessions[sessionId];
@@ -585,6 +698,9 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
             selectedProposalVersion: null,
             pendingClarification: null,
             activeDocumentId: null,
+            eventStageOverride: null,
+            completedFlowActions: [],
+            handoffBundle: null,
           },
         },
       };

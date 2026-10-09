@@ -6,15 +6,46 @@
 .axn-chat-head .ant-select-selector { border-radius: 6px; }
 .axn-chat-avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: var(--axn-primary-bg); color: var(--axn-primary); font-size: var(--fs-body); font-weight: 600; flex-shrink: 0; }
 .axn-message-list { padding: var(--space-6) max(var(--space-6), calc((100% - 880px) / 2)); scrollbar-width: thin; scrollbar-color: var(--axn-border) transparent; background: var(--axn-surface); flex: 1; min-height: 0; }
+.axn-message-list .ant-bubble-list { row-gap: var(--space-5); }
 .axn-message-list .ant-bubble-content { overflow-wrap: anywhere; }
+/* 分屏时对话列变窄，左右留白按容器收，避免贴边 */
+.axn-assistant--split .axn-message-list {
+  padding: var(--space-5) var(--space-4);
+}
 .axn-chat-page .ant-tag { border-radius: 5px; font-size: var(--fs-meta); line-height: 18px; padding-inline: var(--space-1-5); margin-inline-end: 0; }
 .axn-chat-page .ant-btn-sm { font-size: var(--fs-meta); border-radius: 6px; box-shadow: none; }
 .axn-chat-page .ant-alert { border-radius: var(--radius-md); padding: var(--space-3) var(--space-3); line-height: var(--lh-normal); font-size: var(--fs-body); }
 .axn-chat-page .ant-alert-message, .axn-chat-page .ant-alert-title { font-size: var(--fs-body); font-weight: 500; }
 .axn-chat-page .ant-alert-description { font-size: var(--fs-body); color: var(--axn-muted); }
 
-/* 首页：宽敞居中欢迎 + 知识库引导问题。 */
+/* 首页：宽敞居中欢迎 + 建设场景四智能体入口 + 知识库引导问题。 */
 .axn-home { display: flex; flex-direction: column; align-items: center; }
+.axn-scenario-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: var(--space-3) 0 var(--space-4); }
+.axn-scenario-card { display: flex; flex-direction: column; gap: var(--space-2); text-align: left; min-height: 118px; padding: var(--space-3); border: 1px solid var(--axn-border); border-radius: var(--radius-md); background: var(--axn-soft); color: var(--axn-text); cursor: pointer; transition: border-color .15s, background .15s; }
+.axn-scenario-card:hover:not(:disabled) { background: var(--axn-primary-bg); border-color: color-mix(in srgb, var(--axn-primary) 24%, var(--axn-border)); }
+.axn-scenario-card:disabled { opacity: .6; cursor: not-allowed; }
+.axn-scenario-card:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+.axn-scenario-card-title { font-size: var(--fs-lead); font-weight: 600; color: var(--axn-text); }
+.axn-scenario-card-text { font-size: var(--fs-meta); line-height: var(--lh-relaxed); color: var(--axn-muted); }
+.axn-scenario-card-tag { margin-top: auto; font-size: var(--fs-meta); color: var(--axn-primary); font-weight: 600; }
+.axn-scenario-summary { padding: var(--space-4) var(--space-4); font-size: var(--fs-body); line-height: var(--lh-relaxed); color: var(--axn-muted); border-bottom: 1px solid var(--axn-border); }
+.axn-scenario-section { display: flex; flex-direction: column; gap: var(--space-2-5); margin: var(--space-4); padding: var(--space-4) var(--space-4); border: 1px solid var(--axn-border); border-radius: var(--radius-md); background: var(--axn-soft); font-size: var(--fs-body); line-height: var(--lh-relaxed); box-sizing: border-box; }
+.axn-scenario-section .ant-typography { margin: 0 !important; font-size: var(--fs-body); line-height: var(--lh-relaxed); overflow-wrap: anywhere; }
+.axn-scenario > .axn-tc-fs12 { display: block; padding: 0 var(--space-4) var(--space-3); }
+.axn-scenario > .axn-disaster-charts { margin-inline: var(--space-4); }
+.axn-scenario-table-wrap { overflow-x: auto; padding: var(--space-3); border-bottom: 1px solid var(--axn-border); }
+.axn-scenario-table-title { font-size: var(--fs-body); font-weight: 600; color: var(--axn-text); margin-bottom: var(--space-2); }
+.axn-scenario-table { width: 100%; border-collapse: collapse; font-size: var(--fs-meta); }
+.axn-scenario-table th, .axn-scenario-table td { border: 1px solid var(--axn-border); padding: var(--space-2); text-align: left; vertical-align: top; }
+.axn-scenario-table th { background: var(--axn-soft); color: var(--axn-muted); font-weight: 600; }
+.axn-agent-summon-avatar--agent-situation { color: #c2410c; background: color-mix(in srgb, #c2410c 12%, var(--axn-surface)); }
+.axn-agent-summon-avatar--agent-resource { color: #0369a1; background: color-mix(in srgb, #0369a1 12%, var(--axn-surface)); }
+.axn-agent-summon-avatar--agent-plan { color: #a16207; background: color-mix(in srgb, #a16207 12%, var(--axn-surface)); }
+.axn-agent-summon-avatar--agent-doc { color: #4338ca; background: color-mix(in srgb, #4338ca 12%, var(--axn-surface)); }
+.axn-agent-summon-avatar--agent-eval { color: #047857; background: color-mix(in srgb, #047857 12%, var(--axn-surface)); }
+@media (max-width: 720px) {
+  .axn-scenario-grid { grid-template-columns: 1fr; }
+}
 .axn-chat-empty-compact { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-10) var(--space-6); text-align: center; color: var(--axn-muted); }
 .axn-chat-empty-compact > svg.lucide { display: grid; place-items: center; width: 48px; height: 48px; border-radius: var(--radius-xl); color: var(--axn-muted); background: var(--axn-soft); font-size: var(--fs-h1); }
 .axn-chat-empty-compact .ant-typography { margin: var(--space-2) 0 0; }
@@ -32,9 +63,11 @@
 .axn-question-item:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
 .axn-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: 0 var(--space-2); border: 0; background: transparent; flex: 0 0 auto; min-width: 0; max-width: var(--measure-chat); margin: 0 0 var(--space-2); width: 100%; box-sizing: border-box; }
 /* 快捷任务 chips 全部平铺，不再有「更多任务」收纳浮层（原手写浮层与 .axn-more-tasks 规则已删）。 */
-.axn-assistant--split .axn-composer { padding: var(--space-3) var(--space-3) var(--space-3); }
 .axn-chip.ant-btn { height: 27px; padding: 0 var(--space-2); border: 1px solid color-mix(in srgb, var(--axn-primary) 30%, var(--axn-surface)); background: var(--axn-primary-bg); color: var(--axn-primary-text); border-radius: 7px; font-size: var(--fs-meta); box-shadow: none; transition: background .16s, border-color .16s, color .16s; }
 .axn-chip.ant-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--axn-primary) 16%, var(--axn-surface)); color: var(--axn-primary-text); border-color: color-mix(in srgb, var(--axn-primary) 52%, var(--axn-surface)); }
+.axn-chip--primary.ant-btn { font-weight: 600; }
+.axn-chip--more.ant-btn { border-style: dashed; background: transparent; color: var(--axn-text-secondary, #667085); }
+.axn-chip-scenario-tag { margin-inline-end: 0 !important; height: 27px; line-height: 25px; border-radius: 7px; }
 .axn-chip:disabled { opacity: .5; }
 /* 会话头：默认空白，收起侧边栏按钮居左。
    圆角一体化输入区：快捷 chips 在输入框下方，发送按钮在右下角，与 Sender 共享一层外框；宽屏下限制正文宽度保持留白。 */
@@ -46,6 +79,146 @@
 .axn-composer-shell .ant-sender-content { padding-top: var(--space-1-5); }
 .axn-composer-shell .ant-sender:focus-within { box-shadow: none; }
 .axn-composer-footer { display: flex; align-items: flex-end; gap: var(--space-2); }
+.axn-composer-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; padding: var(--space-1) var(--space-1) 0; }
+.axn-stage-prompt-picker { display: flex; align-items: center; gap: 10px; flex: 1 1 220px; min-width: 0; font-size: 11px; color: var(--axn-muted); }
+.axn-stage-prompt-picker > span { flex-shrink: 0; white-space: nowrap; }
+.axn-stage-prompt-select { flex: 1 1 auto; min-width: 0; max-width: 100%; }
+.axn-composer-materials-btn { flex-shrink: 0; padding-inline: 4px !important; }
+
+/* —— 分屏展开文书：收紧输入框内部，避免窄列里控件挤爆 / 留白过大 —— */
+.axn-composer--compact,
+.axn-assistant--split .axn-composer {
+  padding: var(--space-2) var(--space-2) var(--space-2-5);
+}
+.axn-composer--compact .axn-composer-shell,
+.axn-assistant--split .axn-composer-shell {
+  max-width: none;
+  gap: 6px;
+  padding: 6px 8px 8px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(16, 24, 40, 0.06));
+}
+.axn-composer--compact .axn-composer-toolbar,
+.axn-assistant--split .axn-composer-toolbar {
+  gap: 6px;
+  flex-wrap: nowrap;
+  padding: 0;
+  align-items: stretch;
+}
+.axn-composer--compact .axn-stage-prompt-picker,
+.axn-assistant--split .axn-stage-prompt-picker {
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  font-size: 10px;
+}
+.axn-composer--compact .axn-stage-prompt-picker > span,
+.axn-assistant--split .axn-stage-prompt-picker > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+.axn-composer--compact .axn-stage-prompt-select,
+.axn-assistant--split .axn-stage-prompt-select {
+  width: 100%;
+}
+.axn-composer--compact .axn-stage-prompt-select .ant-select-selector,
+.axn-assistant--split .axn-stage-prompt-select .ant-select-selector {
+  font-size: 12px;
+}
+.axn-composer--compact .axn-pending-file,
+.axn-assistant--split .axn-pending-file {
+  margin: 0;
+  padding: 6px 8px;
+  gap: 6px;
+  font-size: 11px;
+}
+.axn-composer--compact .axn-pending-file small,
+.axn-assistant--split .axn-pending-file small {
+  margin-left: 4px;
+  display: inline;
+}
+/* Sender：缩小内容区内边距，prefix/suffix 贴底且不撑开过高空白 */
+.axn-composer--compact .ant-sender,
+.axn-assistant--split .axn-composer .ant-sender {
+  padding: 0;
+}
+.axn-composer--compact .ant-sender-content,
+.axn-assistant--split .axn-composer .ant-sender-content {
+  padding: 4px 2px 0 !important;
+  gap: 4px;
+}
+.axn-composer--compact .ant-sender-input,
+.axn-assistant--split .axn-composer .ant-sender-input,
+.axn-composer--compact .ant-sender textarea,
+.axn-assistant--split .axn-composer .ant-sender textarea {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  min-height: 44px !important;
+}
+.axn-composer--compact .ant-sender-suffix,
+.axn-assistant--split .axn-composer .ant-sender-suffix,
+.axn-composer--compact .ant-sender-prefix,
+.axn-assistant--split .axn-composer .ant-sender-prefix {
+  align-items: center;
+  gap: 4px;
+  margin-inline: 0;
+}
+.axn-composer--compact .axn-cp-select,
+.axn-assistant--split .axn-cp-select,
+.axn-cp-select--compact.ant-select {
+  min-width: 72px !important;
+  max-width: 128px !important;
+  margin-inline-end: 4px !important;
+  font-size: 11px !important;
+}
+.axn-composer--compact .axn-cp-select .ant-select-selection-item,
+.axn-assistant--split .axn-cp-select .ant-select-selection-item,
+.axn-cp-select--compact .ant-select-selection-item {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.axn-cp-select-popup--compact.ant-select-dropdown,
+.axn-stage-prompt-popup--compact.ant-select-dropdown {
+  min-width: 260px !important;
+  max-width: min(360px, 92vw) !important;
+}
+.axn-assistant--split .axn-cp-chips-wrap {
+  padding-inline: var(--space-2);
+}
+.axn-assistant--split .axn-chips {
+  max-width: none;
+  margin-bottom: var(--space-1);
+  gap: 6px;
+  padding-inline: 0;
+}
+.axn-assistant--split .axn-chip.ant-btn,
+.axn-assistant--split .axn-chip-scenario-tag {
+  height: 24px;
+  font-size: 11px;
+  line-height: 22px;
+  padding-inline: 8px;
+}
+.axn-file-input-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+.axn-pending-file, .axn-sent-file { display: flex; align-items: center; gap: 10px; border: 1px solid color-mix(in srgb, var(--axn-primary) 28%, var(--axn-border)); border-radius: 6px; padding: 9px 11px; background: color-mix(in srgb, var(--axn-primary) 6%, var(--axn-surface)); color: var(--axn-primary-text, #426b94); font-size: 12px; overflow-wrap: anywhere; }
+.axn-pending-file { justify-content: space-between; margin: 0 var(--space-1); }
+.axn-pending-file small, .axn-sent-file small { font-size: 10px; color: var(--axn-muted); margin-left: 8px; }
+.axn-sent-file { margin-top: 10px; background: color-mix(in srgb, #fff 18%, transparent); border-color: color-mix(in srgb, #fff 35%, transparent); color: inherit; }
+.axn-user-bubble-body { display: flex; flex-direction: column; gap: 4px; }
+.axn-intent-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.axn-intent-resolved { display: block; margin-top: 8px; font-size: 12px; }
+.axn-attachment-workflow { display: flex; flex-direction: column; gap: var(--space-2); }
+.axn-materials-hint { font-size: var(--fs-meta) !important; }
+.axn-materials-section { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.axn-material-card { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--axn-border); border-radius: 8px; padding: 10px 12px; background: var(--axn-soft, #f7fafc); }
+.axn-material-card strong { font-size: 13px; }
+.axn-material-card small { color: var(--axn-muted); font-size: 11px; }
+.axn-material-card details { font-size: 12px; color: var(--axn-text-secondary, #475467); }
+.axn-material-card details p { margin: 6px 0 0; white-space: pre-wrap; }
+.axn-material-card-head { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .axn-send-btn { flex-shrink: 0; }
 .axn-clarification { padding: var(--space-2) var(--space-4); border-top: 1px solid var(--axn-border); }
 .axn-clarification .ant-space-compact { margin-top: var(--space-3); }
@@ -64,23 +237,52 @@
 .axn-step-pending .axn-step-name, .axn-step-cancelled .axn-step-name { color: var(--axn-muted); }
 .axn-step-running .axn-step-name { color: var(--axn-primary); }
 .axn-step-failed .axn-step-name { color: var(--axn-error); }
-.axn-task-answer { background: var(--axn-surface); padding: var(--space-0-5) 0; font-size: var(--fs-lead); line-height: var(--lh-relaxed); white-space: pre-wrap; overflow-wrap: anywhere; }
+.axn-task-answer { background: var(--axn-soft); padding: var(--space-4); border-radius: var(--radius-md); font-size: var(--fs-lead); line-height: var(--lh-relaxed); white-space: pre-wrap; overflow-wrap: anywhere; box-sizing: border-box; }
+.axn-task-answer .ant-typography { margin: 0 !important; }
+
+.axn-event-briefing { display: flex; flex-direction: column; gap: var(--space-3); }
+.axn-event-briefing-text { margin: 0 !important; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.85; }
+.axn-event-next-steps { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-4); margin-top: var(--space-1); border-top: 1px dashed var(--axn-border); }
+.axn-event-next-title { margin: 0 !important; font-size: var(--fs-body) !important; font-weight: 600 !important; }
+.axn-event-next-buttons { width: 100%; }
+.axn-event-next-buttons.ant-space { gap: var(--space-2) !important; }
+.axn-event-briefing-actions { padding-top: var(--space-1); border-top: 1px dashed var(--axn-border); }
+.axn-event-timeline-item { display: flex; flex-direction: column; gap: 2px; }
 .axn-task-card--failed { border-color: color-mix(in srgb, var(--axn-error) 25%, var(--axn-border)); }
 
 /* 摘要、资源、知识引用和建议。 */
 .axn-artifact { border: 1px solid var(--axn-border); border-radius: 9px; background: var(--axn-surface); overflow: hidden; min-width: 0; }
-.axn-artifact-row { display: grid; grid-template-columns: 76px minmax(0,1fr); gap: var(--space-3); padding: var(--space-3) var(--space-3); font-size: var(--fs-body); line-height: var(--lh-relaxed); border-bottom: 1px solid var(--axn-border); }
+.axn-artifact-row { display: grid; grid-template-columns: 76px minmax(0,1fr); gap: var(--space-3); padding: var(--space-3-5) var(--space-4); font-size: var(--fs-body); line-height: var(--lh-relaxed); border-bottom: 1px solid var(--axn-border); }
 .axn-artifact-row:last-child { border-bottom: 0; }
 .axn-artifact-label { color: var(--axn-muted); }
 .axn-artifact-value { color: var(--axn-text); text-align: left; overflow-wrap: anywhere; min-width: 0; }
-.axn-artifact-foot { padding: var(--space-3) var(--space-3); color: var(--axn-muted); font-size: var(--fs-body); line-height: var(--lh-normal); overflow-wrap: anywhere; background: var(--axn-soft); }
-.axn-artifact > .ant-btn { margin: var(--space-3) var(--space-3) var(--space-3); }
-.axn-artifact > .ant-alert { margin: var(--space-3); }
-.axn-resource-results { display: grid; gap: var(--space-2); padding: var(--space-3); }
-.axn-resource-result, .axn-document-result { padding: var(--space-3); border: 1px solid var(--axn-border); border-radius: var(--radius-md); background: var(--axn-soft); }
-.axn-resource-result { display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--fs-body); line-height: var(--lh-normal); }
-.axn-resource-result .ant-typography { font-size: var(--fs-body); overflow-wrap: anywhere; }
-.axn-artifact > .axn-resource-result { margin: var(--space-3); }
+.axn-artifact-foot { padding: var(--space-4); color: var(--axn-muted); font-size: var(--fs-body); line-height: var(--lh-normal); overflow-wrap: anywhere; background: var(--axn-soft); }
+.axn-artifact-foot .ant-space { row-gap: var(--space-2); }
+.axn-artifact > .ant-btn { margin: var(--space-3) var(--space-4) var(--space-4); }
+.axn-artifact > .ant-alert { margin: var(--space-3) var(--space-4); }
+.axn-resource-results { display: grid; gap: var(--space-2); padding: var(--space-4); }
+.axn-resource-result, .axn-document-result { padding: var(--space-4); border: 1px solid var(--axn-border); border-radius: var(--radius-md); background: var(--axn-soft); box-sizing: border-box; }
+.axn-resource-result { display: flex; flex-direction: column; gap: var(--space-2-5); font-size: var(--fs-body); line-height: var(--lh-normal); }
+.axn-resource-result .ant-typography { margin: 0 !important; font-size: var(--fs-body); overflow-wrap: anywhere; }
+.axn-artifact > .axn-resource-result { margin: var(--space-3) var(--space-4); }
+/* 处置建议：章节块与底栏左右边距对齐，避免「其余章节 / 查看」贴边或错位 */
+.axn-proposal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) 0;
+  box-sizing: border-box;
+}
+.axn-proposal-body > .axn-resource-result { margin: 0; }
+.axn-proposal-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2-5);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  box-sizing: border-box;
+}
+.axn-proposal-foot .ant-typography { margin: 0 !important; }
 .axn-qa { padding: var(--space-3); }
 .axn-qa .axn-artifact-row { padding-inline: 0; }
 /* 来源块靠底色（--axn-soft）与圆角区分即可，左侧不加高亮条（标注反馈，勿再加 border-left）。 */
@@ -142,7 +344,7 @@
 .axn-agent-summon-head > .ant-typography { font-size: var(--fs-lead); }
 .axn-agent-summon-role .ant-typography { font-size: var(--fs-meta); line-height: var(--lh-normal); }
 .axn-agent-summon-action .ant-typography { font-size: var(--fs-body); line-height: var(--lh-normal); color: var(--axn-muted); overflow-wrap: anywhere; }
-.axn-agent-execution > .axn-task-card { border: 0; border-top: 1px solid var(--axn-border); border-radius: 0; margin: 0; }
+.axn-agent-execution > .axn-task-card { border: 0; border-top: 1px solid var(--axn-border); border-radius: 0; margin: 0; padding: var(--space-4) var(--space-5); }
 
 /* 文书生成过程、要素摘要与文书预览。 */
 /* 内联文书卡保持平面：它铺在纯白会话底上，阴影没有承接面（白叠白只会让边缘发灰），
@@ -155,13 +357,13 @@
 .axn-document-workflow .ant-steps { margin-bottom: var(--space-4); }
 .axn-document-workflow .ant-steps-item-title { font-size: var(--fs-meta); font-weight: 500; }
 .axn-document-workflow .ant-steps-item-description { font-size: var(--fs-body); line-height: var(--lh-normal); }
-.axn-document-elements { margin: var(--space-3) 0; padding: var(--space-1) var(--space-3); font-size: var(--fs-body); border: 1px solid var(--axn-border); border-radius: var(--radius-md); background: var(--axn-soft); }
-.axn-document-elements > div { display: grid; grid-template-columns: 60px minmax(0,1fr); gap: var(--space-2); padding: var(--space-2) 0; line-height: var(--lh-normal); }
+.axn-document-elements { margin: var(--space-3) 0; padding: var(--space-3) var(--space-4); font-size: var(--fs-body); border: 1px solid var(--axn-border); border-radius: var(--radius-md); background: var(--axn-soft); box-sizing: border-box; }
+.axn-document-elements > div { display: grid; grid-template-columns: 60px minmax(0,1fr); gap: var(--space-2); padding: var(--space-2-5) 0; line-height: var(--lh-normal); }
 .axn-document-elements > div + div { border-top: 1px solid var(--axn-border); }
 .axn-document-elements dt { color: var(--axn-muted); font-size: var(--fs-meta); }
 .axn-document-elements dd { margin: 0; overflow-wrap: anywhere; color: var(--axn-text); }
-.axn-document-result { margin: var(--space-4) 0; }
-.axn-document-result .ant-typography { margin-bottom: var(--space-2); font-size: var(--fs-body); line-height: var(--lh-relaxed); }
+.axn-document-result { margin: var(--space-3) var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-2-5); }
+.axn-document-result .ant-typography { margin: 0 !important; font-size: var(--fs-body); line-height: var(--lh-relaxed); }
 .axn-document-result > .ant-typography:first-child { display: block; }
 .axn-document-workflow-footer { padding-top: var(--space-3); border-top: 1px solid var(--axn-border); width: 100%; }
 .axn-document-workflow-footer .ant-typography { font-size: var(--fs-body); }
@@ -210,8 +412,15 @@
 .axn-cp-title { font-size: var(--fs-lead); flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .axn-cp-compact { width: 100%; margin-top: var(--space-2); }
 .axn-cp-chips-wrap { display: flex; justify-content: center; padding: 0 var(--space-4); width: 100%; box-sizing: border-box; }
-/* 关联灾情：无边框 + 品牌蓝文字（标注：这边的文字改成品牌蓝色），与右侧主按钮同排 */
-.axn-cp-select.ant-select { min-width: 96px; max-width: 220px; font-size: var(--fs-meta); margin-inline-end: var(--space-1-5); }
+/* 关联灾情：无边框 + 品牌蓝文字；选择器与下拉略加宽，减少事件名被截断 */
+.axn-cp-select.ant-select { min-width: 140px; max-width: 320px; font-size: var(--fs-meta); margin-inline-end: var(--space-1-5); }
 .axn-cp-select .ant-select-content, .axn-cp-select .ant-select-content-placeholder { color: var(--axn-primary); }
 .axn-cp-select .ant-select-suffix, .axn-cp-select .ant-select-suffix .anticon { color: var(--axn-primary); }
 .axn-cp-select.ant-select:hover .ant-select-content { color: color-mix(in srgb, var(--axn-primary) 78%, var(--axn-text)); }
+.axn-cp-select-option-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.axn-cp-select-tip { max-width: 320px; font-size: var(--fs-meta); line-height: 1.45; }
+.axn-cp-select-tip-title { font-weight: 600; margin-bottom: 4px; }
+.axn-cp-select-tip-desc { margin-top: 4px; opacity: 0.92; }
+.axn-cp-select-tip-note { margin-top: 6px; font-size: 11px; opacity: 0.72; }
+.axn-cp-select-popup.ant-select-dropdown { min-width: 320px !important; }
+.axn-cp-select-popup .ant-select-item-option-content { overflow: hidden; }

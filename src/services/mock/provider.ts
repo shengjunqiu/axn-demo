@@ -1,3 +1,6 @@
+import { tenderTaskPrompt } from '@/seed/tenderNames';
+import { vueDemoResourceById } from '@/seed/vueDemoResources';
+import { disasterProfileById } from '@/seed/disasterScenarios';
 /**
  * 受控 Mock Provider：规则意图识别 + 确定性任务编排。
  * 所有回复均为模拟结果，不接真实大模型；步骤与依据来自本地种子与运行时状态。
@@ -18,6 +21,13 @@ import {
   faultScenarios,
 } from '@/seed/scenario';
 import { RESCUE_EVALUATION_MOCK } from '@/seed/rescueEvaluation';
+import {
+  buildChatMaterialSummary,
+  buildConstructionResult,
+  hasAuthorizedResourceLedger,
+  resolveConstructionCapability,
+  type ConstructionResult,
+} from '@/seed/constructionScenarios';
 import { computeDerived } from '@/seed/derived';
 import { type FixtureFact, type FixtureTeam, type FixtureIncident, type FixtureKnowledge } from '@/seed/scenario';
 import { useDemoStore } from '@/store/demoStore';
@@ -34,6 +44,10 @@ import {
   missingDailyFields,
 } from '../documentFactory.js';
 import { ensureQaLoaded, getQaItem, matchQa, qaStatusLabel } from '../qaKnowledge.js';
+import { publishConstructionMaterial } from '../agentMaterialDocument.js';
+import { vueDemoResourceIdsForEvent } from '@/seed/vueDemoResources';
+import type { ScenarioSectionsArtifact } from '@/domain/types';
+import { buildMultiSourceSnapshot, aggregationCounts, multiSourceMaterial } from '../multiSourceAggregation';
 
 /**
  * 未命中任何演示意图（输入框自由文本）时的默认回复。
@@ -94,7 +108,7 @@ function teamByName(text: string, ids: string[]): string | null {
 }
 
 export function recognize(rawText: string, ctx: { lastResourceResultIds: string[]; candidateResourceIds: string[] }): RecognizedIntent {
-  const text = rawText.trim();
+  const text = tenderTaskPrompt(rawText).trim();
 
   // 与应急业务无关的闲聊/无关问题 → 明确兑底，不硬套灾情摘要（产品红线：未知问题不伪装成摘要）
   if (/^(今天|现在)?(天气|气温|股票|新闻|笑话|周杰伦)/.test(text) || /天气(怎么样|如何)/.test(text)) {
@@ -116,12 +130,49 @@ export function recognize(rawText: string, ctx: { lastResourceResultIds: string[
     return { intent: 'fill_handover', params: { value }, displayTitle: '补录交接事项' };
   }
   if (/^(评估救援效果|救援效果评估|评估救援成效)$/.test(text)) {
-    return { intent: 'evaluation', params: {}, displayTitle: '评估救援效果' };
+    return { intent: 'evaluation', params: { capability: 'deviation' }, displayTitle: '评估救援效果' };
   }
-  if (text === '生成救援方案') {
-    return { intent: 'proposal', params: {}, displayTitle: '生成救援方案' };
+  if (/反思式总结|生成总结报告|过程记录.*总结|复盘.*总结/.test(text)) {
+    return { intent: 'evaluation', params: { capability: 'summary' }, displayTitle: '生成总结报告' };
+  }
+  if (/投入偏差|对照.*计划.*实际|分析.*偏差/.test(text)) {
+    return { intent: 'evaluation', params: { capability: 'deviation' }, displayTitle: '分析投入偏差' };
+  }
+  if (text === '生成救援方案' || /生成处置方案|处置方案初稿|结合现有人员装备.*方案/.test(text)) {
+    return { intent: 'proposal', params: { capability: 'plan' }, displayTitle: '生成救援方案' };
+  }
+  // 阶段提问：方案修订（「处置方案修订」「现场情况变化」等）优先于泛化处置建议
+  if (/现场反馈.*修订|依据现场反馈修订|修订.*方案|方案.*修订|现场情况变化|作业条件.*核实|调整建议/.test(text)) {
+    return { intent: 'proposal', params: { capability: 'revise' }, displayTitle: '依据现场反馈修订' };
+  }
+  // 阶段提问：协调事项清单（非整份救援方案正文）
+  if (/需协调的事项|协调事项|技术、安全和保障|保障协调事项|整理处置建议/.test(text)) {
+    return { intent: 'proposal', params: { capability: 'plan', focus: 'coordination' }, displayTitle: '整理协调事项' };
+  }
+  // 阶段提问：阶段要情（含「阶段要情初稿」，不要求必须出现「应急要情」四字）
+  if (/阶段要情|整理.*要情|进展.*要情|要情初稿/.test(text)) {
+    return { intent: 'doc_brief', params: {}, displayTitle: '生成应急要情' };
+  }
+  if (/^(生成周边资源报告)$/.test(text) || /周边.*资源.*报告|资源分析报告/.test(text)) {
+    return { intent: 'resource_query', params: { capability: 'resourceReport' }, displayTitle: '生成周边资源报告' };
+  }
+  if (/^(核对资源状态)$/.test(text) || (/状态|更新|校正/.test(text) && /队伍|人员|装备|资源/.test(text))) {
+    return { intent: 'resource_query', params: { capability: 'update' }, displayTitle: '核对资源状态' };
+  }
+  if (/编组|一车一组|按装备.*编组|抽组建议/.test(text)) {
+    return { intent: 'resource_query', params: { capability: 'group' }, displayTitle: '按模板建议编组' };
+  }
+  if (/^(生成态势报告)$/.test(text) || /态势报告|研判报告|安全区域.*医院|可出动救援队伍/.test(text)) {
+    return { intent: 'summary', params: { capability: 'situationReport' }, displayTitle: '生成态势报告' };
+  }
+  if (/核对道路天气|道路与天气|道路通行.*天气|天气.*投送/.test(text)) {
+    return { intent: 'summary', params: { capability: 'situation' }, displayTitle: '核对道路天气' };
+  }
+  if (/分析.*现场资料|次生风险|灾情研判|待核实事项|队伍人员状态时效|人员状态数据/.test(text)) {
+    return { intent: 'summary', params: { capability: 'situation' }, displayTitle: '灾情研判' };
   }
   // 抢险救援知识问答（qa.json，126 条，模拟文档溯源）：归一化精确/双向包含命中，优先于含“要情/最快”等词的业务正则
+  if (/查看本事件预案依据|当前事件.*预案|本事件.*预案/.test(text)) return { intent: 'knowledge', params: { currentEventPlan: true }, displayTitle: '查看本事件预案依据' };
   const qaHit = matchQa(text);
   if (qaHit) {
     return { intent: 'qa_knowledge', params: { qaId: qaHit.id }, displayTitle: '知识问答' };
@@ -159,16 +210,16 @@ export function recognize(rawText: string, ctx: { lastResourceResultIds: string[
     return { intent: 'candidate_add_top2', params: { resourceId: addTarget }, displayTitle: '加入候选力量' };
   }
   if (/(处置建议|怎么处置|如何处置|建议.{0,4}措施|工作建议|下一步建议)/.test(text)) {
-    return { intent: 'proposal', params: {}, displayTitle: '形成处置建议' };
+    return { intent: 'proposal', params: { capability: 'plan' }, displayTitle: '形成处置建议' };
   }
-  if (/周边有哪些可以调动的专业救援力量|(?:查询|查找|查)(?:可调|可调动的)?(?:队伍|资源|救援力量)|(?:资源|队伍|救援力量|仓库|物资).{0,10}(?:查|找|有哪些|清单|盘点)|周边.{0,6}(?:资源|队伍|救援)/.test(text)) {
-    return { intent: 'resource_query', params: {}, displayTitle: '查询周边救援资源' };
+  if (/周边有哪些可以调动的专业救援力量|(?:查询|查找|查)(?:可调|可调动的)?(?:队伍|资源|救援力量)|(?:资源|队伍|救援力量|仓库|物资).{0,10}(?:查|找|有哪些|清单|盘点)|周边.{0,6}(?:资源|队伍|救援)|可调动的队伍|排涝的队伍/.test(text)) {
+    return { intent: 'resource_query', params: { capability: 'search' }, displayTitle: '查询周边救援资源' };
   }
   if (/(依据|来源|为什么|根据什么|出处)/.test(text)) {
     return { intent: 'knowledge', params: { chunkId: 'kb-demo-status-terms' }, displayTitle: '解释依据与术语' };
   }
   if (/(摘要|灾情|态势|概况|什么情况|发生了什么|情况怎么样)/.test(text)) {
-    return { intent: 'summary', params: {}, displayTitle: '汇总灾情摘要' };
+    return { intent: 'summary', params: { capability: 'situation' }, displayTitle: '汇总灾情摘要' };
   }
   return { intent: 'unknown', params: {}, displayTitle: '未能识别的请求' };
 }
@@ -184,13 +235,18 @@ function summonFor(intent: Ctx['intent']):
   | null {
   switch (intent) {
     case 'evaluation':
-      return { agentId: 'agent-eval', agentName: '效果评估智能体', agentRole: '评估救援进展、处置成效与剩余风险', action: '正在汇总现场反馈与模拟救援记录，对比目标完成情况并生成阶段性评估' };
+      return {
+        agentId: 'agent-eval',
+        agentName: '救援效果评估智能体',
+        agentRole: '对照投入、生成总结与案例候选',
+        action: '正在汇总现场反馈与模拟救援记录，对照计划实际并整理评估结论',
+      };
     case 'summary':
       return {
         agentId: 'agent-situation',
         agentName: '态势感知智能体',
-        agentRole: '汇总事件事实与监测数据',
-        action: '正在比对事件事实、接报信息与水情监测数据，生成灾情摘要',
+        agentRole: '研判灾情、核对队伍人员状态时效，形成含安全区域与医疗资源的态势报告',
+        action: '正在汇集现场监测资料，核对队伍/人员状态更新时间，并整理安全区域、可出动队伍与医院等资源信息',
       };
     case 'resource_query':
     case 'resource_sort_eta':
@@ -199,16 +255,16 @@ function summonFor(intent: Ctx['intent']):
     case 'candidate_remove':
       return {
         agentId: 'agent-resource',
-        agentName: '资源管理智能体',
-        agentRole: '查询与调度救援资源',
-        action: '正在检索本事件授权范围内的救援队伍与装备仓库，并汇总可用状态',
+        agentName: '救援资源管理智能体',
+        agentRole: '查询资源、核对状态与模板编组',
+        action: '正在按用途检索周边队伍、装备与保障单元，并核对可用性',
       };
     case 'proposal':
       return {
         agentId: 'agent-plan',
         agentName: '救援方案生成智能体',
-        agentRole: '形成处置建议与响应等级建议',
-        action: '正在结合灾情摘要与候选力量，拟定处置步骤与依据',
+        agentRole: '按参考结构成稿，结合现场反馈修订',
+        action: '正在整理处置建议与协调待核事项（正文入文书工作区）',
       };
     case 'doc_brief':
     case 'doc_daily':
@@ -222,6 +278,44 @@ function summonFor(intent: Ctx['intent']):
       };
     default:
       return null;
+  }
+}
+
+function toScenarioArtifact(
+  result: ConstructionResult,
+  document?: { id: string; code: string } | null,
+): ScenarioSectionsArtifact {
+  return {
+    kind: 'scenario_sections',
+    capability: result.capability,
+    agentId: result.agentId,
+    title: result.title,
+    summary: result.summary,
+    sections: result.sections,
+    table: result.table,
+    tables: result.tables,
+    notice: result.notice,
+    dataTime: result.dataTime,
+    documentId: document?.id,
+    documentCode: document?.code,
+  };
+}
+
+/** 物化建设结果为红头文书并产出 scenario_sections 事件（对齐文书生成 → 右侧工作区）。 */
+function* publishScenarioMaterial(
+  req: Ctx,
+  result: ConstructionResult,
+): Generator<TaskEvent, void, unknown> {
+  const document = publishConstructionMaterial(req.sessionId, result.capability, result);
+  yield {
+    type: 'artifact',
+    artifact: { payload: toScenarioArtifact(result, document) },
+  };
+  if (document) {
+    yield {
+      type: 'text_delta',
+      text: `已生成《${document.title}》，可在右侧文书工作区预览核对，或点击「查看文书」打开。`,
+    };
   }
 }
 
@@ -300,6 +394,8 @@ async function* runEvaluation(req: Ctx, signal: AbortSignal, paceMs: number): As
   const incident = evaluationIncident;
   const scope = { kind: 'event' as const, eventId: req.eventId };
   const sample = RESCUE_EVALUATION_MOCK[req.eventId];
+  const capability = resolveConstructionCapability(req.intent, req.userInput, req.params) ?? 'deviation';
+  const construction = buildConstructionResult(capability, req.eventId, req.userInput);
   yield { type: 'step_started', stepId: 'e1', name: '汇总灾情与救援反馈', inputSummary: '事件事实 + 模拟作业记录' };
   await sleep(paceMs, signal);
   assertActive(req);
@@ -307,14 +403,22 @@ async function* runEvaluation(req: Ctx, signal: AbortSignal, paceMs: number): As
   yield { type: 'step_started', stepId: 'e2', name: '对比救援目标与阶段成效' };
   await sleep(paceMs, signal);
   assertActive(req);
-  const metrics = sample
-    ? `目标完成：${sample.objective} ${sample.completed}/${sample.target}${sample.unit}，完成率 ${Math.round(sample.completed / sample.target * 100)}%。\n响应时效：模拟首次响应 ${sample.responseMinutes} 分钟，目标 ${sample.targetMinutes} 分钟，达到目标。\n力量投入：模拟作业记录为 ${sample.personnel} 人、${sample.equipment} 台设备（独立模拟记录，不代表候选力量已调派）。`
-    : '当前事件尚无模拟救援作业记录，目标完成率、响应时效和投入效能待补充现场反馈后评估。';
   yield { type: 'step_completed', stepId: 'e2', outputSummary: sample ? `${sample.objective}完成率 ${Math.round(sample.completed / sample.target * 100)}%，响应时效达到模拟目标` : '缺少作业记录，保留待评估项' };
   yield { type: 'step_started', stepId: 'e3', name: '形成救援效果评估与改进建议' };
   await sleep(paceMs, signal);
   assertActive(req);
-  yield { type: 'text_delta', text: `救援效果评估 · ${factDisplay(incident.factRefs.title, scope)}（模拟）\n\n一、当前处置情况\n险情状态：${factDisplay(incident.factRefs.controlStatus, scope)}。\n人员情况：${factDisplay(incident.factRefs.casualty, scope)}。\n\n二、阶段性救援成效\n${metrics}\n\n三、评估结论\n${sample ? '模拟记录显示阶段目标正在推进、响应及时，仍有未完成事项，尚不能判定救援任务全部完成。' : '资料不足，暂不形成救援成效结论。'}\n\n四、剩余风险与改进建议\n${sample?.risk ?? '需补齐救援进展、现场监测和人员救助记录。'}\n${sample?.next ?? '补充任务目标、实际完成量、到场时间和投入记录后重新评估。'}\n\n评估依据：当前事件模拟事实与独立模拟作业记录；用于展示阶段复盘，不作为真实现场结论。` };
+  const evalExtra = sample
+    ? `阶段性成效：${sample.objective} ${sample.completed}/${sample.target}${sample.unit}；剩余风险：${sample.risk}`
+    : `作业记录不足，成效与风险项待补核。事件「${factDisplay(incident.factRefs.title, scope)}」险情状态：${factDisplay(incident.factRefs.controlStatus, scope)}。`;
+  yield {
+    type: 'text_delta',
+    text: buildChatMaterialSummary(
+      construction,
+      req.userInput,
+      capability === 'summary' ? evalExtra : `${evalExtra}（聊天区为摘要；详细评估结构见右侧文书）`,
+    ),
+  };
+  yield* publishScenarioMaterial(req, construction);
   yield { type: 'step_completed', stepId: 'e3', outputSummary: '救援效果评估已生成（模拟）' };
   yield { type: 'completed', summary: '救援效果评估完成' };
 }
@@ -364,53 +468,160 @@ async function* runSummary(req: Ctx, signal: AbortSignal, paceMs: number): Async
     sourceRefs: [refs.title],
   };
 
-  yield { type: 'step_started', stepId: 's2', name: '汇总结构化事实', inputSummary: '接报与事件服务（模拟）+ 水情监测服务（模拟）' };
+  yield { type: 'step_started', stepId: 's2', name: '多源数据汇聚', inputSummary: '舆情、气象、水文、地质、现场影像、接报记录（本地模拟）' };
+  await sleep(paceMs, signal);
+  assertActive(req);
+  const multiSource = buildMultiSourceSnapshot(req.eventId);
+  const sourceCounts = aggregationCounts(multiSource.event.sources);
+  yield {
+    type: 'step_completed', stepId: 's2',
+    outputSummary: `覆盖 ${sourceCounts.covered}/6 类来源，${sourceCounts.raw} 条原始记录归并为 ${sourceCounts.merged} 条线索；${sourceCounts.pending} 条待核。${rows.length} 项事件事实独立保留。`,
+    sourceRefs: multiSource.event.sources.flatMap(source => source.records.flatMap(record => record.refs)),
+  };
+
+  const capability = resolveConstructionCapability(req.intent, req.userInput, req.params) ?? 'situation';
+  yield {
+    type: 'step_started',
+    stepId: 's2b',
+    name: '核对队伍与人员状态时效',
+    inputSummary: '可出动状态 + 状态更新时间（模拟快照）',
+  };
   await sleep(paceMs, signal);
   assertActive(req);
   yield {
     type: 'step_completed',
-    stepId: 's2',
-    outputSummary: `共 ${rows.length} 项结构化事实`,
-    sourceRefs: rows.map((r) => r.factId),
+    stepId: 's2b',
+    outputSummary: capability === 'situationReport'
+      ? '已整理队伍/人员状态时效，并准备安全区域、可出动队伍与医院资源'
+      : '已标注队伍/人员状态更新时间与可出动核对事项',
   };
 
-  yield { type: 'step_started', stepId: 's3', name: '生成灾情摘要卡片' };
+  yield {
+    type: 'step_started',
+    stepId: 's3',
+    name: capability === 'situationReport' ? '生成态势报告（含安全区域与医疗资源）' : '生成灾情摘要卡片',
+  };
   await sleep(paceMs, signal);
   assertActive(req);
   const pendingKeys = rows.flatMap((r) => r.emphasize === 'pending' ? [r.factId] : []);
   yield {
     type: 'step_completed',
     stepId: 's3',
-    outputSummary: '摘要卡片已生成',
+    outputSummary: capability === 'situationReport' ? '态势报告初稿已生成' : '摘要卡片已生成',
     sourceRefs: rows.map((r) => r.factId),
     artifact: {
       payload: {
         kind: 'summary',
+        multiSource,
         eventId: req.eventId,
         rows,
         pendingKeys,
         waterLevelFactId: waterFactId,
-        dataTime: DEMO_CLOCK,
-        sourceUnavailable: waterFactId ? null : '当前事件无水情监测依据',
+        dataTime: multiSource.gatheredAt,
+        sourceUnavailable: waterFactId ? null : disasterProfileById.has(req.eventId) ? '专业监测图表见本事件建设材料' : '当前事件无水情监测依据',
       },
     },
   };
+  const construction = buildConstructionResult(capability, req.eventId, req.userInput);
+  const sourceMaterial = multiSourceMaterial(multiSource);
+  construction.sections.unshift(sourceMaterial.section);
+  construction.tables = [sourceMaterial.table, ...(construction.tables ?? [])];
+  const situationHint = disasterProfileById.has(req.eventId)
+    ? `已按${disasterProfileById.get(req.eventId)!.category}独立模拟资料汇总，不套用其他灾种监测依据。`
+    : waterFactId
+      ? '已按模拟数据源汇总当前灾情；建议响应等级尚未确认。'
+      : '已汇总当前事件事实；无水情监测依据的字段保持待核实。';
   yield {
     type: 'text_delta',
-    text: waterFactId
-      ? '已按模拟数据源汇总当前灾情，影响范围与人员伤亡情况详见下方摘要。建议响应等级来自上游态势服务（尚未确认），全部数据为模拟数据。'
-      : '已汇总当前事件事实。当前事件无水情监测及上游态势建议依据；未确认字段保持待核实。全部数据为模拟数据。',
+    text: buildChatMaterialSummary(
+      construction,
+      req.userInput,
+      capability === 'situationReport'
+        ? `${situationHint}态势材料含安全区域、可出动队伍与医院等待核信息。`
+        : `${situationHint}如需完整清单可继续发送「生成态势报告」。`,
+    ),
   };
-  yield { type: 'completed', summary: '灾情摘要已生成' };
+  yield* publishScenarioMaterial(req, construction);
+  yield { type: 'completed', summary: capability === 'situationReport' ? '态势报告已生成' : '灾情摘要已生成' };
 }
 
 async function* runResourceQuery(req: Ctx, signal: AbortSignal, paceMs: number): AsyncIterable<TaskEvent> {
   const demo = useDemoStore.getState();
-  if (![...teamById.keys(), ...warehouseById.keys()].some((id) => resourceAllowed(id, req.eventId))) {
-    yield { type: 'text_delta', text: '当前事件暂无获授权的资源数据，不能沿用其他事件的距离或预计到达时间。' };
-    yield { type: 'completed', summary: '无获授权的资源数据' };
+  const capability = resolveConstructionCapability(req.intent, req.userInput, req.params) ?? 'search';
+  const construction = buildConstructionResult(capability, req.eventId, req.userInput);
+
+  // 建设场景材料能力（编组 / 周边资源报告 / 状态核对）：对齐 Vue，不依赖授权台账 ETA。
+  if (capability === 'group' || capability === 'resourceReport' || capability === 'update') {
+    const stepName =
+      capability === 'group' ? '读取装备与编组模板'
+        : capability === 'resourceReport' ? '按一期结构整理周边资源报告'
+          : '核对队伍人员与装备更新状态';
+    yield { type: 'step_started', stepId: 'g1', name: stepName, inputSummary: req.userInput || construction.title };
+    await sleep(paceMs, signal);
+    assertActive(req);
+    yield { type: 'step_completed', stepId: 'g1', outputSummary: '已匹配本事件演示资料' };
+    yield { type: 'step_started', stepId: 'g2', name: '生成材料初稿' };
+    await sleep(paceMs, signal);
+    assertActive(req);
+    yield { type: 'text_delta', text: buildChatMaterialSummary(construction, req.userInput) };
+    yield* publishScenarioMaterial(req, construction);
+    yield {
+      type: 'step_completed',
+      stepId: 'g2',
+      outputSummary: capability === 'group' ? '编组建议已生成（待负责人确认人数）' : `${construction.title}已生成`,
+    };
+    yield {
+      type: 'completed',
+      summary: capability === 'group' ? '编组建议已生成'
+        : capability === 'resourceReport' ? '周边资源报告已生成' : '资源状态待核清单已生成',
+    };
     return;
   }
+
+  // 无当前事件授权台账时：走 Vue「本事件资料整理」路径，产出建设材料 + 分布示意资源 ID，禁止沿用其他事件 ETA。
+  const hasLedger = [...teamById.keys(), ...warehouseById.keys()].some((id) => resourceAllowed(id, req.eventId))
+    || hasAuthorizedResourceLedger(req.eventId);
+  if (!hasLedger) {
+    const demoIds = vueDemoResourceIdsForEvent(req.eventId);
+    yield { type: 'step_started', stepId: 'r1', name: '读取本事件人装资料', inputSummary: req.userInput || '周边资源查询' };
+    await sleep(paceMs, signal);
+    assertActive(req);
+    yield { type: 'step_completed', stepId: 'r1', outputSummary: '已按当前事件演示资料整理，未沿用其他事件距离/ETA' };
+    yield { type: 'step_started', stepId: 'r2', name: '整理分布示意与查询材料' };
+    await sleep(paceMs, signal);
+    assertActive(req);
+    if (demoIds.length > 0) {
+      yield {
+        type: 'artifact',
+        artifact: {
+          payload: {
+            kind: 'resources',
+            eventId: req.eventId,
+            resourceIds: demoIds,
+            sortedBy: null,
+            dataTime: DEMO_CLOCK,
+            excluded: [],
+            note: '建设场景演示叠加点位：可在「资源与态势」中切换列表 / 态势地图查看分布；距离与 ETA 非授权台账字段。',
+          },
+        },
+      };
+    }
+    yield {
+      type: 'text_delta',
+      text: buildChatMaterialSummary(
+        construction,
+        req.userInput,
+        demoIds.length > 0
+          ? '可点击「查看资源列表 / 查看态势地图」核对分布示意；正式可调用结论须由资源维护岗位确认。'
+          : '当前事件暂无授权实时台账（距离/预计到达）；候选与待核字段见右侧文书。',
+      ),
+    };
+    yield* publishScenarioMaterial(req, construction);
+    yield { type: 'step_completed', stepId: 'r2', outputSummary: construction.title };
+    yield { type: 'completed', summary: '本事件资源查询材料已生成' };
+    return;
+  }
+
   yield { type: 'step_started', stepId: 'r1', name: '确定查询范围', inputSummary: `事件 ${req.eventId} 周边（模拟距离）` };
   await sleep(paceMs, signal);
   assertActive(req);
@@ -469,8 +680,13 @@ async function* runResourceQuery(req: Ctx, signal: AbortSignal, paceMs: number):
   };
   yield {
     type: 'text_delta',
-    text: '查询到 2 支可用队伍与 2 处仓库（模拟数据）。team-003 因正在执行其他模拟任务未列入。需要按“谁最快能到”继续追问，或选择队伍加入候选。',
+    text: buildChatMaterialSummary(
+      construction,
+      req.userInput,
+      '查询到 2 支可用队伍与 2 处仓库（模拟）；team-003 因其他任务未列入。可继续按预计到达排序或加入候选。',
+    ),
   };
+  yield* publishScenarioMaterial(req, construction);
   yield { type: 'completed', summary: '资源查询完成' };
 }
 
@@ -616,7 +832,7 @@ async function* runCandidateRemove(req: Ctx, signal: AbortSignal, paceMs: number
 }
 
 async function* runKnowledge(req: Ctx, signal: AbortSignal, paceMs: number): AsyncIterable<TaskEvent> {
-  const chunk = knowledgeById.get('kb-demo-status-terms') ?? knowledgeById.values().next().value as FixtureKnowledge;
+  const chunk = (req.params.currentEventPlan ? knowledgeById.get(`kb-${req.eventId}`) : undefined) ?? knowledgeById.get('kb-demo-status-terms') ?? knowledgeById.values().next().value as FixtureKnowledge;
   yield { type: 'step_started', stepId: 'k1', name: '检索知识包', inputSummary: chunk.title };
   await sleep(paceMs, signal);
   assertActive(req);
@@ -710,10 +926,11 @@ async function* runProposal(req: Ctx, signal: AbortSignal, paceMs: number): Asyn
     outputSummary: `候选 ${initialCandidates.length} 支；生成前将复核最新候选`,
     sourceRefs: factRefs,
   };
+  const eventKnowledgeIds = disasterProfileById.has(req.eventId) ? [`kb-${req.eventId}`] : [...knowledgeById.keys()].filter(id => !id.startsWith('kb-evt-sim-'));
   yield { type: 'step_started', stepId: 'p2', name: '匹配知识包', inputSummary: '要素清单 / 案例 / 术语' };
   await sleep(paceMs, signal);
   assertActive(req);
-  yield { type: 'step_completed', stepId: 'p2', outputSummary: `命中 ${knowledgeById.size} 个知识条目（模拟）`, sourceRefs: [...knowledgeById.keys()] };
+  yield { type: 'step_completed', stepId: 'p2', outputSummary: `命中 ${eventKnowledgeIds.length} 个适用知识条目（模拟）`, sourceRefs: eventKnowledgeIds };
 
   yield { type: 'step_started', stepId: 'p3', name: '组装处置建议（待审核）' };
   await sleep(paceMs, signal);
@@ -721,34 +938,41 @@ async function* runProposal(req: Ctx, signal: AbortSignal, paceMs: number): Asyn
   // UI 可在执行期间更改候选：最终组装与写入之间不再 await。
   const candidates = [...useSessionStore.getState().sessions[req.sessionId].candidateResourceIds];
   const version = 'v1';
+  const capability = resolveConstructionCapability(req.intent, req.userInput, req.params) ?? 'plan';
+  const construction = buildConstructionResult(capability, req.eventId, req.userInput);
+  const candidateText = candidates.length
+    ? candidates
+        .map((id) => String(factById.get(teamById.get(id)?.factRefs.name ?? '')?.value ?? vueDemoResourceById.get(id)?.name ?? id))
+        .join('、')
+    : '尚未指定候选力量。';
   const proposal: Proposal = {
     proposalId: `proposal-${crypto.randomUUID()}`,
     eventId: req.eventId,
     version,
     isMock: true,
-    title: '险情处置工作建议（模拟 · 待审核）',
+    title: capability === 'revise' ? '现场反馈修订建议（模拟 · 待审核）' : '险情处置工作建议（模拟 · 待审核）',
     sections: [
-      { id: 'objective', title: '工作目标', text: '及时核实当前险情，形成可核查的工作记录。' },
-      { id: 'information', title: '信息核实', text: '继续收集现场信息，明确未核实事项及对应责任。' },
+      ...construction.sections
+        .filter((s) => s.title !== '人装编组')
+        .map((s) => ({
+          id: s.title,
+          title: s.title,
+          text: s.text,
+        })),
       {
         id: 'resources',
         title: '拟预置力量',
-        text: candidates.length
-          ? candidates
-              .map((id) => String(factById.get(teamById.get(id)?.factRefs.name ?? '')?.value ?? id))
-              .join('、')
-          : '尚未指定候选力量。',
+        text: candidateText,
         bindingResourceIds: candidates,
         emptyText: '尚未指定候选力量。',
       },
-      { id: 'review', title: '专业审核', text: '建议开展风险评估及力量预置论证，具体处置措施由专业人员审核确定。' },
     ],
     riskNotes: [
       '人员伤亡及影响范围仍待核实。',
       '建议升级响应等级尚未确认。',
       '候选力量尚未形成正式调派命令。',
     ],
-    knowledgeRefs: [...knowledgeById.keys()],
+    knowledgeRefs: eventKnowledgeIds,
     factRefsUsed: factRefs,
     candidateIds: candidates,
     createdAt: new Date().toISOString(),
@@ -770,11 +994,19 @@ async function* runProposal(req: Ctx, signal: AbortSignal, paceMs: number): Asyn
       },
     },
   };
+  const coordinationFocus = req.params?.focus === 'coordination' || /协调|技术、安全|保障协调/.test(req.userInput);
   yield {
     type: 'text_delta',
-    text: '处置建议已生成（模拟 · 待审核意见）。要点：核实待核实事项、论证力量预置。注意：候选是拟使用的资源，不是已调派力量；建议响应等级尚未确认。可在右侧工作区查看依据并采纳。',
+    text: buildChatMaterialSummary(
+      construction,
+      req.userInput,
+      coordinationFocus
+        ? '以上为协调事项摘要；候选力量不等于已调派，建议响应等级尚未确认。'
+        : '要点：核实待核事项并论证力量预置；候选不等于已调派，建议响应等级尚未确认。',
+    ),
   };
-  yield { type: 'completed', summary: '处置建议已生成' };
+  yield* publishScenarioMaterial(req, construction);
+  yield { type: 'completed', summary: coordinationFocus ? '协调事项已整理' : '处置建议已生成' };
 }
 
 async function* runDocBrief(req: Ctx, signal: AbortSignal, paceMs: number): AsyncIterable<TaskEvent> {
