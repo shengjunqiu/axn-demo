@@ -145,9 +145,19 @@ export default function MockDocumentDetail({ scope, document, onClose, onOpenLib
       onDiscard={discard}
       onSubmitToOriginal={openTransfer}
       submitLabel={handoff ? '查看原系统回执' : '提交到原系统'}
+      platformAction={(
+        <OriginalSystemLink
+          code={document.code}
+          eventId={eventId}
+          title={document.title}
+          sourceId={document.id}
+          sections={document.sections}
+          buttonLabel="打开综合管理平台"
+          size="middle"
+        />
+      )}
     />
     {editing && dirty && <div className="doc-dirty-note" data-testid="mock-dirty-note">有未保存修改 · 「取消编辑」保留内容，「放弃修改」丢弃，保存后写入当前会话文书库</div>}
-    {!editing && <div style={{padding:12}}><OriginalSystemLink code={document.code} eventId={eventId} title={document.title} sourceId={document.id} sections={document.sections} /></div>}
     {handoff && !editing && (
       <div className="doc-handoff-note" data-testid="mock-handoff-note">
         已传入原系统（演示）· {handoff.target} · {handoff.status === 'uploaded' ? '待提交审核' : '已提交审核'} · 回执 {handoff.receiptId} · {handoff.uploadedAt}

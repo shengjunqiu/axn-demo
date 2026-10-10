@@ -13,6 +13,9 @@ function LinkedButton({
   sourceId,
   sections,
   disabled = false,
+  /** 工具栏短文案；默认「打开{系统 · 栏目}」 */
+  buttonLabel,
+  size = 'small',
 }: {
   code: string;
   eventId: string;
@@ -20,16 +23,20 @@ function LinkedButton({
   sourceId: string;
   sections: readonly (readonly [string, string])[];
   disabled?: boolean;
+  buttonLabel?: string;
+  size?: 'small' | 'middle' | 'large';
 }) {
   const navigate = useNavigate();
   const { message } = App.useApp();
   const [system, page] = originalTarget(code);
-  const label = originalDestinationLabel(system, page);
+  const destination = originalDestinationLabel(system, page);
+  const text = buttonLabel ?? `打开${destination}`;
   return (
     <Button
-      size="small"
+      size={size}
       disabled={disabled || !eventId || eventId.startsWith('evt-blank-')}
-      aria-label={`打开${label}`}
+      aria-label={`打开${destination}`}
+      title={destination}
       data-testid="original-system-link"
       onClick={() => {
         try {
@@ -41,7 +48,7 @@ function LinkedButton({
         }
       }}
     >
-      打开{label}
+      {text}
     </Button>
   );
 }

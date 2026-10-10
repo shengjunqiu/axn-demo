@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Button, Modal, Tag, Tooltip, Typography } from 'antd';
 import {
   FileText,
@@ -30,6 +30,8 @@ export default function DocumentDetailToolbar({
   onSubmitToOriginal,
   submitLabel = '提交到原系统',
   submitDisabled = false,
+  /** 跳转综合管理 / 原业务系统栏目（对话区已去掉，工具栏保留） */
+  platformAction,
 }: {
   title: string;
   subtitle?: string;
@@ -49,6 +51,7 @@ export default function DocumentDetailToolbar({
   onSubmitToOriginal?: () => void;
   submitLabel?: string;
   submitDisabled?: boolean;
+  platformAction?: ReactNode;
 }) {
   const [exportFormat, setExportFormat] = useState<'Word' | 'PDF' | null>(null);
   return <>
@@ -74,6 +77,7 @@ export default function DocumentDetailToolbar({
             {submitLabel}
           </Button>
         )}
+        {!editing && platformAction}
         {onVersions ? <Button icon={<FileText />} onClick={onVersions}>版本与导出</Button> : previewExports && <>
           <Button aria-label="导出 Word" icon={<FileText />} onClick={() => onExport ? onExport('Word') : setExportFormat('Word')} disabled={editing}>{onExport ? '导出 Word' : 'Word 预览'}</Button>
           <Button aria-label="导出 PDF" icon={<FileType />} onClick={() => onExport ? onExport('PDF') : setExportFormat('PDF')} disabled={editing}>{onExport ? '导出 PDF' : 'PDF 预览'}</Button>
