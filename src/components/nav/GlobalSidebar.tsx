@@ -16,8 +16,10 @@ import {
   Flame,
   FolderOpen,
   // LayoutGrid, // 恢复「应急项目」侧栏入口时一并取回
+  LayoutGrid,
   Lightbulb,
   MonitorSmartphone,
+  Smartphone,
   Pin,
   Plus,
   RotateCcw,
@@ -72,13 +74,25 @@ const NAV: { key: NavKey; label: string; icon: ReactNode }[] = [
   // { key: 'knowledge', label: '知识库', icon: <FlaskConical /> },
 ];
 
-/** 非 NavPage 的侧栏快捷入口（一期嵌入等独立全屏页）。 */
+/** 非 NavPage 的侧栏快捷入口（门户 / 一期嵌入 / 手机工作台等独立全屏页）。 */
 const EXTRA_NAV: { path: string; label: string; icon: ReactNode; testId: string }[] = [
+  {
+    path: '/portal',
+    label: '桌面门户入口',
+    icon: <LayoutGrid size={16} />,
+    testId: 'nav-desktop-portal',
+  },
   {
     path: '/phase1/coordination',
     label: '一期系统嵌入',
     icon: <MonitorSmartphone size={16} />,
     testId: 'nav-phase1-host',
+  },
+  {
+    path: '/mobile',
+    label: '手机工作台嵌入',
+    icon: <Smartphone size={16} />,
+    testId: 'nav-mobile-workbench',
   },
 ];
 

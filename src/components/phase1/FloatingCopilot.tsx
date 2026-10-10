@@ -1,6 +1,6 @@
 /**
- * 一期系统嵌入页悬浮机器人：默认收起为 FAB；
- * 点击后可选「展开聊天框」或「进入安小能 /assistant」。
+ * 悬浮/内嵌安小能：默认收起；可挂 FAB，或由外部（如常用应用图标）打开。
+ * 打开后可选「展开聊天框」或「进入安小能 /assistant」。
  */
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -8,13 +8,29 @@ import { Button, Tooltip } from 'antd';
 import { MessageCircle, Sparkles, X } from 'lucide-react';
 import { NAV_PATH } from '@/components/nav/navRoutes';
 import ChatPanel from '@/components/chat/ChatPanel';
+import './floating-copilot.css';
 
 type Mode = 'collapsed' | 'chooser' | 'chat';
 
-export default function FloatingCopilot() {
+export default function FloatingCopilot({
+  subtitle = '一期系统内嵌助手（模拟）',
+  className,
+  showFab = true,
+  /** 递增时从外部打开选择菜单（常用应用入口） */
+  openSignal = 0,
+}: {
+  subtitle?: string;
+  className?: string;
+  showFab?: boolean;
+  openSignal?: number;
+} = {}) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>('collapsed');
   const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (openSignal > 0) setMode('chooser');
+  }, [openSignal]);
 
   useEffect(() => {
     if (mode === 'collapsed') return;
@@ -34,8 +50,14 @@ export default function FloatingCopilot() {
     };
   }, [mode]);
 
+  if (mode === 'collapsed' && !showFab) return null;
+
   return (
-    <div className="axn-float-copilot" data-testid="floating-copilot" ref={rootRef}>
+    <div
+      className={`axn-float-copilot${className ? ` ${className}` : ''}`}
+      data-testid="floating-copilot"
+      ref={rootRef}
+    >
       {mode === 'chat' ? (
         <div className="axn-float-copilot-panel" role="dialog" aria-label="安小能悬浮对话">
           <header className="axn-float-copilot-head">
@@ -45,7 +67,7 @@ export default function FloatingCopilot() {
               </span>
               <div>
                 <strong>安小能</strong>
-                <small>一期系统内嵌助手（模拟）</small>
+                <small>{subtitle}</small>
               </div>
             </div>
             <div className="axn-float-copilot-head-actions">
@@ -100,17 +122,29 @@ export default function FloatingCopilot() {
             </button>
           </div>
         ) : null}
-        <button
-          type="button"
-          className={`axn-float-copilot-fab${mode !== 'collapsed' ? ' is-open' : ''}`}
-          aria-label={mode === 'collapsed' ? '打开安小能助手' : '关闭安小能助手'}
-          aria-expanded={mode !== 'collapsed'}
-          data-testid="floating-copilot-fab"
-          onClick={() => setMode((prev) => (prev === 'collapsed' ? 'chooser' : 'collapsed'))}
-        >
-          {mode === 'collapsed' ? <Sparkles size={22} /> : <X size={22} />}
-          {mode === 'collapsed' ? <span className="axn-float-copilot-fab-label">安小能</span> : null}
-        </button>
+        {showFab ? (
+          <button
+            type="button"
+            className={`axn-float-copilot-fab${mode !== 'collapsed' ? ' is-open' : ''}`}
+            aria-label={mode === 'collapsed' ? '打开安小能助手' : '关闭安小能助手'}
+            aria-expanded={mode !== 'collapsed'}
+            data-testid="floating-copilot-fab"
+            onClick={() => setMode((prev) => (prev === 'collapsed' ? 'chooser' : 'collapsed'))}
+          >
+            {mode === 'collapsed' ? <Sparkles size={22} /> : <X size={22} />}
+            {mode === 'collapsed' ? <span className="axn-float-copilot-fab-label">安小能</span> : null}
+          </button>
+        ) : mode === 'chooser' ? (
+          <button
+            type="button"
+            className="axn-float-copilot-fab is-open"
+            aria-label="关闭安小能助手"
+            data-testid="floating-copilot-close"
+            onClick={() => setMode('collapsed')}
+          >
+            <X size={22} />
+          </button>
+        ) : null}
       </div>
     </div>
   );

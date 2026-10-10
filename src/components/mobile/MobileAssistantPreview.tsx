@@ -1,6 +1,6 @@
 /**
- * 手机端演示页：在苹果手机边框内嵌套展示 /assistant 真机窄屏布局。
- * 灵动岛 / 状态栏属外框铬层，不压 iframe 内容；iframe 带 phonePreview 标记做顶底安全区。
+ * 手机端演示页：在苹果手机边框内嵌套展示「工作台」入口页。
+ * 边框内为 /mobile-workbench（含悬浮安小能），可展开聊天或进入 /assistant。
  */
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
@@ -18,7 +18,7 @@ const HOME_H = 22;
 export default function MobileAssistantPreview() {
   const iframeSrc = useMemo(() => {
     const { origin, pathname } = window.location;
-    return `${origin}${pathname}#${NAV_PATH.assistant}?phonePreview=1`;
+    return `${origin}${pathname}#/mobile-workbench?phonePreview=1`;
   }, []);
 
   const frameH = SCREEN_H - STATUS_H - HOME_H;
@@ -27,8 +27,8 @@ export default function MobileAssistantPreview() {
     <div className="axn-mobile-preview" data-testid="mobile-assistant-preview">
       <header className="axn-mobile-preview-bar">
         <div>
-          <h1 className="axn-mobile-preview-title">安小能 · 手机端预览</h1>
-          <p className="axn-mobile-preview-desc">边框内为真实 /assistant 窄屏布局（模拟）</p>
+          <h1 className="axn-mobile-preview-title">安小能 · 手机工作台预览</h1>
+          <p className="axn-mobile-preview-desc">边框内为手机工作台；点「常用应用」中的安小能直接进入对话页（模拟）</p>
         </div>
         <Link className="axn-mobile-preview-back" to={NAV_PATH.assistant}>
           返回桌面端

@@ -43,10 +43,16 @@ const DisasterEventsPage = lazy(() => import('@/components/events/DisasterEvents
 const OriginalSystemWorkspace = lazy(() => import('@/components/workspace/OriginalSystemWorkspace'));
 const PrintView = lazy(() => import('@/components/doc/PrintView'));
 const MobileAssistantPreview = lazy(() => import('@/components/mobile/MobileAssistantPreview'));
+const MobileWorkbenchHost = lazy(() => import('@/components/mobile/MobileWorkbenchHost'));
 const Phase1HostPage = lazy(() => import('@/components/phase1/Phase1HostPage'));
+const DesktopPortalHost = lazy(() => import('@/components/phase1/DesktopPortalHost'));
 
 /** 手机端预览页：独立全屏舞台，不走桌面侧栏外壳。 */
 const MOBILE_PREVIEW_PATH = '/mobile';
+/** 手机工作台嵌入页：仿安能通工作台 + 悬浮安小能。 */
+const MOBILE_WORKBENCH_PATH = '/mobile-workbench';
+/** 电脑端门户入口：四系统 + 安小能。 */
+const DESKTOP_PORTAL_PATH = '/portal';
 /** 一期系统嵌入页：原系统全屏背景 + 悬浮安小能，不走桌面侧栏外壳。 */
 const PHASE1_HOST_PREFIX = '/phase1';
 
@@ -162,11 +168,29 @@ export default function AppRoot() {
     [isCompact, sidebarCollapsed],
   );
 
-  // 手机端预览：全屏舞台 + iPhone 边框，内嵌 /assistant，不渲染桌面侧栏。
+  // 手机端预览：全屏舞台 + iPhone 边框，内嵌手机工作台入口页，不渲染桌面侧栏。
   if (location.pathname === MOBILE_PREVIEW_PATH) {
     return (
       <Suspense fallback={<div className="axn-mobile-preview" />}>
         <MobileAssistantPreview />
+      </Suspense>
+    );
+  }
+
+  // 手机工作台嵌入：安能通风格工作台背景 + 悬浮安小能。
+  if (location.pathname === MOBILE_WORKBENCH_PATH) {
+    return (
+      <Suspense fallback={<div className="axn-mw-host" />}>
+        <MobileWorkbenchHost />
+      </Suspense>
+    );
+  }
+
+  // 电脑端门户入口：截图氛围 + 五模块（最右安小能直达助理）。
+  if (location.pathname === DESKTOP_PORTAL_PATH) {
+    return (
+      <Suspense fallback={<div className="axn-portal-host" />}>
+        <DesktopPortalHost />
       </Suspense>
     );
   }
