@@ -17,32 +17,45 @@ import {
 } from '@/seed/mockDocuments';
 import { useMockDocumentStore } from '@/store/mockDocumentStore';
 import DocumentDetailToolbar from './DocumentDetailToolbar';
+import { isRedheadSubhead, splitRedheadParagraphs } from './redheadBody';
 
-/** 管道表正文渲染为红头表格；普通段落仍走首行缩进。 */
+/** 管道表正文渲染为红头表格；普通正文按行拆段，避免 \n 被折叠成一堆文字。 */
 function RedheadSectionBody({ body }: { body: string }) {
   const table = parsePipeTable(body);
-  if (!table) return <p>{body}</p>;
-  return (
-    <div className="axn-redhead-table-wrap">
-      <table className="axn-redhead-table">
-        <thead>
-          <tr>
-            {table.headers.map((header) => (
-              <th key={header}>{header}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {table.rows.map((row, rowIndex) => (
-            <tr key={rowIndex}>
-              {row.map((cell, cellIndex) => (
-                <td key={`${rowIndex}-${cellIndex}`}>{cell}</td>
+  if (table) {
+    return (
+      <div className="axn-redhead-table-wrap">
+        <table className="axn-redhead-table">
+          <thead>
+            <tr>
+              {table.headers.map((header) => (
+                <th key={header}>{header}</th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {table.rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {row.map((cell, cellIndex) => (
+                  <td key={`${rowIndex}-${cellIndex}`}>{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+  const paragraphs = splitRedheadParagraphs(body);
+  if (paragraphs.length === 0) return <p>{body}</p>;
+  return (
+    <>
+      {paragraphs.map((para, index) => (
+        <p key={`${index}-${para.slice(0, 12)}`} className={isRedheadSubhead(para) ? 'axn-redhead-subhead' : undefined}>
+          {para}
+        </p>
+      ))}
+    </>
   );
 }
 

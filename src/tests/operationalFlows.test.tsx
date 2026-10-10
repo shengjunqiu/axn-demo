@@ -15,6 +15,8 @@ describe('补充业务流程的确认边界', () => {
         onClose={() => {}}
       />,
     );
+    expect(screen.getByTestId('flow-multi-source')).toBeTruthy();
+    expect(screen.getByTestId('multi-source-summary')).toBeTruthy();
     expect((screen.getByRole('button', { name: '回放视觉分析样例' }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: '载入灾前灾后演示资料' }));
     fireEvent.click(screen.getByRole('button', { name: '回放视觉分析样例' }));

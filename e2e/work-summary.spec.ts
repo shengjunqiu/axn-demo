@@ -2,15 +2,15 @@ import { clickQuickTask } from './helpers/quickTasks';
 import { expect, test } from '@playwright/test';
 
 for (const entry of ['分类按钮', '对话输入', '快捷操作']) {
-  test(`工作总结通过${entry}逐轮收集复盘要素并生成报告`, async ({ page }) => {
+  test(`抢险总结通过${entry}逐轮收集复盘要素并生成报告`, async ({ page }) => {
     await page.goto('/');
     if (entry === '分类按钮') {
       await page.locator('.axn-gs-nav-item', { hasText: '文书库' }).first().click();
-      await page.getByTestId('document-library').getByRole('button', { name: '生成工作总结', exact: true }).click();
+      await page.getByTestId('document-library').getByRole('button', { name: '生成抢险总结', exact: true }).click();
     } else if (entry === '快捷操作') {
       await clickQuickTask(page, '生成工作总结');
     } else {
-      await page.getByPlaceholder(/向安小能发送指令/).fill('请生成工作总结');
+      await page.getByPlaceholder(/向安小能发送指令/).fill('请生成抢险总结');
       await page.keyboard.press('Enter');
     }
     const card = page.getByTestId('document-generation-card').last();
@@ -21,7 +21,7 @@ for (const entry of ['分类按钮', '对话输入', '快捷操作']) {
     await expect(page.getByTestId('mock-redhead-document')).toHaveCount(0);
     await expect(page.locator('.doc-center .doc-generation')).toContainText('等待补充改进计划');
     await expect(page.locator('.doc-center .doc-library-row')).toHaveCount(0);
-    const submit = card.getByRole('button', { name: '提交并生成工作总结' });
+    const submit = card.getByRole('button', { name: '提交并生成抢险总结' });
     await expect(submit).toBeDisabled();
     const answer = '通信保障组下周完成采购需求评估，后勤组完善服装与餐食保障，落实人员轮换机制。';
     if (entry === '分类按钮') {

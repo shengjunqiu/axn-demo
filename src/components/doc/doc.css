@@ -291,9 +291,23 @@
 .axn-redhead-body p {
   font-size: 21px;
   line-height: 1.78;
-  margin: 0 0 2px;
+  margin: 0 0 0.55em;
   text-align: justify;
   text-indent: 2em;
+  overflow-wrap: anywhere;
+}
+
+/* 节内小标题 / 编号条目：顶格、略加重，与正文段区分 */
+.axn-redhead-body p.axn-redhead-subhead {
+  text-indent: 0;
+  font-weight: 600;
+  margin-top: 0.85em;
+  margin-bottom: 0.3em;
+  text-align: left;
+}
+
+.axn-redhead-body p.axn-redhead-subhead:first-child {
+  margin-top: 0;
 }
 
 /* 建设场景表格章节（监测数据 / 资源候选等）：管道文本还原为正式表 */

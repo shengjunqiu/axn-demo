@@ -422,7 +422,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
             </Typography.Title>
             <Typography.Text type="secondary">
               {waitingForImprovement
-                ? '工作总结要素已收集 5/6 · 请在对话中填写下一步改进措施，提交后继续生成文书'
+                ? '抢险总结要素已收集 5/6 · 请在对话中填写下一步改进措施，提交后继续生成文书'
                 : pendingDocument ? pendingDocument.prompt
                 : generatingCode
                   ? `生成${DOCUMENT_CATEGORIES.find((category) => category.code === generatingCode)?.name} · 正在编排红头文书（模拟）`

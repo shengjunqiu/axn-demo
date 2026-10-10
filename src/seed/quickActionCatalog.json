@@ -1,0 +1,241 @@
+{
+  "version": 1,
+  "source": "招标.md §4 高价值应用场景与智能体建设技术要求",
+  "scenarios": [
+    { "id": "assistant", "clause": "4.1", "label": "应急助手场景" },
+    { "id": "situation", "clause": "4.2", "label": "灾情研判场景" },
+    { "id": "forceDelivery", "clause": "4.3", "label": "力量投送场景" },
+    { "id": "rescueOps", "clause": "4.4", "label": "实施救援场景" }
+  ],
+  "actions": [
+    {
+      "label": "生成灾情摘要",
+      "clause": "4.2.1",
+      "scenarioId": "situation",
+      "agentId": "agent-situation",
+      "agentName": "态势感知智能体",
+      "kind": "chat"
+    },
+    {
+      "label": "现场智能勘察",
+      "clause": "4.2.2",
+      "scenarioId": "situation",
+      "agentId": "agent-situation",
+      "agentName": "态势感知智能体",
+      "kind": "flow"
+    },
+    {
+      "label": "态势研判预警",
+      "clause": "4.2.3",
+      "scenarioId": "situation",
+      "agentId": "agent-situation",
+      "agentName": "态势感知智能体",
+      "kind": "chat"
+    },
+    {
+      "label": "生成态势报告",
+      "clause": "4.2.4",
+      "scenarioId": "situation",
+      "agentId": "agent-situation",
+      "agentName": "态势感知智能体",
+      "kind": "chat"
+    },
+    {
+      "label": "核对道路天气",
+      "clause": "4.2",
+      "scenarioId": "situation",
+      "agentId": "agent-situation",
+      "agentName": "态势感知智能体",
+      "kind": "chat"
+    },
+    {
+      "label": "预警推送",
+      "clause": "4.5 / 态势感知智能体 / 3",
+      "scenarioId": "situation",
+      "agentId": "agent-situation",
+      "agentName": "态势感知智能体",
+      "kind": "flow"
+    },
+    {
+      "label": "查询周边救援资源",
+      "clause": "4.3.1",
+      "scenarioId": "forceDelivery",
+      "agentId": "agent-resource",
+      "agentName": "救援资源管理智能体",
+      "kind": "chat"
+    },
+    {
+      "label": "编组确认",
+      "clause": "4.3.2",
+      "scenarioId": "forceDelivery",
+      "agentId": "agent-resource",
+      "agentName": "救援资源管理智能体",
+      "kind": "flow"
+    },
+    {
+      "label": "规划梯队投送",
+      "clause": "4.3.3",
+      "scenarioId": "forceDelivery",
+      "agentId": "agent-resource",
+      "agentName": "救援资源管理智能体",
+      "kind": "flow"
+    },
+    {
+      "label": "生成周边资源报告",
+      "clause": "4.3",
+      "scenarioId": "forceDelivery",
+      "agentId": "agent-resource",
+      "agentName": "救援资源管理智能体",
+      "kind": "chat"
+    },
+    {
+      "label": "核对资源状态",
+      "clause": "4.5 / 救援资源管理智能体 / 1",
+      "scenarioId": "forceDelivery",
+      "agentId": "agent-resource",
+      "agentName": "救援资源管理智能体",
+      "kind": "chat"
+    },
+    {
+      "label": "资源维护与导出",
+      "clause": "4.5 / 救援资源管理智能体 / 1",
+      "scenarioId": "forceDelivery",
+      "agentId": "agent-resource",
+      "agentName": "救援资源管理智能体",
+      "kind": "flow"
+    },
+    {
+      "label": "生成救援方案",
+      "clause": "4.4.1",
+      "scenarioId": "rescueOps",
+      "agentId": "agent-plan",
+      "agentName": "救援方案生成智能体",
+      "kind": "chat"
+    },
+    {
+      "label": "方案修订对比",
+      "clause": "4.4.2",
+      "scenarioId": "rescueOps",
+      "agentId": "agent-plan",
+      "agentName": "救援方案生成智能体",
+      "kind": "flow"
+    },
+    {
+      "label": "评估救援效果",
+      "clause": "4.4.3",
+      "scenarioId": "rescueOps",
+      "agentId": "agent-eval",
+      "agentName": "救援效果评估智能体",
+      "kind": "chat"
+    },
+    {
+      "label": "复盘评估分析",
+      "clause": "4.4.3",
+      "scenarioId": "rescueOps",
+      "agentId": "agent-eval",
+      "agentName": "救援效果评估智能体",
+      "kind": "flow"
+    },
+    {
+      "label": "资料核验与总结",
+      "clause": "4.5 / 救援效果评估智能体 / 2",
+      "scenarioId": "rescueOps",
+      "agentId": "agent-doc",
+      "agentName": "文书生成智能体",
+      "kind": "flow"
+    },
+    {
+      "label": "知识沉淀入库",
+      "clause": "4.5 / 救援效果评估智能体 / 3",
+      "scenarioId": "rescueOps",
+      "agentId": "agent-eval",
+      "agentName": "救援效果评估智能体",
+      "kind": "flow"
+    },
+    {
+      "label": "回撤归建",
+      "clause": "4.4",
+      "scenarioId": "rescueOps",
+      "agentId": "agent-resource",
+      "agentName": "救援资源管理智能体",
+      "kind": "flow"
+    },
+    {
+      "label": "生成应急要情",
+      "clause": "4.1",
+      "scenarioId": "assistant",
+      "agentId": "agent-doc",
+      "agentName": "文书生成智能体",
+      "kind": "chat"
+    },
+    {
+      "label": "生成会议纪要",
+      "clause": "4.1",
+      "scenarioId": "assistant",
+      "agentId": "agent-doc",
+      "agentName": "文书生成智能体",
+      "kind": "chat"
+    },
+    {
+      "label": "生成工作总结",
+      "clause": "4.1",
+      "scenarioId": "assistant",
+      "agentId": "agent-doc",
+      "agentName": "文书生成智能体",
+      "kind": "chat"
+    },
+    {
+      "label": "生成全面总结",
+      "clause": "4.1",
+      "scenarioId": "assistant",
+      "agentId": "agent-doc",
+      "agentName": "文书生成智能体",
+      "kind": "chat"
+    },
+    {
+      "label": "返回力量投送",
+      "clause": "回环",
+      "scenarioId": "rescueOps",
+      "agentId": "agent-resource",
+      "agentName": "救援资源管理智能体",
+      "kind": "loop"
+    },
+    {
+      "label": "补充态势研判",
+      "clause": "回环",
+      "scenarioId": "situation",
+      "agentId": "agent-situation",
+      "agentName": "态势感知智能体",
+      "kind": "loop"
+    }
+  ],
+  "stageChips": {
+    "待研判": {
+      "primary": ["生成灾情摘要", "态势研判预警", "生成态势报告"],
+      "loop": []
+    },
+    "力量投送中": {
+      "primary": ["查询周边救援资源", "生成周边资源报告", "核对资源状态"],
+      "loop": []
+    },
+    "救援中": {
+      "primary": ["生成救援方案", "生成应急要情", "核对资源状态"],
+      "loop": ["返回力量投送", "补充态势研判"]
+    },
+    "待复盘": {
+      "primary": ["评估救援效果", "生成工作总结", "生成全面总结"],
+      "loop": ["补充态势研判"]
+    },
+    "已归档": {
+      "primary": [],
+      "loop": []
+    }
+  },
+  "moreMenu": {
+    "groupBy": "scenario",
+    "scenarioOrder": ["situation", "forceDelivery", "rescueOps", "assistant"],
+    "appendOverallFlow": true,
+    "overallFlowEntryLabel": "整体业务流程",
+    "overallFlowDefaultTab": "现场智能勘察"
+  }
+}

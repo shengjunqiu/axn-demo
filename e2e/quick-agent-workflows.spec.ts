@@ -103,7 +103,7 @@ test('五类智能体均有入口，方案与评估可执行并展示结果', as
   await expect(plan).toContainText('信息核实');
   await expect(plan).toContainText('专业审核');
   await expect(plan.getByRole('button', { name: '查看文书' })).toBeVisible();
-  await expect(page.getByTestId('mock-redhead-document')).toContainText('救援处置方案', { timeout: 10000 });
+  await expect(page.getByTestId('mock-redhead-document')).toContainText('现场处置行动方案', { timeout: 10000 });
   await clickQuickTask(page, '评估救援效果');
   const evaluation = page.getByTestId('agent-summon-card').filter({ hasText: '效果评估智能体' }).last();
   await expect(evaluation).toHaveClass(/is-running/);

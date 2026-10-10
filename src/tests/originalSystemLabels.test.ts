@@ -12,7 +12,7 @@ describe('原系统命名（避免仅写「一期」）', () => {
     expect(page).toBe('S03');
     const label = originalDestinationLabel(system, page);
     expect(label).toContain('应急救援综合协调保障系统');
-    expect(label).toContain('救援处置方案管理');
+    expect(label).toContain('现场处置行动方案管理');
     expect(label).not.toContain('一期');
   });
 

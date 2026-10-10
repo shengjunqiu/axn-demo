@@ -14,7 +14,7 @@ import ResourceComposition from './ResourceComposition';
 import RescueEvaluation from './RescueEvaluation';
 import OperationalFlows from '@/components/chat/OperationalFlows';
 
-const MATERIALS = [{ value: 'RESCUE_PLAN', label: '救援预案参考' }, { value: 'SITUATION_REPORT', label: '灾情态势报告样例' }, { value: 'RESOURCE_REPORT', label: '周边资源报告样例' }, { value: 'RESCUE_EVAL', label: '阶段评估样例' }, { value: 'EMERGENCY_BRIEF', label: '应急要情样例' }];
+const MATERIALS = [{ value: 'RESCUE_PLAN', label: '现场处置行动方案样例' }, { value: 'SITUATION_REPORT', label: '灾情态势报告样例' }, { value: 'RESOURCE_REPORT', label: '周边资源报告样例' }, { value: 'RESCUE_EVAL', label: '阶段评估样例' }, { value: 'EMERGENCY_BRIEF', label: '应急抢险要情样例' }];
 export default function DisasterEventPanel({ profile, onTask }: { profile: DisasterProfile; onTask: (prompt: string) => void }) {
   const [code, setCode] = useState('RESCUE_PLAN');
   const [warningOpen,setWarningOpen]=useState(false);

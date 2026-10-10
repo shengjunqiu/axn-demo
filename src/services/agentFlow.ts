@@ -4,6 +4,7 @@
  */
 import { AGENT_QUICK_TASKS } from '@/seed/agentQuickTasks';
 import { isHiddenPrototypeAction } from '@/seed/prototypeVisibility';
+import { stageChipConfig } from '@/seed/quickActionCatalog';
 import { factText, incidentById } from '@/seed/scenario';
 import { tenderName } from '@/seed/tenderNames';
 import { vueWorkspaceEventById, type VueWorkspaceEventMeta } from '@/seed/vueWorkspaceEvents';
@@ -65,8 +66,9 @@ export const SCENARIO_FLOW: ScenarioMeta[] = [
     label: '灾情研判',
     agentLabel: '态势感知智能体',
     stages: ['待研判'],
-    primaryLabels: ['生成灾情摘要', '生成态势报告', '核对道路天气'],
-    advanceOn: ['生成灾情摘要', '生成态势报告', '核对道路天气'],
+    /** 与 quickActionCatalog.stageChips「待研判」保持同步（chips 以 JSON 为准） */
+    primaryLabels: stageChipConfig('待研判').primary,
+    advanceOn: ['生成灾情摘要', '态势研判预警', '生成态势报告'],
     nextStage: '力量投送中',
     handoffTo: 'forceDelivery',
     handoffSummary: '研判草稿已形成资源需求建议，可进入力量投送核对候选力量',
@@ -77,8 +79,8 @@ export const SCENARIO_FLOW: ScenarioMeta[] = [
     label: '力量投送',
     agentLabel: '救援资源管理智能体',
     stages: ['力量投送中'],
-    primaryLabels: ['查询周边救援资源', '生成周边资源报告', '生成救援方案'],
-    advanceOn: ['查询周边救援资源', '生成周边资源报告', '生成救援方案'],
+    primaryLabels: stageChipConfig('力量投送中').primary,
+    advanceOn: ['查询周边救援资源', '生成周边资源报告', '核对资源状态'],
     nextStage: '救援中',
     handoffTo: 'rescueOps',
     handoffSummary: '资源/编组建议已就绪，可进入实施救援编制处置方案',
@@ -98,12 +100,6 @@ export const SCENARIO_FLOW: ScenarioMeta[] = [
   },
 ];
 
-const RESCUE_PRIMARY: Record<'救援中' | '待复盘' | '已归档', string[]> = {
-  救援中: ['生成救援方案', '生成应急要情', '生成会议纪要', '核对资源状态'],
-  待复盘: ['评估救援效果', '生成工作总结', '生成全面总结'],
-  已归档: [],
-};
-
 /** 导航类主推（非 AGENT_QUICK_TASKS） */
 export const ARCHIVE_NAV_LABEL = '打开文书箱';
 
@@ -111,10 +107,10 @@ export const ARCHIVE_NAV_LABEL = '打开文书箱';
 export function normalizeCompletedAction(raw: string): string {
   const text = raw.replace(/\s+/g, '').trim();
   if (!text) return '';
-  if (/全面总结/.test(text)) return '生成全面总结';
-  if (/工作总结/.test(text)) return '生成工作总结';
+  if (/全面总结|抢险总结（全面）/.test(text)) return '生成全面总结';
+  if (/工作总结|抢险总结/.test(text)) return '生成工作总结';
   if (/值班日报/.test(text)) return '生成值班日报';
-  if (/应急要情/.test(text)) return '生成应急要情';
+  if (/应急抢险要情|应急要情/.test(text)) return '生成应急要情';
   if (/评估救援|救援效果/.test(text)) return '评估救援效果';
   if (/总结报告/.test(text)) return '生成总结报告';
   if (/投入偏差/.test(text)) return '分析投入偏差';
@@ -122,9 +118,11 @@ export function normalizeCompletedAction(raw: string): string {
   if (/核对资源/.test(text)) return '核对资源状态';
   if (/核对道路天气|道路与天气/.test(text)) return '核对道路天气';
   if (/查询周边|周边救援资源/.test(text)) return '查询周边救援资源';
-  if (/救援方案|处置建议/.test(text)) return /处置建议/.test(text) ? '形成处置建议' : '生成救援方案';
+  if (/现场处置行动方案|救援方案|处置建议/.test(text)) return /处置建议/.test(text) ? '形成处置建议' : '生成救援方案';
+  if (/态势研判预警/.test(text)) return '态势研判预警';
   if (/态势报告/.test(text)) return '生成态势报告';
-  if (/灾情摘要|灾情研判|汇总灾情/.test(text)) return '生成灾情摘要';
+  if (/灾情摘要|汇总灾情/.test(text)) return '生成灾情摘要';
+  if (/灾情研判/.test(text)) return '生成灾情摘要';
   if (/知识问答|专家知识/.test(text)) return /专家/.test(text) ? '专家知识问答' : '知识问答';
   if (/返回力量投送/.test(text)) return '返回力量投送';
   if (/补充态势研判/.test(text)) return '补充态势研判';
@@ -149,19 +147,12 @@ export function resolveScenarioId(stage: EventStage): ScenarioId {
 }
 
 export function primaryLabelsForStage(stage: EventStage): string[] {
-  if (stage === '待研判') return SCENARIO_FLOW[0].primaryLabels;
-  if (stage === '力量投送中') return SCENARIO_FLOW[1].primaryLabels;
-  if (stage === '救援中' || stage === '待复盘' || stage === '已归档') {
-    return RESCUE_PRIMARY[stage];
-  }
-  return [];
+  return [...stageChipConfig(stage).primary];
 }
 
 /** 实施救援阶段的回环入口 */
 export function loopLabelsForStage(stage: EventStage): string[] {
-  if (stage === '救援中') return ['返回力量投送', '补充态势研判'];
-  if (stage === '待复盘') return ['补充态势研判'];
-  return [];
+  return [...stageChipConfig(stage).loop];
 }
 
 export function splitQuickTasksByStage(stage: EventStage | null): {
@@ -228,7 +219,7 @@ export function computeStageAdvance(
         toScenario: 'rescueOps',
         eventId,
         versionLabel: `复盘评估 v${completedCount + 1}`,
-        summary: '已形成效果评估草稿，可整理工作总结并核对文书',
+        summary: '已形成效果评估草稿，可整理抢险总结并核对文书',
         bullets: ['计划与实际对照要点', '剩余风险与改进建议', '资料完整度待核项'],
         verified: 'draft',
       },
@@ -243,7 +234,7 @@ export function computeStageAdvance(
         fromScenario: 'rescueOps',
         toScenario: 'rescueOps',
         eventId,
-        versionLabel: `工作总结 v${completedCount + 1}`,
+        versionLabel: `抢险总结 v${completedCount + 1}`,
         summary: '总结草稿已生成（演示归档终点），正式归档仍走原系统',
         bullets: ['处置过程与不足', '改进计划', '待审知识候选'],
         verified: 'draft',
@@ -281,10 +272,11 @@ export function computeStageAdvance(
 
 /** 动作链路：完成后的候选下一步（再与阶段主推求交） */
 export const ACTION_FOLLOW_UP_LABELS: Record<string, string[]> = {
-  生成灾情摘要: ['生成态势报告', '查询周边救援资源', '生成救援方案'],
+  生成灾情摘要: ['态势研判预警', '生成态势报告', '查询周边救援资源'],
+  态势研判预警: ['生成态势报告', '生成灾情摘要', '查询周边救援资源'],
   生成态势报告: ['查询周边救援资源', '生成救援方案', '生成应急要情'],
-  查询周边救援资源: ['生成周边资源报告', '生成救援方案', '核对资源状态'],
-  生成周边资源报告: ['生成救援方案', '打开文书箱'],
+  查询周边救援资源: ['生成周边资源报告', '核对资源状态', '生成救援方案'],
+  生成周边资源报告: ['核对资源状态', '生成救援方案', '打开文书箱'],
   核对资源状态: ['查询周边救援资源', '生成救援方案'],
   生成救援方案: ['生成应急要情', '生成会议纪要', '评估救援效果', '返回力量投送'],
   形成处置建议: ['生成应急要情', '生成会议纪要', '评估救援效果'],

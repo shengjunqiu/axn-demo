@@ -2,7 +2,7 @@
  * 版头/落款规格按真件提取；章节骨架对齐一期过程公文材料。
  * 样稿与生成正文均按演示事件填充，不再使用纯占位架子。
  * - 值班日报：机关标志 + 红字文种；结尾=值班员/值班电话。
- * - 应急要情：平台行 + 机关标志 + 「应 急 救 援 要 情」。
+ * - 应急抢险要情：平台行 + 机关标志 + 「应 急 抢 险 要 情」。
  * - 报告类：机关标志 + 红字文种 + 黑色标题。
  */
 import { resolveDocumentSections } from './resolveDocumentSections';
@@ -36,16 +36,16 @@ type CategoryDef = {
 /** 文书库样稿，不写入正式文书审批与事实快照。 */
 export const DOCUMENT_CATEGORIES: readonly CategoryDef[] = [
   { code: 'DUTY_DAILY', name: '值班日报', prefix: '应急值', redhead: { platform: '', org: '中国安能建设集团有限公司', type: '值 班 日 报', showNumber: false, showTitle: false, tail: 'duty' }, topics: ['应急值守日报', '夜间值守交接日报'], sections: resolveDocumentSections(MOCK_SAMPLE_EVENT_ID, 'DUTY_DAILY') },
-  { code: 'EMERGENCY_BRIEF', name: '应急要情', prefix: '应急报', redhead: { platform: '中央企业应急救援综合平台', org: '中国安能建设集团有限公司', type: '应 急 救 援 要 情', showNumber: true, showTitle: true, tail: 'brief' }, topics: ['险情处置要情', '应急救援过程要情'], sections: resolveDocumentSections(MOCK_SAMPLE_EVENT_ID, 'EMERGENCY_BRIEF') },
+  { code: 'EMERGENCY_BRIEF', name: '应急抢险要情', prefix: '应急报', redhead: { platform: '中央企业应急救援综合平台', org: '中国安能建设集团有限公司', type: '应 急 抢 险 要 情', showNumber: true, showTitle: true, tail: 'brief' }, topics: ['险情处置要情', '应急救援过程要情'], sections: resolveDocumentSections(MOCK_SAMPLE_EVENT_ID, 'EMERGENCY_BRIEF') },
   { code: 'MEETING_MINUTES', name: '会议纪要', prefix: '应急会纪', redhead: { platform: '', org: '中国安能建设集团有限公司', type: '会 议 纪 要', showNumber: true, showTitle: true, tail: 'report' }, topics: ['应急协调会议纪要', '值班值守工作部署会议纪要'], sections: resolveDocumentSections(MOCK_SAMPLE_EVENT_ID, 'MEETING_MINUTES') },
-  { code: 'WORK_SUMMARY', name: '工作总结', prefix: '应急综', redhead: { platform: '', org: '中国安能建设集团有限公司', type: '工 作 总 结', showNumber: true, showTitle: true, tail: 'report' }, topics: ['阶段性应急工作总结', '应急值守保障工作总结'], sections: resolveDocumentSections(MOCK_SAMPLE_EVENT_ID, 'WORK_SUMMARY') },
+  { code: 'WORK_SUMMARY', name: '抢险总结', prefix: '应急综', redhead: { platform: '', org: '中国安能建设集团有限公司', type: '抢 险 总 结', showNumber: true, showTitle: true, tail: 'report' }, topics: ['阶段性抢险总结', '应急值守保障工作总结'], sections: resolveDocumentSections(MOCK_SAMPLE_EVENT_ID, 'WORK_SUMMARY') },
   // 四智能体建设材料（由对话任务物化到右侧红头文书）
   { code: 'SITUATION_REPORT', name: '态势报告', prefix: '应急态', redhead: { platform: '', org: '中国安能建设集团有限公司', type: '灾 情 态 势 报 告', showNumber: true, showTitle: true, tail: 'report' }, topics: [], sections: resolveDocumentSections(MOCK_SAMPLE_EVENT_ID, 'SITUATION_REPORT') },
   { code: 'RESOURCE_REPORT', name: '周边资源报告', prefix: '应急资', redhead: { platform: '', org: '中国安能建设集团有限公司', type: '周 边 资 源 分 析 报 告', showNumber: true, showTitle: true, tail: 'report' }, topics: [], sections: resolveDocumentSections(MOCK_SAMPLE_EVENT_ID, 'RESOURCE_REPORT') },
   // 查询 / 核对类材料：不当作一期「周边资源分析报告」红头，避免文种与正文结构错配。
   { code: 'RESOURCE_QUERY', name: '资源查询', prefix: '应急查', redhead: { platform: '', org: '中国安能建设集团有限公司', type: '资 源 查 询 结 果', showNumber: true, showTitle: true, tail: 'report' }, topics: [], sections: resolveDocumentSections(MOCK_SAMPLE_EVENT_ID, 'RESOURCE_QUERY') },
   { code: 'RESOURCE_STATUS', name: '资源状态核对', prefix: '应急核', redhead: { platform: '', org: '中国安能建设集团有限公司', type: '资 源 状 态 核 对', showNumber: true, showTitle: true, tail: 'report' }, topics: [], sections: resolveDocumentSections(MOCK_SAMPLE_EVENT_ID, 'RESOURCE_STATUS') },
-  { code: 'RESCUE_PLAN', name: '救援方案', prefix: '应急案', redhead: { platform: '', org: '中国安能建设集团有限公司', type: '救 援 处 置 方 案', showNumber: true, showTitle: true, tail: 'report' }, topics: [], sections: resolveDocumentSections(MOCK_SAMPLE_EVENT_ID, 'RESCUE_PLAN') },
+  { code: 'RESCUE_PLAN', name: '现场处置行动方案', prefix: '应急案', redhead: { platform: '', org: '中国安能建设集团有限公司', type: '现 场 处 置 行 动 方 案', showNumber: true, showTitle: true, tail: 'report' }, topics: [], sections: resolveDocumentSections(MOCK_SAMPLE_EVENT_ID, 'RESCUE_PLAN') },
   { code: 'RESCUE_EVAL', name: '效果评估', prefix: '应急评', redhead: { platform: '', org: '中国安能建设集团有限公司', type: '救 援 效 果 评 估', showNumber: true, showTitle: true, tail: 'report' }, topics: [], sections: resolveDocumentSections(MOCK_SAMPLE_EVENT_ID, 'RESCUE_EVAL') },
 ];
 
@@ -88,12 +88,12 @@ export const MOCK_DOCUMENT_HANDOFF_TARGETS: Record<string, string> = {
   RESOURCE_REPORT: '周边资源分析报告（A01）',
   RESOURCE_QUERY: '周边资源分析报告／资源查询附件（A01）',
   RESOURCE_STATUS: '周边资源分析报告／资源状态核对（A01）',
-  RESCUE_PLAN: '救援处置方案管理（S03）',
-  RESCUE_EVAL: '总结报告管理与编写（P02）',
-  DUTY_DAILY: '应急要情查询与编制／值班日报（B03）',
-  EMERGENCY_BRIEF: '应急要情查询与编制（B03）',
+  RESCUE_PLAN: '现场处置行动方案管理（S03）',
+  RESCUE_EVAL: '抢险总结管理与编写（P02）',
+  DUTY_DAILY: '应急抢险要情查询与编制／值班日报（B03）',
+  EMERGENCY_BRIEF: '应急抢险要情查询与编制（B03）',
   MEETING_MINUTES: '全过程记录／会议纪要（P01）',
-  WORK_SUMMARY: '总结报告管理与编写（P02）',
+  WORK_SUMMARY: '抢险总结管理与编写（P02）',
 };
 
 export function handoffTargetFor(code: string) {

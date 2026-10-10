@@ -22,7 +22,12 @@ describe('agentFlow', () => {
   it('按阶段拆分快捷任务：主推与折叠', () => {
     const judgment = splitQuickTasksByStage('待研判');
     expect(judgment.scenarioLabel).toBe('灾情研判');
-    expect(judgment.primary.map((item) => item.label)).toEqual(['生成灾情摘要', '生成态势报告', '核对道路天气']);
+    expect(judgment.primary.map((item) => item.label)).toEqual([
+      '生成灾情摘要',
+      '态势研判预警',
+      '生成态势报告',
+    ]);
+    expect(judgment.secondary.some((item) => item.label === '核对道路天气')).toBe(true);
     expect(judgment.secondary.some((item) => item.label === '评估救援效果')).toBe(true);
     expect(judgment.secondary.some((item) => item.label === '生成灾情摘要')).toBe(false);
     expect(judgment.loopLabels).toEqual([]);
@@ -42,8 +47,9 @@ describe('agentFlow', () => {
     expect(force.primary.map((item) => item.label)).toEqual([
       '查询周边救援资源',
       '生成周边资源报告',
-      '生成救援方案',
+      '核对资源状态',
     ]);
+    expect(force.secondary.some((item) => item.label === '生成救援方案')).toBe(true);
     expect(force.secondary.some((item) => item.label === '生成应急要情')).toBe(true);
   });
 
@@ -74,12 +80,14 @@ describe('agentFlow', () => {
   });
 
   it('follow-up 不过界：排除越阶段主推', () => {
-    // 待研判完成摘要后，若仍按待研判过滤，不应主推评估
-    expect(filterFollowUpLabels('生成灾情摘要', '待研判')).toEqual(['生成态势报告']);
-    // 推进到力量投送后，链路中的资源/方案可主推
+    // 待研判完成摘要后，主推研判预警与态势报告，不应主推评估
+    expect(filterFollowUpLabels('生成灾情摘要', '待研判')).toEqual([
+      '态势研判预警',
+      '生成态势报告',
+    ]);
+    // 推进到力量投送后，链路中与阶段主推相交的资源检索可主推
     expect(filterFollowUpLabels('生成灾情摘要', '力量投送中')).toEqual([
       '查询周边救援资源',
-      '生成救援方案',
     ]);
     expect(filterFollowUpLabels('生成救援方案', '救援中')).toContain('返回力量投送');
     expect(filterFollowUpLabels('生成救援方案', '救援中')).not.toContain('生成灾情摘要');
@@ -97,6 +105,6 @@ describe('agentFlow', () => {
     const reply = buildStageMismatchReply('待研判', '生成工作总结');
     expect(reply).toContain('灾情研判');
     expect(reply).toContain('待复盘');
-    expect(reply).toMatch(/生成灾情摘要|态势报告|道路天气/);
+    expect(reply).toMatch(/多源数据汇聚|态势研判预警|态势报告自动生成/);
   });
 });

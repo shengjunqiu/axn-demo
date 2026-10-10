@@ -136,7 +136,7 @@ test.describe('持久化（AC-025 / AC-026）', () => {
     await page.getByPlaceholder(/向安小能发送指令/).fill('生成应急要情');
     await page.keyboard.press('Enter');
     await openLibrary(page);
-    const draftCard = page.locator('.doc-card', { hasText: '应急要情' }).filter({ hasText: '草稿' }).first();
+    const draftCard = page.locator('.doc-card', { hasText: '应急抢险要情' }).filter({ hasText: '草稿' }).first();
     await expect(draftCard).toBeVisible({ timeout: 30000 });
   });
 });

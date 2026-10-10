@@ -79,8 +79,8 @@ test('2. 对话区内关联灾情 → 切换事件上下文与共享 session', a
   await expect(page.getByText(/已切换关联灾情为「清河段堤防险情」/)).toBeVisible();
   await expect(page.getByText('【当前状态】')).toBeVisible();
   await expect(page.getByTestId('event-next-steps')).toBeVisible();
-  await expect(page.getByTestId('event-next-steps-task-查询周边救援资源')).toBeVisible();
   await expect(page.getByTestId('event-next-steps-task-生成救援方案')).toBeVisible();
+  await expect(page.getByTestId('event-next-steps-task-生成应急要情')).toBeVisible();
   await expect(page.getByTestId('open-event-timeline')).toBeVisible();
   await page.getByTestId('open-event-timeline').click();
   await expect(page.getByTestId('event-timeline-drawer')).toBeVisible();
@@ -88,10 +88,9 @@ test('2. 对话区内关联灾情 → 切换事件上下文与共享 session', a
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('header-event')).toContainText('清河段堤防险情');
   // 下一步建议按钮可触发快捷任务；完成后任务卡继续给出后续建议
-  await page.getByTestId('event-next-steps-task-查询周边救援资源').click();
+  await page.getByTestId('event-next-steps-task-生成救援方案').click();
   await expect(page.getByTestId('task-next-steps')).toBeVisible({ timeout: 30000 });
-  await expect(page.getByTestId('task-next-steps-task-生成周边资源报告')).toBeVisible();
-  await expect(page.getByTestId('task-next-steps-task-生成救援方案')).toBeVisible();
+  await expect(page.getByTestId('task-next-steps-task-生成应急要情')).toBeVisible();
   // 取消关联 → 回到未关联（专属虚拟事件）并提示
   await page.getByTestId('chat-link-incident').click();
   await page.locator('.ant-select-item-option', { hasText: '未关联事件' }).click();

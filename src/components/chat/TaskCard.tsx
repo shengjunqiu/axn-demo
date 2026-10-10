@@ -1,7 +1,4 @@
 import { tenderName } from '@/seed/tenderNames';
-import DisasterMonitoring from '@/components/events/DisasterMonitoring';
-import { disasterProfileById } from '@/seed/disasterScenarios';
-import OriginalSystemLink from './OriginalSystemLink';
 /**
  * 任务执行卡（T-006）：渲染 assistant 任务消息的执行步骤、产物摘要、流式文本与操作。
  * 数据全部来自 sessionStore.tasks（zustand 订阅），本组件不复制任务状态。
@@ -44,7 +41,7 @@ import { factText, getFact, knowledgeById, teamById, warehouseById } from '@/see
 import { vueDemoResourceById } from '@/seed/vueDemoResources';
 import NextStepActionsBar from './NextStepActionsBar';
 import TaskSkillPanel from '@/components/skills/TaskSkillPanel';
-import MultiSourceSummary from './MultiSourceSummary';
+import { aggregationCounts } from '@/services/multiSourceAggregation';
 
 const { Text } = Typography;
 
@@ -53,6 +50,8 @@ export interface TaskCardProps {
   onOpenDrawer: (target: 'resource' | 'knowledge', options?: { tab?: 'list' | 'map' }) => void;
   onTask?: (prompt: string) => void;
   onNavigate?: (path: string) => void;
+  /** 打开业务流程补充抽屉并定位到指定流程 Tab */
+  onOpenFlow?: (tab: string) => void;
   busy?: boolean;
 }
 
@@ -94,12 +93,39 @@ function factValueText(factId: string, override?: string): string {
   return unit ? `${text} ${unit}` : text;
 }
 
-function SummaryBlock({ payload }: { payload: SummaryArtifact }) {
+function SummaryBlock({
+  payload,
+  onOpenFlow,
+}: {
+  payload: SummaryArtifact;
+  onOpenFlow?: (tab: string) => void;
+}) {
   const isPending = (id: string) => resolveFact(id, { kind: 'event', eventId: payload.eventId })?.verification !== 'confirmed';
   const pendingKeys = payload.pendingKeys.filter(isPending);
+  const msCounts = payload.multiSource ? aggregationCounts(payload.multiSource.event.sources) : null;
   return (
     <div className="axn-artifact">
-      {payload.multiSource && <MultiSourceSummary snapshot={payload.multiSource} />}
+      {payload.multiSource && msCounts && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 8 }}
+          data-testid="multi-source-flow-hint"
+          title="多源数据汇聚明细已放入业务流程补充"
+          description={(
+            <Space orientation="vertical" size={8} style={{ width: '100%' }}>
+              <span>
+                覆盖 {msCounts.covered}/6 类 · 原始 {msCounts.raw} 条 · 归并后 {msCounts.merged} 条 · 待核 {msCounts.pending} 条。完整六类来源请在「智能勘察分析」中查看。
+              </span>
+              {onOpenFlow && (
+                <Button size="small" type="primary" ghost onClick={() => onOpenFlow('现场智能勘察')}>
+                  打开智能勘察分析
+                </Button>
+              )}
+            </Space>
+          )}
+        />
+      )}
       {payload.rows.map((row) => (
         <div key={row.label + row.factId} className="axn-artifact-row">
           <span className="axn-artifact-label">{row.label}</span>
@@ -373,8 +399,46 @@ function ScenarioSectionsBlock({
   };
   const linkedEventId = useSessionStore(s => s.sessions[sessionId]?.eventId ?? '');
   const showResourceMap = RESOURCE_SCENARIO_CAPABILITIES.has(payload.capability);
-  // 对话内只保留摘要与首表预览，完整章节放到右侧文书，避免与红头面板重复堆叠。
-  const previewSections = payload.sections.slice(0, 2);
+  // 已物化红头文书：对话里只留标题摘要 + 打开入口，正文/表格/监测图一律在右侧文书看。
+  if (document) {
+    return (
+      <div className="axn-artifact axn-scenario axn-scenario--compact" data-testid="scenario-sections">
+        <div className="axn-artifact-row">
+          <span className="axn-artifact-label">建设材料</span>
+          <span className="axn-artifact-value">
+            <Text strong>{payload.title}</Text>
+            <Tag className="axn-tc-ml6">模拟数据</Tag>
+          </span>
+        </div>
+        <Typography.Paragraph type="secondary" className="axn-tc-fs12" style={{ marginBottom: 8 }} ellipsis={{ rows: 2 }}>
+          {payload.summary}
+        </Typography.Paragraph>
+        <div className="axn-document-result" data-testid="agent-material-preview">
+          <Typography.Text strong><FileText /> {document.title}</Typography.Text>
+          <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
+            {document.date} · 红头格式 · 模拟文书 · 共 {document.sections.length} 节，请在右侧查看全文
+          </Typography.Paragraph>
+        </div>
+        <div className="axn-artifact-foot">
+          <Space wrap>
+            <Button aria-label="查看文书" size="small" type="primary" ghost icon={<FileText />} onClick={openInWorkspace}>
+              查看文书
+            </Button>
+            {showResourceMap && (
+              <>
+                <Button size="small" type="primary" ghost onClick={() => onOpenDrawer('resource', { tab: 'list' })}>
+                  查看资源列表
+                </Button>
+                <Button aria-label="查看态势地图" size="small" type="primary" onClick={() => onOpenDrawer('resource', { tab: 'map' })}>
+                  查看态势地图
+                </Button>
+              </>
+            )}
+          </Space>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="axn-artifact axn-scenario" data-testid="scenario-sections">
       <div className="axn-artifact-row">
@@ -385,46 +449,15 @@ function ScenarioSectionsBlock({
         </span>
       </div>
       <div className="axn-scenario-summary">{payload.summary}</div>
-      {disasterProfileById.has(linkedEventId) && ['situation', 'situationReport'].includes(payload.capability) && <DisasterMonitoring profile={disasterProfileById.get(linkedEventId)!} />}
       {payload.table && (
         <ScenarioTable title="队伍与人员状态时效" headers={payload.table.headers} rows={payload.table.rows.slice(0, 2)} />
       )}
-      {/* 对话内只点到 1 个章节短摘，完整章节进右侧文书 */}
-      {previewSections.slice(0, 1).map((section) => (
-        <div className="axn-scenario-section" key={section.title}>
-          <Text strong>{section.title}</Text>
-          <Typography.Paragraph className="axn-tc-pre" ellipsis={{ rows: 2 }}>{section.text}</Typography.Paragraph>
-        </div>
-      ))}
-      {payload.sections.length > 1 && (
-        <Typography.Text type="secondary" className="axn-tc-fs12">
-          另有 {payload.sections.length - 1} 个章节，请在右侧文书工作区查看全文。
-        </Typography.Text>
-      )}
-      {document && (
-        <div className="axn-document-result" data-testid="agent-material-preview">
-          <Typography.Text strong><FileText /> {document.title}</Typography.Text>
-          <Typography.Paragraph type="secondary">{document.date} · 红头格式 · 模拟文书</Typography.Paragraph>
-          <Typography.Paragraph ellipsis={{ rows: 2 }}>{document.sections[0]?.[1]}</Typography.Paragraph>
-        </div>
-      )}
+      <Typography.Text type="secondary" className="axn-tc-fs12">
+        完整章节请在右侧文书工作区查看。
+      </Typography.Text>
       <div className="axn-artifact-foot">
         <Space wrap>
           <span>{payload.notice} · 数据时间 {payload.dataTime}</span>
-          {document && (
-            <Button aria-label="查看文书" size="small" type="primary" ghost icon={<FileText />} onClick={openInWorkspace}>
-              查看文书
-            </Button>
-          )}
-          {document && (
-            <Button aria-label="提交到原系统" size="small" onClick={openInWorkspace}>
-              {document.handoff ? '查看原系统回执' : '提交到原系统'}
-            </Button>
-          )}
-          <OriginalSystemLink code={document?.code ?? payload.documentCode ?? 'SITUATION_REPORT'} eventId={linkedEventId} title={document?.title ?? payload.title} sourceId={document?.id ?? payload.documentId ?? `${sessionId}:${payload.capability}`} sections={document?.sections ?? [['摘要',payload.summary],...(payload.table ? [['数据表',[payload.table.headers.join(' | '),...payload.table.rows.map(r=>r.join(' | '))].join('\n')] as [string,string]] : []),...(payload.tables ?? []).map(t=>[t.title,[t.headers.join(' | '),...t.rows.map(r=>r.join(' | '))].join('\n')] as [string,string]),...payload.sections.map(s=>[s.title,s.text] as [string,string])]} />
-          {document?.handoff && (
-            <Typography.Text type="success">已上传 · {document.handoff.target}</Typography.Text>
-          )}
           {showResourceMap && (
             <>
               <Button size="small" type="primary" ghost onClick={() => onOpenDrawer('resource', { tab: 'list' })}>
@@ -476,10 +509,20 @@ function DocumentBlock({ payload, sessionId }: { payload: DocumentLinkArtifact; 
   );
 }
 
-function ArtifactBlock({ payload, onOpenDrawer, sessionId }: { payload: TaskArtifactPayload; onOpenDrawer: TaskCardProps['onOpenDrawer']; sessionId: string }) {
+function ArtifactBlock({
+  payload,
+  onOpenDrawer,
+  onOpenFlow,
+  sessionId,
+}: {
+  payload: TaskArtifactPayload;
+  onOpenDrawer: TaskCardProps['onOpenDrawer'];
+  onOpenFlow?: TaskCardProps['onOpenFlow'];
+  sessionId: string;
+}) {
   switch (payload.kind) {
     case 'summary':
-      return <SummaryBlock payload={payload} />;
+      return <SummaryBlock payload={payload} onOpenFlow={onOpenFlow} />;
     case 'resources':
       return <ResourceBlock payload={payload} onOpenDrawer={onOpenDrawer} />;
     case 'knowledge':
@@ -513,11 +556,14 @@ function ArtifactBlock({ payload, onOpenDrawer, sessionId }: { payload: TaskArti
   }
 }
 
-export default function TaskCard({ task, onOpenDrawer, onTask, onNavigate, busy = false }: TaskCardProps) {
+export default function TaskCard({ task, onOpenDrawer, onTask, onNavigate, onOpenFlow, busy = false }: TaskCardProps) {
   const meta = STATUS_META[task.status] ?? { label: task.status, color: 'default' };
   const isRunning = task.status === 'running' || task.status === 'queued';
   const session = useSessionStore((s) => s.sessions[task.sessionId]);
-  const showFollowUps = (task.status === 'succeeded' || task.status === 'partial') && onTask && onNavigate;
+  const hasMaterialDoc = task.artifacts.some((a) => a.payload.kind === 'scenario_sections');
+  // 文书物化结果本身已带「查看文书」入口，不再叠一层下一步建议，避免对话噪音。
+  const showFollowUps =
+    (task.status === 'succeeded' || task.status === 'partial') && onTask && onNavigate && !hasMaterialDoc;
   const followUps = showFollowUps
     ? buildFollowUpNextStepActions(task.displayTitle, task.eventId, session)
     : [];
@@ -579,15 +625,15 @@ export default function TaskCard({ task, onOpenDrawer, onTask, onNavigate, busy 
         </ul>
       )}
 
-      {task.textAnswer && (
+      {/* 已物化建设文书时，正文与长摘要只在右侧；聊天区改由 scenario_sections 卡片给短提示 */}
+      {task.textAnswer && !task.artifacts.some(a => a.payload.kind === 'scenario_sections') && (
         <div className="axn-task-answer">
-          {/* 有建设材料产物时，聊天区只展示摘要（过长正文裁切，完整稿在右侧文书） */}
           <Typography.Paragraph
             className="axn-tc-pre"
             style={{ marginBottom: 0 }}
             ellipsis={
-              task.artifacts.some(a => a.payload.kind === 'scenario_sections' || a.payload.kind === 'proposal')
-                ? { rows: 6, expandable: false }
+              task.artifacts.some(a => a.payload.kind === 'proposal')
+                ? { rows: 4, expandable: false }
                 : false
             }
           >
@@ -597,7 +643,13 @@ export default function TaskCard({ task, onOpenDrawer, onTask, onNavigate, busy 
       )}
 
       {task.artifacts.map((artifact) => (
-        <ArtifactBlock key={artifact.artifactId} payload={artifact.payload} onOpenDrawer={onOpenDrawer} sessionId={task.sessionId} />
+        <ArtifactBlock
+          key={artifact.artifactId}
+          payload={artifact.payload}
+          onOpenDrawer={onOpenDrawer}
+          onOpenFlow={onOpenFlow}
+          sessionId={task.sessionId}
+        />
       ))}
 
       {task.error && (
@@ -617,7 +669,6 @@ export default function TaskCard({ task, onOpenDrawer, onTask, onNavigate, busy 
         />
       )}
 
-      {(task.status === 'succeeded' || task.status === 'partial') && !task.artifacts.some(a => a.payload.kind === 'scenario_sections') && <OriginalSystemLink code={task.intent === 'qa_knowledge' || task.intent === 'knowledge' ? 'KNOWLEDGE' : task.intent === 'doc_brief' ? 'EMERGENCY_BRIEF' : task.intent === 'doc_daily' ? 'DUTY_DAILY' : task.intent === 'proposal' ? 'RESCUE_PLAN' : task.intent === 'resource_query' ? 'RESOURCE_REPORT' : task.intent === 'evaluation' ? 'RESCUE_EVAL' : 'SITUATION_REPORT'} eventId={task.eventId} title={task.displayTitle} sourceId={task.taskId} sections={[[task.displayTitle, task.textAnswer ?? '请查看关联原始资料']]} />}
       {showFollowUps && (
         <NextStepActionsBar
           actions={followUps}

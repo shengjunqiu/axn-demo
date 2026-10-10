@@ -12,7 +12,7 @@ export async function generateWorkSummary(sessionId: string, text = '生成工�
   const session = store.sessions[sessionId];
   if (!session || session.messages.some(message => message.documentWorkflow?.stage === 'waiting_input') || useMockDocumentStore.getState().libraries[sessionId]?.generatingCode ||
     Object.values(store.tasks).some(task => task.sessionId === sessionId && ['running', 'queued'].includes(task.status))) return;
-  const useFull = /全面总结|工作总结（全面）|全面型/.test(text);
+  const useFull = /全面总结|工作总结（全面）|抢险总结（全面）|全面型/.test(text);
   const record = RESCUE_EVALUATION_MOCK[session.eventId];
   const profile = disasterProfileById.get(session.eventId);
   const overview = record
@@ -48,14 +48,14 @@ export async function generateWorkSummary(sessionId: string, text = '生成工�
   const elements = [{
     label: '报告结构',
     value: useFull
-      ? '全面工作总结 · 基本情况/主要经验做法/深刻启示/下一步打算'
-      : '反思式工作总结 · 实际处置过程/处置方案/存在不足/改进计划',
+      ? '全面抢险总结 · 基本情况/主要经验做法/深刻启示/下一步打算'
+      : '反思式抢险总结 · 实际处置过程/处置方案/存在不足/改进计划',
   }];
   let workflow: Workflow = { stage: 'collecting', elements, collection, collectedCount: 0, reportSections: sections };
   store.appendMessage(sessionId, { sessionId, role: 'user', kind: 'text', text, taskId: null });
   const invocation = store.appendMessage(sessionId, {
-    sessionId, role: 'assistant', kind: 'agent', taskId: null, text: '收集救援复盘要素并生成工作总结',
-    agentName: '文书生成智能体', agentRole: '生成工作总结 · 复盘评估分析', documentWorkflow: workflow,
+    sessionId, role: 'assistant', kind: 'agent', taskId: null, text: '收集救援复盘要素并生成抢险总结',
+    agentName: '文书生成智能体', agentRole: '抢险总结 · 复盘评估分析', documentWorkflow: workflow,
   });
   const update = (patch: Partial<Workflow>) => {
     workflow = { ...workflow, ...patch };

@@ -77,8 +77,8 @@ describe('eventSwitchBriefing', () => {
   it('动作完成后给出与阶段对齐的后续建议', () => {
     expect(normalizeCompletedAction('汇总灾情摘要')).toBe('生成灾情摘要');
     expect(buildFollowUpNextStepActions('查询周边救援资源', 'evt-demo-001').map((item) => item.label)).toEqual([
-      '生成救援方案',
       '核对资源状态',
+      '生成救援方案',
     ]);
     expect(buildFollowUpNextStepActions('评估救援效果', 'evt-vue-g5513').map((item) => item.label)).toEqual([
       '生成工作总结',

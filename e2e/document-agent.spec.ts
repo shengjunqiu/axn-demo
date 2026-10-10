@@ -26,7 +26,7 @@ test('文书库：分类浏览、样稿与生成回写', async ({ page }) => {
   await expect(library.getByText('会议纪要', { exact: true })).toHaveCount(0);
   await expect(library.getByText('值班日报', { exact: true })).toHaveCount(0);
   await expect(library.locator('.doc-sample-row')).toHaveCount(4);
-  for (const name of ['应急要情', '工作总结']) {
+  for (const name of ['应急抢险要情', '抢险总结']) {
     const category = library.locator('.doc-category').filter({ hasText: name });
     // 点开样稿 → 回到助理页并展示右侧文书工作区
     await category.locator('.doc-sample-row').first().click();
@@ -38,9 +38,9 @@ test('文书库：分类浏览、样稿与生成回写', async ({ page }) => {
     await openLibrary(page);
     await category.getByRole('button', { name: `生成${name}`, exact: true }).click();
     await expect(page.getByTestId('document-workspace')).toContainText('正在生成文书');
-    if (name === '工作总结') {
+    if (name === '抢险总结') {
       await page.getByRole('textbox', { name: '下一步改进措施' }).fill('完善通信保障和人员轮换机制。');
-      await page.getByRole('button', { name: '提交并生成工作总结' }).click();
+      await page.getByRole('button', { name: '提交并生成抢险总结' }).click();
     }
     await expect(page.getByTestId('document-toolbar')).toContainText('新生成');
     await closeWorkspace(page);
@@ -73,7 +73,7 @@ test('文书库：分类浏览、样稿与生成回写', async ({ page }) => {
 test('聊天文书快捷操作无需补录即可生成右侧模拟红头文书', async ({ page }) => {
   await page.goto('/');
   const panel = page.locator('.doc-center');
-  for (const [name, title] of [['应急要情', '重点河段险情处置要情']]) {
+  for (const [name, title] of [['应急抢险要情', '重点河段险情处置要情']]) {
     await clickQuickTask(page, `生成${name}`);
     const workflow = page.getByTestId('document-generation-card').last();
     await expect(workflow).toContainText('正在整理已收集的文书要素');

@@ -50,9 +50,9 @@ describe('resolveDocumentSections 消除纯架子占位', () => {
   });
 
   it('文书标题优先用事件名而非通用 topics', () => {
-    expect(resolveDocumentTitle('evt-vue-nl08', '应急要情', '险情处置要情')).toContain('武陵大道');
-    expect(resolveDocumentTitle('evt-sim-earthquake', '应急要情')).toContain('岚川');
-    expect(resolveDocumentTitle('evt-demo-001', '应急要情')).toMatch(/清河|堤防/);
+    expect(resolveDocumentTitle('evt-vue-nl08', '应急抢险要情', '险情处置要情')).toContain('武陵大道');
+    expect(resolveDocumentTitle('evt-sim-earthquake', '应急抢险要情')).toContain('岚川');
+    expect(resolveDocumentTitle('evt-demo-001', '应急抢险要情')).toMatch(/清河|堤防/);
   });
 
   it('文书库预置样稿与分类默认正文不含占位万能句', () => {

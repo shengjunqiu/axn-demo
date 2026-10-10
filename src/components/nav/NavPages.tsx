@@ -204,7 +204,7 @@ interface KnowledgeLibrary {
 const LIBRARIES: KnowledgeLibrary[] = [
   { libraryId: 'lib-plan', name: '预案库', icon: <FileCheck />, desc: '应急预案与处置流程文档', count: 12 },
   { libraryId: 'lib-law', name: '法规规范库', icon: <BookOpen />, desc: '相关法规、规程与标准条目', count: 8 },
-  { libraryId: 'lib-case', name: '历史案例库', icon: <Network />, desc: '历史事件处置案例与复盘', count: 15 },
+  { libraryId: 'lib-case', name: '典型案例库', icon: <Network />, desc: '中国安能集团抢险救灾典型案例与复盘', count: 15 },
   { libraryId: 'lib-tactic', name: '救援技战法', icon: <Zap />, desc: '典型场景技战法与操作要点', count: 10 },
   { libraryId: 'lib-equipment', name: '装备知识库', icon: <Wrench />, desc: '救援装备参数与使用要点', count: 22 },
   { libraryId: 'lib-team', name: '队伍能力库', icon: <Heart />, desc: '救援队伍能力档案与擅长场景', count: 6 },

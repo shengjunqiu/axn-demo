@@ -116,7 +116,7 @@ test('生成文书自动打开工作区；关闭后同一完成不再自动弹�
 test('待补充的工作总结在刷新后恢复到文书工作区', async ({ page }) => {
   await page.goto('/');
   await openLibrary(page);
-  await page.getByTestId('document-library').getByRole('button', { name: '生成工作总结', exact: true }).click();
+  await page.getByTestId('document-library').getByRole('button', { name: '生成抢险总结', exact: true }).click();
   await expect(page.getByTestId('document-generation-card').last()).toContainText('待补充', { timeout: 30000 });
   await page.reload();
   await expect(page.getByText('安小能 · 应急智能工作台')).toBeVisible({ timeout: 15000 });
@@ -265,7 +265,7 @@ test('快捷任务按场景推荐平铺，其余收入更多动作并遵守运�
   await page.goto('/');
   const chips = page.locator('.axn-chips');
   // 默认演示事件处于「救援中 / 实施救援」：主区仅阶段主推
-  for (const name of ['方案智能生成', '生成应急要情', '核对资源状态']) {
+  for (const name of ['现场处置行动方案', '应急抢险要情', '核对资源状态']) {
     await expect(chips.getByRole('button', { name, exact: true })).toBeVisible();
   }
   // 阶段外与整体业务流程不在主区
@@ -279,8 +279,8 @@ test('快捷任务按场景推荐平铺，其余收入更多动作并遵守运�
   await page.keyboard.press('Escape');
   await page.screenshot({ path: 'artifacts/ui-polish/quick-tasks.png' });
   await clickQuickTask(page, '生成应急要情');
-  await expect(chips.getByRole('button', { name: '生成应急要情', exact: true })).toBeDisabled();
+  await expect(chips.getByRole('button', { name: '应急抢险要情', exact: true })).toBeDisabled();
   await expect(chips.getByTestId('chip-more-actions')).toBeDisabled();
   await expect(page.getByTestId('document-generation-card').last()).toContainText('红头文书已生成', { timeout: 20000 });
-  await expect(chips.getByRole('button', { name: '生成应急要情', exact: true })).toBeEnabled();
+  await expect(chips.getByRole('button', { name: '应急抢险要情', exact: true })).toBeEnabled();
 });

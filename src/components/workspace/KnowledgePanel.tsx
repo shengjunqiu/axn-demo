@@ -276,7 +276,7 @@ export default function KnowledgePanel() {
                         disabled={busy || isTactics}
                         onClick={() => {
                           void sendMessage(session.sessionId, {
-                            text: `引用案例（模拟）：${chunk.title}。请结合本事件生成/修订救援方案，不写入他案人数与联系人。`,
+                            text: `引用中国安能集团抢险救灾典型案例（模拟）：${chunk.title}。请结合本事件生成/修订现场处置行动方案，不写入他案人数与联系人。`,
                           });
                         }}
                       >

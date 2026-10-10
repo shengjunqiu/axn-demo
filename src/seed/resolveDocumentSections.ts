@@ -13,6 +13,7 @@ import {
   WORK_SUMMARY_REFLECT_TITLES,
   WORK_SUMMARY_TEMPLATE_TITLES,
   buildDisasterSections,
+  personnelGroupingText,
   type DocumentSection,
 } from './documentTemplates';
 import { vueDemoResourcesForEvent } from './vueDemoResources';
@@ -100,10 +101,14 @@ function readEventFillContext(eventId: string): EventFillContext {
 
 function overview(ctx: EventFillContext): string {
   return [
-    `${ctx.title}；灾种：${ctx.disasterType}；地点：${ctx.location}`,
+    ctx.title,
+    `灾种：${ctx.disasterType}`,
+    `地点：${ctx.location}`,
     ctx.description,
-    `影响范围：${ctx.impact}；人员情况：${ctx.casualty}`,
-    `接报/发生时间：${ctx.occurredAt}；处置状态：${ctx.controlStatus}`,
+    `影响范围：${ctx.impact}`,
+    `人员情况：${ctx.casualty}`,
+    `接报/发生时间：${ctx.occurredAt}`,
+    `处置状态：${ctx.controlStatus}`,
   ].join('\n');
 }
 
@@ -147,11 +152,11 @@ function buildFromContext(ctx: EventFillContext, code: string): DocumentSection[
       ];
     case 'RESCUE_PLAN':
       return [
-        [RESCUE_PLAN_TITLES[0], `${overview(ctx)}\n研判口径：先成立专家组完成风险隐患评估，再展开救援。\n历史案例参考（案例库·演示）：同类处置强调先遣评估与通行条件核对，不写入他案人数。${bound}`],
-        [RESCUE_PLAN_TITLES[1], `力量候选（未调派）：\n${ctx.resourcesText}\n编组原则：精干高效，数量由经验人员最终敲定；正式抽组仍走原系统。`],
-        [RESCUE_PLAN_TITLES[2], '现场指挥机构、技术组、安全组及保障组岗位名单待原系统确认；本草稿不成立新的指挥关系。'],
-        [RESCUE_PLAN_TITLES[3], `（一）救援基本条件\n按「${ctx.disasterType}」核对道路、展开面、供电通信；地点 ${ctx.location}。\n（二）战法要点（内部战法参考·演示）\n围绕主要风险「${ctx.risks}」组织专业处置准备，工法参数待专家组论证。\n（三）人装编组\n${ctx.resourcesText}\n（四）安全预警与撤离\n进入条件、停工撤离触发、撤离路线及人员清点待安全岗确认。\n（五）综合保障\n运输、供电、餐食、服装、医疗、通信及人员轮换责任岗位待核定。`],
-        [RESCUE_PLAN_TITLES[4], `主要风险与困难：${ctx.risks}\n人员情况：${ctx.casualty}。附件与审签沿用原处置方案模块；以上为演示初稿，不构成现场作业指令。`],
+        [RESCUE_PLAN_TITLES[0], `${overview(ctx)}\n研判口径：先成立专家组完成风险隐患评估，再展开救援；先遣组完成现场侦测与通行条件核对后投入主力。\n中国安能集团抢险救灾典型案例（案例库·演示）：同类处置强调先遣评估与通行条件核对，不写入他案人数。${bound}`],
+        [RESCUE_PLAN_TITLES[1], `${personnelGroupingText(ctx.resourcesText)}\n编组原则：精干高效，数量由经验人员最终敲定；正式抽组仍走原系统。`],
+        [RESCUE_PLAN_TITLES[2], '现场指挥机构、技术组、安全组及保障组岗位名单待原系统确认；本草稿不成立新的指挥关系。先遣组向现场指挥机构回传侦测与属地对接情况。'],
+        [RESCUE_PLAN_TITLES[3], `（一）救援基本条件与侦测依据\n按「${ctx.disasterType}」核对道路、展开面、供电通信；地点 ${ctx.location}。\n先遣组侦测处置：侦测处置分队（先遣组）搜集掌握情况通常采取研究上级通报、与地方有关部门对接，并应用侦测设备开展情报收集。\n（二）战法要点（内部战法参考·演示）\n围绕主要风险「${ctx.risks}」组织专业处置准备，工法参数待专家组论证。\n（三）人装编组与料源\n${personnelGroupingText(ctx.resourcesText)}\n（四）安全预警与撤离\n进入条件、停工撤离触发、撤离路线及人员清点待安全岗确认。\n（五）综合保障\n运输、供电、餐食、服装、医疗、通信及人员轮换责任岗位待核定；与上级公司建立应急通信指挥链条。`],
+        [RESCUE_PLAN_TITLES[4], `主要风险与困难：${ctx.risks}\n人员情况：${ctx.casualty}。附件：人装编组清单、先遣组侦测记录等待补；审签沿用原处置方案模块；以上为演示初稿，不构成现场作业指令。`],
       ];
     case 'RESCUE_EVAL':
       return [
@@ -193,7 +198,7 @@ function buildFromContext(ctx: EventFillContext, code: string): DocumentSection[
       ];
     case 'KNOWLEDGE':
       return [
-        ['灾种预案参考', `${ctx.disasterType}相关预案与规范要点（演示）；关联事件：${ctx.title}`],
+        ['预案', `${ctx.disasterType}相关预案与规范要点（演示）；关联事件：${ctx.title}`],
         ['复核与适用边界', `${ctx.risks}。以上为产品演示参考材料，需专业复核，不构成现场作业指令。`],
       ];
     default:

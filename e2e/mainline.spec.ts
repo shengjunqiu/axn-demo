@@ -105,7 +105,7 @@ test.describe('安小能主线（要情全链路）', () => {
     await sendChat(page, '生成应急要情');
     await waitTaskDone(page, '生成应急要情');
     await openLibrary(page);
-    const docCard = page.locator('.doc-card', { hasText: '应急要情' }).first();
+    const docCard = page.locator('.doc-card', { hasText: '应急抢险要情' }).first();
     await expect(docCard).toBeVisible();
     await shot('05-doc-center');
 
@@ -203,7 +203,7 @@ test.describe('安小能主线（要情全链路）', () => {
     await page.reload();
     await expect(page.getByText('安小能 · 应急智能工作台')).toBeVisible({ timeout: 15000 });
     await openLibrary(page);
-    const signedAfterReload = page.locator('.doc-card', { hasText: '应急要情' }).filter({ hasText: '已签发' }).first();
+    const signedAfterReload = page.locator('.doc-card', { hasText: '应急抢险要情' }).filter({ hasText: '已签发' }).first();
     await expect(signedAfterReload).toBeVisible({ timeout: 15000 });
 
     // 16. 控制台无阻断性错误（错误堆栈输出到 reporter 便于定位）

@@ -1,3 +1,8 @@
+import {
+  catalogScenarioLabel,
+  QUICK_ACTION_CATALOG,
+  type CatalogScenarioId,
+} from '@/seed/quickActionCatalog';
 import { tenderName } from '@/seed/tenderNames';
 import { isDutyContent, isMeetingMinutesContent } from '@/seed/prototypeVisibility';
 import OperationalFlows, { FLOW_TASKS } from './OperationalFlows';
@@ -34,6 +39,7 @@ import { sendMessage, cancelTask } from '@/services/taskRunner';
 import {
   buildStageMismatchReply,
   isActionAheadOfStage,
+  normalizeCompletedAction,
   resolveActionPrompt,
   splitQuickTasksByStage,
 } from '@/services/agentFlow';
@@ -232,7 +238,7 @@ export default function ChatPanel({ onOpenDrawer = noopOpenDrawer, compact = fal
       void submitWorkSummaryImprovement(session.sessionId, waitingSummary.messageId, text);
       return;
     }
-    if (text && /生成.*工作总结|工作总结.*生成|生成全面总结|全面总结/.test(text)) {
+    if (text && /生成.*工作总结|工作总结.*生成|生成全面总结|全面总结|抢险总结/.test(text)) {
       void generateWorkSummary(session.sessionId, text);
       return;
     }
@@ -422,7 +428,7 @@ export default function ChatPanel({ onOpenDrawer = noopOpenDrawer, compact = fal
   };
 
   const handleQuickTask = async (raw: string) => {
-    const text = resolveActionPrompt(raw);
+    const text = normalizeCompletedAction(resolveActionPrompt(raw)) || resolveActionPrompt(raw);
     if (replyStageMismatch(text)) return;
     if (text === '生成工作总结' || text === '生成全面总结') {
       if (session && !busy) {
@@ -439,7 +445,7 @@ export default function ChatPanel({ onOpenDrawer = noopOpenDrawer, compact = fal
     const sessionId = session.sessionId;
     useSessionStore.getState().appendMessage(sessionId, { sessionId, role: 'user', kind: 'text', text, taskId: null });
     const elements = [
-      { label: '文书类型', value: code === 'MEETING_MINUTES' ? '会议纪要' : '应急要情' },
+      { label: '文书类型', value: code === 'MEETING_MINUTES' ? '会议纪要' : '应急抢险要情' },
       { label: '编制单位', value: '应急指挥中心（模拟）' },
       { label: '报送对象', value: '相关应急工作部门（模拟）' },
       { label: '关联事项', value: eventTitle },
@@ -468,33 +474,58 @@ export default function ChatPanel({ onOpenDrawer = noopOpenDrawer, compact = fal
   };
 
   const chipSplit = useMemo(() => splitQuickTasksByStage(eventStage), [eventStage]);
-  // 主区只平铺当前阶段操作；阶段外任务、回环与整体业务流程一律进「更多动作」（PC/手机同一套）
+  // 主区只平铺当前阶段操作；其余按招标场景分组进「更多动作」（PC/手机同一套）
   const moreActionItems: MenuProps['items'] = useMemo(() => {
-    const taskItems = chipSplit.secondary.map((item) => ({
-      key: item.label,
-      label: `${tenderName(item.label)}（${tenderName(item.agentName)}）`,
-      disabled: !session || busy,
-      onClick: () => { void handleQuickTask(item.label); },
-    }));
-    const loopItems = chipSplit.loopLabels.map((label) => ({
-      key: `loop:${label}`,
-      label: tenderName(label),
-      disabled: !session || busy,
-      onClick: () => { void handleQuickTask(label); },
-    }));
-    const items: MenuProps['items'] = [...taskItems];
-    if (loopItems.length > 0) {
-      items.push({ type: 'divider' }, ...loopItems);
+    const moreMenu = QUICK_ACTION_CATALOG.moreMenu;
+    const order = moreMenu.scenarioOrder;
+    const groups = new Map<CatalogScenarioId, typeof chipSplit.secondary>();
+    for (const id of order) groups.set(id, []);
+    for (const item of chipSplit.secondary) {
+      const scenarioId = (item.scenarioId ?? 'assistant') as CatalogScenarioId;
+      const bucket = groups.get(scenarioId) ?? [];
+      bucket.push(item);
+      groups.set(scenarioId, bucket);
     }
-    items.push(
-      { type: 'divider' },
-      {
-        key: '__overall-flow__',
-        label: '整体业务流程',
-        disabled: !session || busy,
-        onClick: () => setFlow('现场智能勘察'),
-      },
-    );
+    const items: MenuProps['items'] = [];
+    for (const id of order) {
+      const bucket = groups.get(id) ?? [];
+      if (bucket.length === 0) continue;
+      items.push({
+        type: 'group',
+        key: `group:${id}`,
+        label: catalogScenarioLabel(id),
+        children: bucket.map((item) => ({
+          key: item.label,
+          label: `${tenderName(item.label)}（${tenderName(item.agentName)}）`,
+          disabled: !session || busy,
+          onClick: () => { void handleQuickTask(item.label); },
+        })),
+      });
+    }
+    if (chipSplit.loopLabels.length > 0) {
+      items.push({
+        type: 'group',
+        key: 'group:loop',
+        label: '阶段回环',
+        children: chipSplit.loopLabels.map((label) => ({
+          key: `loop:${label}`,
+          label: tenderName(label),
+          disabled: !session || busy,
+          onClick: () => { void handleQuickTask(label); },
+        })),
+      });
+    }
+    if (moreMenu.appendOverallFlow) {
+      items.push(
+        { type: 'divider' },
+        {
+          key: '__overall-flow__',
+          label: moreMenu.overallFlowEntryLabel,
+          disabled: !session || busy,
+          onClick: () => setFlow(moreMenu.overallFlowDefaultTab as typeof FLOW_TASKS[number]),
+        },
+      );
+    }
     return items;
   }, [chipSplit.secondary, chipSplit.loopLabels, session?.sessionId, busy]);
 
@@ -616,6 +647,7 @@ export default function ChatPanel({ onOpenDrawer = noopOpenDrawer, compact = fal
                 busy={busy}
                 onTask={(prompt) => { void handleQuickTask(prompt); }}
                 onNavigate={(path) => { navigate(path); }}
+                onOpenFlow={(tab) => { setFlow(tab as typeof FLOW_TASKS[number]); }}
               />
             ) : (
               <Tag color="error">任务数据缺失（模拟数据）</Tag>
@@ -655,6 +687,7 @@ export default function ChatPanel({ onOpenDrawer = noopOpenDrawer, compact = fal
                   busy={busy}
                   onTask={(prompt) => { void handleQuickTask(prompt); }}
                   onNavigate={(path) => { navigate(path); }}
+                  onOpenFlow={(tab) => { setFlow(tab as typeof FLOW_TASKS[number]); }}
                 />
               )}
             </AgentSummonCard>
@@ -871,9 +904,13 @@ export default function ChatPanel({ onOpenDrawer = noopOpenDrawer, compact = fal
       <div className="axn-cp-chips-wrap">
         <div className="axn-chips" data-testid="quick-task-chips">
           {chipSplit.scenarioLabel ? (
-            <span className="axn-chip axn-chip--label" title="当前场景">
-              {tenderName(chipSplit.scenarioLabel)}
-            </span>
+            <>
+              <span className="axn-scenario-name" title="当前场景（非操作按钮）" data-testid="chip-scenario-label">
+                <span className="axn-scenario-name__kicker">当前场景</span>
+                <span className="axn-scenario-name__text">{tenderName(chipSplit.scenarioLabel)}</span>
+              </span>
+              <span className="axn-chips-divider" aria-hidden />
+            </>
           ) : null}
           {chipSplit.primary.map(({ label, agentName, agentId }) => (
             <Button

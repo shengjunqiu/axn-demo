@@ -99,6 +99,10 @@ describe('documentTemplates 一期骨架顺序', () => {
       expect(body).toMatch(/战法/);
       expect(body).toMatch(/安全预警/);
       expect(body).toMatch(/案例库/);
+      expect(body).toMatch(/先遣组/);
+      expect(body).toMatch(/人员编组/);
+      expect(body).toMatch(/集结号令/);
+      expect(body).toMatch(/应急通信指挥链条/);
       if (nonWater.has(profile.eventId)) {
         expect(body).not.toMatch(/管涌|围井反滤/);
       }

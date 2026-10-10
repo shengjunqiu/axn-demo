@@ -250,7 +250,7 @@ export function assessInput(
   }
   const isArchive = capability === 'document' && /归档补充说明/.test(documentType);
   const isSummary =
-    capability === 'summary' || (capability === 'document' && /工作总结|任务总结/.test(documentType));
+    capability === 'summary' || (capability === 'document' && /工作总结|抢险总结|任务总结/.test(documentType));
   const allowed = attachment?.type ? fileTypes[attachment.type as FileTypeKey]?.allowed : undefined;
   if (
     (attachment && allowed?.length && !allowed.includes(event.stage)) ||

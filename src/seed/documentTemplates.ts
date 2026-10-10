@@ -125,19 +125,26 @@ function planSectionByKeyword(p: DisasterProfile, keywords: string[], fallback: 
 }
 
 function keyMonitoringLine(p: DisasterProfile, limit = 5): string {
-  return p.monitoring.slice(0, limit).map((m) => {
-    const latest = m.values.at(-1);
-    const time = m.times.at(-1) ?? '';
-    return `${m.label} ${latest ?? '缺测'}${m.unit}（${time}）`;
-  }).join('；');
+  return p.monitoring
+    .slice(0, limit)
+    .map((m) => {
+      const latest = m.values.at(-1);
+      const time = m.times.at(-1) ?? '';
+      return `${m.label}：${latest ?? '缺测'}${m.unit}（${time}）`;
+    })
+    .join('\n');
 }
 
 function overviewLine(p: DisasterProfile): string {
   return [
-    `${p.name}；灾种：${p.category}；地点：${p.location}`,
+    p.name,
+    `灾种：${p.category}`,
+    `地点：${p.location}`,
     p.description,
-    `影响范围：${p.impactScope}；人员情况：${p.casualty}`,
-    `阶段：${p.stage}；模拟资料时间：${p.capturedAt}`,
+    `影响范围：${p.impactScope}`,
+    `人员情况：${p.casualty}`,
+    `阶段：${p.stage}`,
+    `模拟资料时间：${p.capturedAt}`,
   ].join('\n');
 }
 
@@ -213,6 +220,28 @@ function historyCaseRefs(p: DisasterProfile): string {
   ].join('\n');
 }
 
+/** 人员编组与先遣组（侦测处置分队）行动要点，供处置方案复用。 */
+export function personnelGroupingText(resourcesText: string): string {
+  return [
+    '人员编组建议（演示·待原系统锁定）：',
+    '1. 侦测处置分队（先遣组）：负责现场侦测、情报搜集、属地对接与展开条件核实；先完成风险隐患评估后再投入主力作业。',
+    '2. 主力作业梯队：按任务目标展开专业处置作业，规模由负责人核定。',
+    '3. 综合保障组：负责运输、油料、物资、通信与后勤保障。',
+    '',
+    '先遣组工作要点：侦测处置分队（先遣组）搜集掌握情况通常采取研究上级通报、与地方有关部门对接，并应用侦测设备开展情报收集。',
+    '集结与出动准备：救援队伍指挥员应迅速发出集结号令，组织人员集结，传达任务和上级指示，明确具体行动和保障事项；救援队员依据预案和指挥员要求迅速组织设备启动、油料补充、物资装载和车辆编队，与上级公司建立应急通信指挥链条。',
+    '',
+    `候选人装（未等于已调派）：\n${resourcesText}`,
+  ].join('\n');
+}
+
+function advanceDetectWorkText(): string {
+  return [
+    '先遣组侦测处置：',
+    '侦测处置分队（先遣组）搜集掌握情况通常采取研究上级通报、与地方有关部门对接，并应用侦测设备开展情报收集；核实道路通行、展开面、供电通信及安全检测条件后，再提出主力投入建议。',
+  ].join('\n');
+}
+
 function buildRescuePlan(p: DisasterProfile): DocumentSection[] {
   const detect = planSectionByKeyword(p, ['侦测', '适用险情'], measureSlot(p, 0, '侦测依据待补。'));
   const tactics = planSectionByKeyword(p, ['主战法', '战法'], measureSlot(p, 1, '战法与工法参数待专业岗位论证补充。'));
@@ -220,37 +249,38 @@ function buildRescuePlan(p: DisasterProfile): DocumentSection[] {
   const watch = planSectionByKeyword(p, ['监测预警', '撤离'], measureSlot(p, 3, '监测预警与撤离触发待安全岗位确认。'));
   const safety = planSectionByKeyword(p, ['安全红线', '待核'], measureSlot(p, 4, '进入条件、停工撤离触发条件、撤离路线及人员清点安排待安全岗位确认。'));
   const command = planSectionByKeyword(p, ['指挥协同', '审签'], '现场指挥机构、技术组、安全组及保障组岗位名单待原系统确认；本草稿不成立新的指挥关系。');
+  const grouping = personnelGroupingText(disasterResourcesText(p));
   return [
     [
       '一、基本情况',
-      `${overviewLine(p)}\n适用预案参考：${p.planTitle}（模拟参考，非正式签发版；吸收安能公开战法关键词，不冒充九分案正文）。\n灾种关键监测最新值（模拟）：${keyMonitoringLine(p)}\n研判口径：先成立专家组完成风险隐患评估，再展开救援。\n${detect}\n历史案例参考（中性摘要，不写入他案人数）：\n${historyCaseRefs(p)}`,
+      `${overviewLine(p)}\n适用预案参考：${p.planTitle}（模拟参考，非正式签发版；吸收安能公开战法关键词，不冒充九分案正文）。\n灾种关键监测最新值（模拟）：${keyMonitoringLine(p)}\n研判口径：先成立专家组完成风险隐患评估，再展开救援；先遣组完成现场侦测与通行条件核对后投入主力。\n${detect}\n中国安能集团抢险救灾典型案例（中性摘要，不写入他案人数）：\n${historyCaseRefs(p)}`,
     ],
     [
       '二、任务受领与力量抽组',
-      `任务目标（模拟）：${p.objective}，阶段进度 ${p.completed}/${p.target}${p.unit}。\n${force}\n编组原则：精干高效，数量由经验人员最终敲定；正式抽组、报备与锁定仍走原系统流程。`,
+      `任务目标（模拟）：${p.objective}，阶段进度 ${p.completed}/${p.target}${p.unit}。\n${grouping}\n编组原则：精干高效，数量由经验人员最终敲定；正式抽组、报备与锁定仍走原系统流程。\n${force}`,
     ],
     [
       '三、指挥机构',
-      command,
+      `${command}\n先遣组向现场指挥机构回传侦测与属地对接情况；主力梯队与保障组按指挥机构分工展开。`,
     ],
     [
       '四、主要措施',
       [
         '（一）救援基本条件与侦测依据',
-        `道路通行、作业展开面、供电通信及安全检测条件待核。主要风险：${p.risks}。\n${detect}\n监测摘要：\n${disasterMonitoringText(p)}`,
+        `道路通行、作业展开面、供电通信及安全检测条件待核。主要风险：${p.risks}。\n${advanceDetectWorkText()}\n${detect}\n监测摘要：\n${disasterMonitoringText(p)}`,
         '（二）主战法与作业步骤（内部战法参考·演示）',
         `${tactics}\n行动战法仅限授权人员查看，禁止下载；本草稿不替代正式战法库或九分案审批稿。`,
         '（三）人装编组与料源',
-        `${force}\n按任务与展开条件控制规模，岗位人数由负责人核定。`,
+        `${grouping}\n按任务与展开条件控制规模，岗位人数由负责人核定。\n${force}`,
         '（四）安全预警与撤离',
         `${watch}\n${safety}\n次生风险变化时同步预警推送责任岗位；撤离路线与人员清点待安全岗确认。`,
         '（五）综合保障',
-        '运输、供电、餐食、服装、医疗及人员轮换责任岗位待核定。宣传口径待宣传岗位确认；通信保障：中继补点、报送渠道与备用电源待通信岗位确认。',
+        '运输、供电、餐食、服装、医疗及人员轮换责任岗位待核定。宣传口径待宣传岗位确认；通信保障：与上级公司建立应急通信指挥链条，中继补点、报送渠道与备用电源待通信岗位确认。',
       ].join('\n'),
     ],
     [
       '五、风险困难与附件落款',
-      `主要风险与困难：${p.risks}\n${p.gaps}\n${safety}\n附件：现场照片、监测曲线、人装清单、安全交底、历史案例索引（待补）。\n落款：拟稿单位待补；审签流程沿用原处置方案模块。以上为演示初稿，不构成现场作业指令。`,
+      `主要风险与困难：${p.risks}\n${p.gaps}\n${safety}\n附件：现场照片、监测曲线、人装编组清单、先遣组侦测记录、安全交底、中国安能集团抢险救灾典型案例索引（待补）。\n落款：拟稿单位待补；审签流程沿用原处置方案模块。以上为演示初稿，不构成现场作业指令。`,
     ],
   ];
 }
@@ -364,7 +394,7 @@ function buildRescueEval(p: DisasterProfile): DocumentSection[] {
 
 function buildKnowledge(p: DisasterProfile): DocumentSection[] {
   return [
-    ['灾种预案参考', p.planTitle],
+    ['预案', p.planTitle],
     ...p.planSections,
     ['复核与适用边界', `${p.gaps}。以上为产品演示参考材料，需专业复核，不构成现场作业指令。`],
   ];
@@ -414,7 +444,7 @@ export function skeletonPlaceholders(code: DisasterDocCode): DocumentSection[] {
     WORK_SUMMARY: WORK_SUMMARY_TEMPLATE_TITLES,
     WORK_SUMMARY_REFLECT: WORK_SUMMARY_REFLECT_TITLES,
     RESCUE_EVAL: RESCUE_EVAL_TITLES,
-    KNOWLEDGE: ['灾种预案参考', '复核与适用边界'],
+    KNOWLEDGE: ['预案', '复核与适用边界'],
   };
   return titles[code].map((title) => [title, PLACEHOLDER]);
 }

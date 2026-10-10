@@ -11,10 +11,12 @@ import { buildConstructionResult } from '@/seed/constructionScenarios';
 import SituationForecast from '@/components/events/SituationForecast';
 import ResourceComposition from '@/components/events/ResourceComposition';
 import AssistantInteraction from './AssistantInteraction';
+import MultiSourceSummary from './MultiSourceSummary';
 import RescueEvaluation from '@/components/events/RescueEvaluation';
 import WithdrawalReturn from '@/components/events/WithdrawalReturn';
 import RouteComparison from '@/components/events/RouteComparison';
 import DeliveryRouteMap from '@/components/events/DeliveryRouteMap';
+import { buildMultiSourceSnapshot } from '@/services/multiSourceAggregation';
 import {
   checkPlanRules,
   hasRuleConflict,
@@ -476,6 +478,17 @@ export default function OperationalFlows({
                             )}
                           </Card>
                         )}
+                        <Card
+                          size="small"
+                          title="多源数据汇聚 · 态势感知"
+                          style={{ marginTop: 12 }}
+                          data-testid="flow-multi-source"
+                        >
+                          <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
+                            对话「多源数据汇聚」产出的六类来源明细在此查看；聊天区仅保留摘要入口。
+                          </Typography.Paragraph>
+                          <MultiSourceSummary snapshot={buildMultiSourceSnapshot(eventId)} />
+                        </Card>
                       </>
                     )}
                     {name === '规划梯队投送' && (

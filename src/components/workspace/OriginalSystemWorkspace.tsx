@@ -555,7 +555,9 @@ export default function OriginalSystemWorkspace({
                   {selected.sections.map(([heading, body], i) => (
                     <section key={i}>
                       <Typography.Title level={5}>{heading}</Typography.Title>
-                      <Typography.Paragraph>{body}</Typography.Paragraph>
+                      <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', marginBottom: 0 }}>
+                        {body}
+                      </Typography.Paragraph>
                     </section>
                   ))}
                   <Button

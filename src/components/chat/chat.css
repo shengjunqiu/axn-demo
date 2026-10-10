@@ -139,12 +139,54 @@
   color: var(--axn-primary-text, #426b94);
   border-color: color-mix(in srgb, var(--axn-primary) 48%, var(--axn-border));
 }
-.axn-chip--label {
-  font-weight: 600;
-  background: color-mix(in srgb, var(--axn-primary) 14%, var(--axn-surface));
-  border-color: color-mix(in srgb, var(--axn-primary) 36%, var(--axn-border));
+/* 场景名：纯文案标签，不做成可点 chip */
+.axn-scenario-name {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  max-width: min(220px, 42vw);
+  padding: 0 2px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: var(--axn-text-secondary, #667085);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
   cursor: default;
   user-select: none;
+  pointer-events: none;
+}
+.axn-scenario-name__kicker {
+  color: var(--axn-muted, #98a2b3);
+  font-weight: 400;
+  font-size: 11px;
+}
+.axn-scenario-name__text {
+  color: var(--axn-text, #1f2937);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.axn-chips-divider {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 1px;
+  min-height: 16px;
+  margin: 4px 2px;
+  background: var(--axn-border);
+}
+.axn-chip--label {
+  /* 兼容旧类名：与场景名同为非交互文案 */
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  color: var(--axn-text-secondary, #667085);
+  font-weight: 600;
+  cursor: default;
+  user-select: none;
+  pointer-events: none;
 }
 .axn-chip--primary.ant-btn { font-weight: 600; }
 .axn-chip--more.ant-btn {
@@ -374,6 +416,13 @@
   height: 26px;
   font-size: 11px;
   padding-inline: 9px;
+}
+.axn-assistant--split .axn-scenario-name {
+  font-size: 11px;
+  max-width: min(180px, 38vw);
+}
+.axn-assistant--split .axn-scenario-name__kicker {
+  font-size: 10px;
 }
 @media (min-width: 720px) {
   .axn-chips {
