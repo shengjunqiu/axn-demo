@@ -165,8 +165,12 @@ export function loopLabelsForStage(stage: EventStage): string[] {
 }
 
 export function splitQuickTasksByStage(stage: EventStage | null): {
+  /** 仅当前事件阶段主推，按阶段配置顺序 */
   primary: QuickTaskItem[];
+  /** 其余快捷任务（含回环可走的历史动作） */
   secondary: QuickTaskItem[];
+  /** 当前阶段回环入口（非 AGENT_QUICK_TASKS，进「更多动作」） */
+  loopLabels: string[];
   scenarioLabel: string | null;
   agentLabel: string | null;
 } {
@@ -175,17 +179,23 @@ export function splitQuickTasksByStage(stage: EventStage | null): {
     return {
       primary: [],
       secondary: [...visibleTasks],
+      loopLabels: [],
       scenarioLabel: null,
       agentLabel: null,
     };
   }
   const scenario = scenarioForStage(stage);
-  const primarySet = new Set(primaryLabelsForStage(stage));
-  const primary = visibleTasks.filter((t) => primarySet.has(t.label));
+  const primaryLabels = primaryLabelsForStage(stage).filter((label) => !isHiddenPrototypeAction(label));
+  const primarySet = new Set(primaryLabels);
+  const byLabel = new Map<string, QuickTaskItem>(visibleTasks.map((t) => [t.label, t]));
+  const primary = primaryLabels
+    .map((label) => byLabel.get(label))
+    .filter((t): t is QuickTaskItem => t != null);
   const secondary = visibleTasks.filter((t) => !primarySet.has(t.label));
   return {
     primary,
     secondary,
+    loopLabels: loopLabelsForStage(stage).filter((label) => !isHiddenPrototypeAction(label)),
     scenarioLabel: scenario.label,
     agentLabel: scenario.agentLabel,
   };

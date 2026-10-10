@@ -2,8 +2,38 @@
 .axn-chat-page { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--axn-surface); color: var(--axn-text); }
 .axn-chat-head { display: flex; align-items: center; min-height: 48px; padding: 0 var(--space-2); border-bottom: 1px solid var(--axn-border); background: var(--axn-surface); }
 .axn-collapse-btn { margin-left: var(--space-1); color: var(--axn-muted); font-size: var(--icon-md); }
-.axn-chat-head-row { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.axn-chat-head-row { display: flex; align-items: center; gap: var(--space-2); min-width: 0; flex: 1; }
+.axn-chat-head-row .ant-btn-sm { flex: 0 0 auto; }
 .axn-chat-head .ant-select-selector { border-radius: 6px; }
+
+/* 窄屏：收起钮与汉堡重复；顶栏左侧留出固定汉堡位，正文不整体右移 */
+@media (max-width: 767px) {
+  .axn-collapse-btn { display: none !important; }
+  .axn-chat-page {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+  .axn-chat-head {
+    padding: 0 var(--space-3) 0 52px;
+    min-height: 52px;
+  }
+  .axn-chat-head-row { gap: var(--space-2-5); }
+  .axn-message-list {
+    padding: var(--space-4) var(--space-3);
+  }
+  .axn-composer {
+    padding: var(--space-2) var(--space-3) var(--space-3);
+  }
+  .axn-chips {
+    max-width: 100%;
+  }
+  .axn-artifact-foot {
+    padding: var(--space-3);
+  }
+  .axn-message-list .ant-bubble-content {
+    max-width: 100%;
+  }
+}
 .axn-chat-avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: var(--axn-primary-bg); color: var(--axn-primary); font-size: var(--fs-body); font-weight: 600; flex-shrink: 0; }
 .axn-message-list { padding: var(--space-6) max(var(--space-6), calc((100% - 880px) / 2)); scrollbar-width: thin; scrollbar-color: var(--axn-border) transparent; background: var(--axn-surface); flex: 1; min-height: 0; }
 .axn-message-list .ant-bubble-list { row-gap: var(--space-5); }
@@ -61,25 +91,157 @@
 .axn-question-item:hover:not(:disabled) { background: var(--axn-primary-bg); border-color: color-mix(in srgb, var(--axn-primary) 24%, var(--axn-border)); color: var(--axn-primary); }
 .axn-question-item:disabled { color: var(--axn-muted); cursor: not-allowed; opacity: .6; }
 .axn-question-item:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
-.axn-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: 0 var(--space-2); border: 0; background: transparent; flex: 0 0 auto; min-width: 0; max-width: var(--measure-chat); margin: 0 0 var(--space-2); width: 100%; box-sizing: border-box; }
-/* 快捷任务 chips 全部平铺，不再有「更多任务」收纳浮层（原手写浮层与 .axn-more-tasks 规则已删）。 */
-.axn-chip.ant-btn { height: 27px; padding: 0 var(--space-2); border: 1px solid color-mix(in srgb, var(--axn-primary) 30%, var(--axn-surface)); background: var(--axn-primary-bg); color: var(--axn-primary-text); border-radius: 7px; font-size: var(--fs-meta); box-shadow: none; transition: background .16s, border-color .16s, color .16s; }
-.axn-chip.ant-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--axn-primary) 16%, var(--axn-surface)); color: var(--axn-primary-text); border-color: color-mix(in srgb, var(--axn-primary) 52%, var(--axn-surface)); }
+.axn-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 2px 6px;
+  border: 0;
+  background: transparent;
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: var(--measure-chat);
+  margin: 0 0 var(--space-1);
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--axn-border) transparent;
+}
+.axn-chips::-webkit-scrollbar { height: 3px; }
+.axn-chips::-webkit-scrollbar-thumb { background: var(--axn-border); border-radius: 999px; }
+/* 统一 chip 外观：标签 / 推荐 / 更多 / 流程同一套尺寸与间距 */
+.axn-chip,
+.axn-chip.ant-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 10px;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--axn-primary) 28%, var(--axn-border));
+  background: color-mix(in srgb, var(--axn-primary) 8%, var(--axn-surface));
+  color: var(--axn-primary-text, #426b94);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: none;
+  transition: background .16s, border-color .16s, color .16s;
+}
+.axn-chip.ant-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--axn-primary) 14%, var(--axn-surface));
+  color: var(--axn-primary-text, #426b94);
+  border-color: color-mix(in srgb, var(--axn-primary) 48%, var(--axn-border));
+}
+.axn-chip--label {
+  font-weight: 600;
+  background: color-mix(in srgb, var(--axn-primary) 14%, var(--axn-surface));
+  border-color: color-mix(in srgb, var(--axn-primary) 36%, var(--axn-border));
+  cursor: default;
+  user-select: none;
+}
 .axn-chip--primary.ant-btn { font-weight: 600; }
-.axn-chip--more.ant-btn { border-style: dashed; background: transparent; color: var(--axn-text-secondary, #667085); }
-.axn-chip-scenario-tag { margin-inline-end: 0 !important; height: 27px; line-height: 25px; border-radius: 7px; }
-.axn-chip:disabled { opacity: .5; }
+.axn-chip--more.ant-btn {
+  background: var(--axn-surface);
+  color: var(--axn-text-secondary, #667085);
+  border-color: var(--axn-border);
+  border-style: solid;
+}
+.axn-chip--more.ant-btn:hover:not(:disabled) {
+  background: var(--axn-soft, #f5f7fa);
+  color: var(--axn-text);
+  border-color: color-mix(in srgb, var(--axn-primary) 28%, var(--axn-border));
+}
+.axn-chip:disabled,
+.axn-chip.ant-btn:disabled { opacity: .5; }
 /* 会话头：默认空白，收起侧边栏按钮居左。
    圆角一体化输入区：快捷 chips 在输入框下方，发送按钮在右下角，与 Sender 共享一层外框；宽屏下限制正文宽度保持留白。 */
 .axn-composer { padding: var(--space-3) var(--space-4) var(--space-4); display: flex; justify-content: center; }
 .axn-composer-shell { width: 100%; max-width: var(--measure-chat); display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-1-5) var(--space-2) var(--space-2); border: 1px solid var(--axn-border); border-radius: var(--radius-xl); background: var(--axn-surface); box-shadow: var(--shadow-md); transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
 .axn-composer-shell:focus-within { border-color: color-mix(in srgb, var(--axn-primary) 45%, var(--axn-border)); }
-.axn-composer-shell .ant-sender { border: 0; background: transparent; box-shadow: none; }
-/* 输入区上方留白：外壳 6px + 这里 6px（原 8+12），收紧但保留呼吸感 */
-.axn-composer-shell .ant-sender-content { padding-top: var(--space-1-5); }
+.axn-composer-shell .ant-sender { border: 0; background: transparent; box-shadow: none; width: 100%; min-width: 0; }
+/* 输入区：首行全文输入，次行左附件 / 右发送，避免回形针旁竖条留白 */
+.axn-composer-shell .ant-sender-content {
+  padding-top: var(--space-1);
+  display: grid !important;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  column-gap: 6px;
+  row-gap: 2px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.axn-composer-shell .ant-sender-prefix {
+  grid-row: 2;
+  grid-column: 1;
+  justify-self: start;
+  align-self: center;
+}
+.axn-composer-shell .ant-sender-actions-list,
+.axn-composer-shell .ant-sender-suffix {
+  grid-row: 2;
+  grid-column: 2;
+  justify-self: end;
+  align-self: center;
+  margin-inline: 0 !important;
+}
+.axn-composer-suffix {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.axn-composer-shell .ant-sender-content > :not(.ant-sender-prefix):not(.ant-sender-actions-list):not(.ant-sender-suffix) {
+  grid-row: 1;
+  grid-column: 1 / -1;
+  min-width: 0 !important;
+  width: 100% !important;
+}
+.axn-composer-shell .ant-sender-input,
+.axn-composer-shell .ant-sender textarea {
+  min-width: 0 !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  line-height: 1.45;
+  padding-block: 2px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .axn-composer-shell .ant-sender:focus-within { box-shadow: none; }
 .axn-composer-footer { display: flex; align-items: flex-end; gap: var(--space-2); }
 .axn-composer-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; padding: var(--space-1) var(--space-1) 0; }
+.axn-composer-event-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 var(--space-1);
+}
+.axn-composer-event-label {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--axn-muted);
+  white-space: nowrap;
+}
+.axn-composer-event-row .axn-cp-select {
+  flex: 1 1 auto;
+  min-width: 0 !important;
+  max-width: none !important;
+  width: 100%;
+  margin-inline-end: 0 !important;
+}
+.axn-composer-event-row .axn-cp-select .ant-select-selector {
+  width: 100%;
+  border-radius: 8px;
+}
 .axn-stage-prompt-picker { display: flex; align-items: center; gap: 10px; flex: 1 1 220px; min-width: 0; font-size: 11px; color: var(--axn-muted); }
 .axn-stage-prompt-picker > span { flex-shrink: 0; white-space: nowrap; }
 .axn-stage-prompt-select { flex: 1 1 auto; min-width: 0; max-width: 100%; }
@@ -103,15 +265,16 @@
   gap: 6px;
   flex-wrap: nowrap;
   padding: 0;
-  align-items: stretch;
+  align-items: center;
 }
 .axn-composer--compact .axn-stage-prompt-picker,
 .axn-assistant--split .axn-stage-prompt-picker {
   flex: 1 1 auto;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 2px;
-  font-size: 10px;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  min-width: 0;
 }
 .axn-composer--compact .axn-stage-prompt-picker > span,
 .axn-assistant--split .axn-stage-prompt-picker > span {
@@ -119,14 +282,26 @@
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.2;
+  max-width: 4.5em;
 }
 .axn-composer--compact .axn-stage-prompt-select,
 .axn-assistant--split .axn-stage-prompt-select {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
 }
 .axn-composer--compact .axn-stage-prompt-select .ant-select-selector,
 .axn-assistant--split .axn-stage-prompt-select .ant-select-selector {
   font-size: 12px;
+}
+.axn-composer--compact .axn-composer-event-row,
+.axn-assistant--split .axn-composer-event-row {
+  padding: 0;
+  gap: 6px;
+}
+.axn-composer--compact .axn-composer-event-label,
+.axn-assistant--split .axn-composer-event-label {
+  font-size: 10px;
 }
 .axn-composer--compact .axn-pending-file,
 .axn-assistant--split .axn-pending-file {
@@ -155,8 +330,7 @@
 .axn-composer--compact .ant-sender textarea,
 .axn-assistant--split .axn-composer .ant-sender textarea {
   font-size: 13px !important;
-  line-height: 1.5 !important;
-  min-height: 44px !important;
+  line-height: 1.45 !important;
 }
 .axn-composer--compact .ant-sender-suffix,
 .axn-assistant--split .axn-composer .ant-sender-suffix,
@@ -166,13 +340,13 @@
   gap: 4px;
   margin-inline: 0;
 }
-.axn-composer--compact .axn-cp-select,
-.axn-assistant--split .axn-cp-select,
+.axn-composer--compact .axn-composer-event-row .axn-cp-select,
+.axn-assistant--split .axn-composer-event-row .axn-cp-select,
 .axn-cp-select--compact.ant-select {
-  min-width: 72px !important;
-  max-width: 128px !important;
-  margin-inline-end: 4px !important;
-  font-size: 11px !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin-inline-end: 0 !important;
+  font-size: 12px !important;
 }
 .axn-composer--compact .axn-cp-select .ant-select-selection-item,
 .axn-assistant--split .axn-cp-select .ant-select-selection-item,
@@ -191,16 +365,22 @@
 }
 .axn-assistant--split .axn-chips {
   max-width: none;
-  margin-bottom: var(--space-1);
+  margin-bottom: 4px;
   gap: 6px;
-  padding-inline: 0;
+  padding: 0 0 4px;
 }
-.axn-assistant--split .axn-chip.ant-btn,
-.axn-assistant--split .axn-chip-scenario-tag {
-  height: 24px;
+.axn-assistant--split .axn-chip,
+.axn-assistant--split .axn-chip.ant-btn {
+  height: 26px;
   font-size: 11px;
-  line-height: 22px;
-  padding-inline: 8px;
+  padding-inline: 9px;
+}
+@media (min-width: 720px) {
+  .axn-chips {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    row-gap: 8px;
+  }
 }
 .axn-file-input-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
 .axn-pending-file, .axn-sent-file { display: flex; align-items: center; gap: 10px; border: 1px solid color-mix(in srgb, var(--axn-primary) 28%, var(--axn-border)); border-radius: 6px; padding: 9px 11px; background: color-mix(in srgb, var(--axn-primary) 6%, var(--axn-surface)); color: var(--axn-primary-text, #426b94); font-size: 12px; overflow-wrap: anywhere; }
@@ -256,8 +436,18 @@
 .axn-artifact-row:last-child { border-bottom: 0; }
 .axn-artifact-label { color: var(--axn-muted); }
 .axn-artifact-value { color: var(--axn-text); text-align: left; overflow-wrap: anywhere; min-width: 0; }
-.axn-artifact-foot { padding: var(--space-4); color: var(--axn-muted); font-size: var(--fs-body); line-height: var(--lh-normal); overflow-wrap: anywhere; background: var(--axn-soft); }
-.axn-artifact-foot .ant-space { row-gap: var(--space-2); }
+.axn-artifact-foot { padding: var(--space-4); color: var(--axn-muted); font-size: var(--fs-body); line-height: var(--lh-normal); overflow-wrap: anywhere; background: var(--axn-soft); box-sizing: border-box; max-width: 100%; }
+.axn-artifact-foot .ant-space { row-gap: var(--space-2); max-width: 100%; }
+.axn-artifact-foot .ant-space-item { max-width: 100%; min-width: 0; }
+.axn-artifact-foot .ant-space-item > span { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
+.axn-artifact-foot .ant-btn {
+  max-width: 100%;
+  height: auto;
+  white-space: normal;
+  text-align: left;
+  line-height: var(--lh-normal);
+  padding-block: 4px;
+}
 .axn-artifact > .ant-btn { margin: var(--space-3) var(--space-4) var(--space-4); }
 .axn-artifact > .ant-alert { margin: var(--space-3) var(--space-4); }
 .axn-resource-results { display: grid; gap: var(--space-2); padding: var(--space-4); }
@@ -411,12 +601,14 @@
 /* ChatPanel 工具类 */
 .axn-cp-title { font-size: var(--fs-lead); flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .axn-cp-compact { width: 100%; margin-top: var(--space-2); }
-.axn-cp-chips-wrap { display: flex; justify-content: center; padding: 0 var(--space-4); width: 100%; box-sizing: border-box; }
-/* 关联灾情：无边框 + 品牌蓝文字；选择器与下拉略加宽，减少事件名被截断 */
-.axn-cp-select.ant-select { min-width: 140px; max-width: 320px; font-size: var(--fs-meta); margin-inline-end: var(--space-1-5); }
-.axn-cp-select .ant-select-content, .axn-cp-select .ant-select-content-placeholder { color: var(--axn-primary); }
+.axn-cp-chips-wrap { display: flex; justify-content: center; padding: 0 var(--space-3); width: 100%; box-sizing: border-box; }
+/* 关联灾情：品牌蓝文字；在独立行内撑满宽度 */
+.axn-cp-select.ant-select { min-width: 0; font-size: var(--fs-meta); }
+.axn-cp-select .ant-select-content, .axn-cp-select .ant-select-content-placeholder,
+.axn-cp-select .ant-select-selection-item { color: var(--axn-primary); }
 .axn-cp-select .ant-select-suffix, .axn-cp-select .ant-select-suffix .anticon { color: var(--axn-primary); }
-.axn-cp-select.ant-select:hover .ant-select-content { color: color-mix(in srgb, var(--axn-primary) 78%, var(--axn-text)); }
+.axn-cp-select.ant-select:hover .ant-select-content,
+.axn-cp-select.ant-select:hover .ant-select-selection-item { color: color-mix(in srgb, var(--axn-primary) 78%, var(--axn-text)); }
 .axn-cp-select-option-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .axn-cp-select-tip { max-width: 320px; font-size: var(--fs-meta); line-height: 1.45; }
 .axn-cp-select-tip-title { font-weight: 600; margin-bottom: 4px; }

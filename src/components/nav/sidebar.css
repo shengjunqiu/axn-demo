@@ -158,6 +158,133 @@
   background: color-mix(in srgb, var(--axn-primary) 5%, transparent);
 }
 
+/* ── 建设四智能体 ── */
+.axn-gs-agents {
+  padding: 0 var(--space-2) var(--space-2);
+  flex-shrink: 0;
+}
+.axn-gs-agents-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-1) 6px;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--axn-muted);
+  letter-spacing: .04em;
+}
+.axn-gs-agents-clear {
+  border: 0;
+  background: transparent;
+  color: var(--axn-primary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.axn-gs-agents-clear:hover { text-decoration: underline; }
+.axn-gs-agents-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.axn-gs-agent-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--axn-text) 4%, transparent);
+  color: var(--axn-text);
+  cursor: pointer;
+  text-align: left;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.axn-gs-agent-chip:hover {
+  background: color-mix(in srgb, var(--axn-primary) 8%, transparent);
+  border-color: color-mix(in srgb, var(--axn-primary) 20%, transparent);
+}
+.axn-gs-agent-chip.is-active {
+  background: color-mix(in srgb, var(--axn-primary) 12%, var(--axn-surface));
+  border-color: color-mix(in srgb, var(--axn-primary) 40%, transparent);
+  color: var(--axn-primary-text, #426b94);
+}
+.axn-gs-agent-chip-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--axn-primary) 12%, transparent);
+  color: var(--axn-primary);
+}
+.axn-gs-agent-chip.is-active .axn-gs-agent-chip-icon {
+  background: var(--axn-primary);
+  color: #fff;
+}
+.axn-gs-agent-chip-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.axn-gs-agent-chip-name {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.axn-gs-agent-chip-scene {
+  font-size: 10px;
+  color: var(--axn-muted);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.axn-gs-agent-chip.is-active .axn-gs-agent-chip-scene {
+  color: color-mix(in srgb, var(--axn-primary) 70%, var(--axn-muted));
+}
+.axn-gs-event {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--axn-text);
+  cursor: pointer;
+  text-align: left;
+  transition: background .12s;
+}
+.axn-gs-event:hover {
+  background: color-mix(in srgb, var(--axn-primary) 8%, transparent);
+}
+.axn-gs-event.is-active {
+  background: color-mix(in srgb, var(--axn-primary) 12%, var(--axn-surface));
+  color: var(--axn-primary-text, #426b94);
+}
+.axn-gs-event-title {
+  font-size: var(--fs-body);
+  font-weight: 500;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.axn-gs-event-meta {
+  font-size: 11px;
+  color: var(--axn-muted);
+  line-height: 1.2;
+}
+
 /* ── 搜索 ── */
 .axn-gs-search {
   padding: 0 var(--space-2-5) var(--space-2);

@@ -338,14 +338,14 @@ svg.lucide {
 
   .axn-shell-navtoggle {
     position: fixed;
-    top: var(--space-2-5);
-    left: var(--space-2-5);
+    top: 8px;
+    left: 8px;
     z-index: 70;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     padding: 0;
     border: 1px solid var(--axn-border);
     border-radius: var(--radius-md);
@@ -360,6 +360,12 @@ svg.lucide {
   /* 抽屉展开时收起汉堡按钮：它 z-index(70) 高于侧栏(60)，不收会压在抽屉品牌区之上。
      用 visibility 而非 display:none，保留节点让关闭后能把焦点还给它。 */
   .axn-shell-navtoggle.is-open { visibility: hidden; }
+
+  /* 勿给 .axn-shell-main 整列加 padding-left：窄屏(~390) 上会挤出右侧溢出。
+     汉堡避让只做在顶栏（见 chat.css / doc.css）。 */
+  .axn-shell-main {
+    overflow-x: hidden;
+  }
 }
 
 /* 安小能对话滚动区 */

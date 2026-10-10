@@ -38,7 +38,12 @@ function evidenceSrc(path: string): string {
   return `${import.meta.env.BASE_URL}${cleaned}`;
 }
 
-export default function OriginalSystemWorkspace() {
+export default function OriginalSystemWorkspace({
+  /** 栏目内跳转前缀；一期嵌入页传 `/phase1`，默认原系统独立路由 */
+  linkBase = '/originalSystems',
+}: {
+  linkBase?: string;
+} = {}) {
   const { system = 'coordination' } = useParams();
   const [query] = useSearchParams();
   const navigate = useNavigate();
@@ -55,6 +60,7 @@ export default function OriginalSystemWorkspace() {
   const page = originalPage(system, pageId);
   const eventId = query.get('event') ?? '';
   const reportId = query.get('report');
+  const systemPath = (nextSystem: string, search: string) => `${linkBase}/${nextSystem}?${search}`;
 
   let records: ReturnType<typeof readOriginalMaterials> = [];
   let error = '';
@@ -93,11 +99,14 @@ export default function OriginalSystemWorkspace() {
     setFilterDraft({});
     setApplied({});
     navigate(
-      `/originalSystems/${nextSystem}?${new URLSearchParams({
-        page: nextPage,
-        event: eventId,
-        ...(report ? { report } : {}),
-      })}`,
+      systemPath(
+        nextSystem,
+        new URLSearchParams({
+          page: nextPage,
+          event: eventId,
+          ...(report ? { report } : {}),
+        }).toString(),
+      ),
     );
   };
 
@@ -431,10 +440,13 @@ export default function OriginalSystemWorkspace() {
                                       type="link"
                                       onClick={() =>
                                         navigate(
-                                          `/originalSystems/coordination?${new URLSearchParams({
-                                            page: 'E02',
-                                            event: row.id,
-                                          })}`,
+                                          systemPath(
+                                            'coordination',
+                                            new URLSearchParams({
+                                              page: 'E02',
+                                              event: row.id,
+                                            }).toString(),
+                                          ),
                                         )
                                       }
                                     >

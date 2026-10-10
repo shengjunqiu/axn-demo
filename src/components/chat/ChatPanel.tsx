@@ -67,7 +67,8 @@ import './chat.css';
 const { Text } = Typography;
 
 export interface ChatPanelProps {
-  onOpenDrawer: (target: 'resource' | 'knowledge', options?: { tab?: 'list' | 'map' }) => void;
+  /** 悬浮嵌入等场景可不传；资源/知识抽屉仅在主工作台打开 */
+  onOpenDrawer?: (target: 'resource' | 'knowledge', options?: { tab?: 'list' | 'map' }) => void;
   compact?: boolean;
 }
 
@@ -123,7 +124,9 @@ function incidentOptionDetail(value: string) {
   );
 }
 
-export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelProps) {
+const noopOpenDrawer: NonNullable<ChatPanelProps['onOpenDrawer']> = () => {};
+
+export default function ChatPanel({ onOpenDrawer = noopOpenDrawer, compact = false }: ChatPanelProps) {
   const navigate = useNavigate();
   const { token } = theme.useToken();
   const { modal, message: notice } = AntdApp.useApp();
@@ -465,16 +468,35 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   };
 
   const chipSplit = useMemo(() => splitQuickTasksByStage(eventStage), [eventStage]);
-  const moreActionItems: MenuProps['items'] = useMemo(
-    () => chipSplit.secondary.map((item) => ({
+  // 主区只平铺当前阶段操作；阶段外任务、回环与整体业务流程一律进「更多动作」（PC/手机同一套）
+  const moreActionItems: MenuProps['items'] = useMemo(() => {
+    const taskItems = chipSplit.secondary.map((item) => ({
       key: item.label,
       label: `${tenderName(item.label)}（${tenderName(item.agentName)}）`,
       disabled: !session || busy,
       onClick: () => { void handleQuickTask(item.label); },
-    })),
-    // handleQuickTask 依赖 session/busy；用标签列表作稳定依赖即可
-    [chipSplit.secondary, session?.sessionId, busy],
-  );
+    }));
+    const loopItems = chipSplit.loopLabels.map((label) => ({
+      key: `loop:${label}`,
+      label: tenderName(label),
+      disabled: !session || busy,
+      onClick: () => { void handleQuickTask(label); },
+    }));
+    const items: MenuProps['items'] = [...taskItems];
+    if (loopItems.length > 0) {
+      items.push({ type: 'divider' }, ...loopItems);
+    }
+    items.push(
+      { type: 'divider' },
+      {
+        key: '__overall-flow__',
+        label: '整体业务流程',
+        disabled: !session || busy,
+        onClick: () => setFlow('现场智能勘察'),
+      },
+    );
+    return items;
+  }, [chipSplit.secondary, chipSplit.loopLabels, session?.sessionId, busy]);
 
   const pending = session?.pendingClarification && tasks[session.pendingClarification.taskId]?.intent !== 'doc_daily' ? session.pendingClarification : null;
   const submitClarification = () => {
@@ -542,18 +564,17 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
     });
   };
 
-  // 关联灾情选择器：与发送/语音按钮同排，位于其左侧；已选值与下拉项均悬浮展示详情（文案易截断）
+  // 关联灾情：独立成行，避免挤进 Sender suffix 把窄屏输入框压成竖排字
   const incidentSelect = (
     <Tooltip title={incidentOptionDetail(linkValue)} placement="top" mouseEnterDelay={0.25}>
       <Select
         size="small"
-        variant="borderless"
         className={`axn-cp-select${compact ? ' axn-cp-select--compact' : ''}`}
         classNames={{ popup: { root: compact ? 'axn-cp-select-popup axn-cp-select-popup--compact' : 'axn-cp-select-popup' } }}
         value={linkValue}
         onChange={handleLinkChange}
         options={linkOptions}
-        popupMatchSelectWidth={false}
+        popupMatchSelectWidth={compact ? true : false}
         optionRender={(option) => (
           <Tooltip
             title={incidentOptionDetail(String(option.value ?? BLANK_LINK))}
@@ -846,22 +867,20 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         </div>
       )}
 
-      {/* 快捷任务：场景关键推荐平铺 + 其余收入「更多动作」 */}
+      {/* 快捷任务：仅平铺当前事件阶段主推；其余进「更多动作」 */}
       <div className="axn-cp-chips-wrap">
         <div className="axn-chips" data-testid="quick-task-chips">
           {chipSplit.scenarioLabel ? (
-            <Tag className="axn-chip-scenario-tag" color="blue">
+            <span className="axn-chip axn-chip--label" title="当前场景">
               {tenderName(chipSplit.scenarioLabel)}
-            </Tag>
+            </span>
           ) : null}
           {chipSplit.primary.map(({ label, agentName, agentId }) => (
             <Button
               key={label}
               size="small"
-              type="primary"
-              ghost
               className="axn-chip axn-chip--primary"
-              title={`${tenderName(agentName)} · 当前场景推荐`}
+              title={`${tenderName(agentName)} · 当前阶段推荐`}
               data-agent-id={agentId}
               data-testid={`chip-primary-${label}`}
               disabled={!session || busy}
@@ -870,22 +889,19 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
               {tenderName(label)}
             </Button>
           ))}
-          {chipSplit.secondary.length > 0 ? (
-            <Dropdown menu={{ items: moreActionItems }} trigger={['click']} placement="topLeft">
-              <Button
-                size="small"
-                className="axn-chip axn-chip--more"
-                disabled={!session || busy}
-                data-testid="chip-more-actions"
-              >
-                更多动作
-              </Button>
-            </Dropdown>
-          ) : null}
-          <Button size="small" disabled={!session || busy} onClick={() => setFlow('现场智能勘察')}>整体业务流程</Button>
+          <Dropdown menu={{ items: moreActionItems }} trigger={['click']} placement="topLeft">
+            <Button
+              size="small"
+              className="axn-chip axn-chip--more"
+              disabled={!session || busy}
+              data-testid="chip-more-actions"
+            >
+              更多动作
+            </Button>
+          </Dropdown>
         </div>
       </div>
-      {/* 圆角一体化输入区：关联灾情与发送/语音按钮同在输入框右下角；分屏时用 compact 收紧内部布局 */}
+      {/* 圆角输入区：灾情选择独立成行，Sender 只保留附件与发送，避免窄屏挤爆 */}
       <div className={`axn-composer${compact ? ' axn-composer--compact' : ''}`}>
         <div className="axn-composer-shell">
           <div className="axn-composer-toolbar">
@@ -894,7 +910,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
               <Select
                 size="small"
                 allowClear
-                placeholder={compact ? '选择提问或模拟文件' : '选择后填入输入框，由你点击发送'}
+                placeholder={compact ? '选择提问或文件' : '选择后填入输入框，由你点击发送'}
                 value={choicePicker || undefined}
                 disabled={!session || busy || !eventStage}
                 aria-label="选择提问或模拟文件"
@@ -921,6 +937,10 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
                 ? `资料${session?.materials?.length ? ` ${session.materials.length}` : ''}`
                 : `资料${session?.materials?.length ? `（${session.materials.length}）` : ''}`}
             </Button>
+          </div>
+          <div className="axn-composer-event-row">
+            <span className="axn-composer-event-label">关联灾情</span>
+            {incidentSelect}
           </div>
           {pendingAttachment && (
             <div className="axn-pending-file" data-testid="pending-attachment">
@@ -968,14 +988,14 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
               </Tooltip>
             )}
             suffix={(_, { components: { LoadingButton, SendButton, SpeechButton } }) => (
-              <>
-                {incidentSelect}
-                {/* 空输入且无附件→语音；有文字→SendButton；仅附件→自定义发送（避免 Sender 禁用空值） */}
+              <span className="axn-composer-suffix">
+                {/* 发送按钮始终可见；空内容时 SendButton 自带禁用。仅附件时用自定义发送（Sender 禁空提交）。 */}
+                {runningTask == null && !input.trim() && !pendingAttachment && (
+                  <SpeechButton variant="text" color="default" shape="circle" />
+                )}
                 {runningTask != null ? (
                   <LoadingButton />
-                ) : input.trim() ? (
-                  <SendButton />
-                ) : pendingAttachment ? (
+                ) : pendingAttachment && !input.trim() ? (
                   <Button
                     type="primary"
                     shape="circle"
@@ -986,16 +1006,16 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
                     发
                   </Button>
                 ) : (
-                  <SpeechButton variant="solid" color="primary" shape="circle" />
+                  <SendButton type="primary" shape="circle" />
                 )}
-              </>
+              </span>
             )}
-            autoSize={compact ? { minRows: 2, maxRows: 4 } : { minRows: 3, maxRows: 6 }}
+            autoSize={compact ? { minRows: 1, maxRows: 4 } : { minRows: 1, maxRows: 5 }}
             placeholder={
               session
                 ? (pendingAttachment
                   ? (compact ? '可补充说明后发送' : '可补充说明后发送，或直接发送附件')
-                  : (compact ? '向安小能发送指令…' : '向安小能发送指令，Enter 发送；可点回形针添加资料'))
+                  : (compact ? '输入指令…' : '向安小能发送指令，Enter 发送'))
                 : '会话初始化中…'
             }
             disabled={!session || !!generatingDocument}

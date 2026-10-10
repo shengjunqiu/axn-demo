@@ -1,21 +1,23 @@
 /**
  * 全局导航 + 对话历史管理侧栏（UI 改版）：
- * 区域：品牌（左上，保留安小能身份与模拟环境标识）/ 一级功能导航（含独立「文书库」）/
- * 新建（新建对话=对话模式；「新建任务」工作模式入口暂时下线）/ 搜索 / 历史会话 / 底部账户区
- * （当前用户头像 + 名称 + 设置菜单：切换用户身份、对话与通知设置）。
- * 改版要点：原全宽业务页头移除，其承载项下移至侧栏底部；折叠与收藏功能保持移除状态。
+ * 区域：品牌 / 新建 / 一级导航 / 建设四智能体（点选后下方仅展示关联可选事件）/
+ * 搜索 / 历史会话 / 底部账户区。
  * 全部数据为模拟数据。
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { NAV_PATH } from './navRoutes';
 import {
   Bot,
+  ClipboardCheck,
   // Clock, // 恢复「定时任务」侧栏入口时一并取回
   // FilePlus, // 恢复「新建任务」按钮时一并取回
   // FlaskConical, // 恢复「知识库」侧栏入口时一并取回
+  Flame,
   FolderOpen,
   // LayoutGrid, // 恢复「应急项目」侧栏入口时一并取回
+  Lightbulb,
+  MonitorSmartphone,
   Pin,
   Plus,
   RotateCcw,
@@ -23,6 +25,7 @@ import {
   Settings,
   Sparkles,
   Trash2,
+  Wrench,
 } from 'lucide-react'
 import { App as AntdApp, Avatar, Button, Divider, Drawer, Dropdown, Empty, Input, Popconfirm, Radio, Tooltip } from 'antd';
 import type { Conversation, ConversationSettings, NavPage } from '@/domain/types';
@@ -38,11 +41,26 @@ import { useSessionStore } from '@/store/sessionStore';
 import { useActiveScope, useWorkspaceStore, type WorkMode } from '@/store/workspaceStore';
 import { resetDemoData } from '@/store/resetDemo';
 import { actors } from '@/seed/scenario';
+import {
+  conversationMatchesAgent,
+  matchEventKeyword,
+  optionalEventsForAgent,
+  SIDEBAR_AGENTS,
+  type SidebarAgentId,
+} from '@/services/sidebarAgentFilter';
+import type { VueWorkspaceEventMeta } from '@/seed/vueWorkspaceEvents';
 import './sidebar.css';
+
+const SIDEBAR_AGENT_ICONS: Record<SidebarAgentId, ReactNode> = {
+  situation: <Flame size={14} />,
+  resource: <Wrench size={14} />,
+  plan: <Lightbulb size={14} />,
+  evaluation: <ClipboardCheck size={14} />,
+};
 
 type NavKey = NavPage;
 
-const NAV: { key: NavKey; label: string; icon: React.ReactNode }[] = [
+const NAV: { key: NavKey; label: string; icon: ReactNode }[] = [
   { key: 'library', label: '文书库', icon: <FolderOpen /> },
   { key: 'assistant', label: '智能助理', icon: <Sparkles /> },
   // 「应急项目」「定时任务」「知识库」三个入口按下线标注从侧栏隐藏：
@@ -52,6 +70,16 @@ const NAV: { key: NavKey; label: string; icon: React.ReactNode }[] = [
   { key: 'agents', label: '智能体与 Skill', icon: <Bot /> },
   // { key: 'schedules', label: '定时任务', icon: <Clock /> },
   // { key: 'knowledge', label: '知识库', icon: <FlaskConical /> },
+];
+
+/** 非 NavPage 的侧栏快捷入口（一期嵌入等独立全屏页）。 */
+const EXTRA_NAV: { path: string; label: string; icon: ReactNode; testId: string }[] = [
+  {
+    path: '/phase1/coordination',
+    label: '一期系统嵌入',
+    icon: <MonitorSmartphone size={16} />,
+    testId: 'nav-phase1-host',
+  },
 ];
 
 /** 对话与通知设置（轻量展示，需求 2.6）+ 演示数据重置入口（现场一键回到初始场景）。 */
@@ -143,6 +171,8 @@ export default function GlobalSidebar() {
 
   const [keyword, setKeyword] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  /** null=全部会话；选中建设智能体后仅展示关联可选事件（及匹配阶段的会话） */
+  const [activeAgentId, setActiveAgentId] = useState<SidebarAgentId | null>(null);
 
   /** 未保存编辑保护：关闭 / 切换文书、会话或导航前确认（取消保留编辑；继续也不丢弃，工作副本仍在 store 里）。 */
   const guardDirty = useCallback(
@@ -192,7 +222,19 @@ export default function GlobalSidebar() {
     () => Object.values(conversations).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
     [conversations],
   );
-  const filtered = useMemo(() => list.filter((c) => !/值班|值守/.test(c.title) && matchConversation(c, keyword)), [list, keyword]);
+  const filtered = useMemo(
+    () => list.filter(
+      (c) => !/值班|值守/.test(c.title)
+        && matchConversation(c, keyword)
+        && conversationMatchesAgent(c, activeAgentId),
+    ),
+    [list, keyword, activeAgentId],
+  );
+
+  const relatedEvents = useMemo(() => {
+    if (!activeAgentId) return [] as VueWorkspaceEventMeta[];
+    return optionalEventsForAgent(activeAgentId).filter((e) => matchEventKeyword(e, keyword));
+  }, [activeAgentId, keyword]);
 
   const groups = useMemo(() => {
     const map = new Map<ConversationGroup, Conversation[]>();
@@ -206,6 +248,27 @@ export default function GlobalSidebar() {
       .map((g) => ({ group: g, items: map.get(g) ?? [] }))
       .filter((entry) => entry.items.length > 0);
   }, [filtered]);
+
+  const openEventConversation = useCallback((event: VueWorkspaceEventMeta) => {
+    guardDirty('关联事件并对话', () => {
+      const existing = Object.values(useConversationStore.getState().conversations)
+        .filter((c) => c.eventId === event.eventId)
+        .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0];
+      if (existing) {
+        selectConversation(existing.id);
+      } else {
+        const conversation = createConversation({
+          title: event.name,
+          type: 'emergency',
+          eventId: event.eventId,
+          summary: `${event.stage} · ${event.category}`,
+          status: 'active',
+        });
+        selectConversation(conversation.id);
+      }
+      navigate(NAV_PATH.assistant);
+    });
+  }, [guardDirty, selectConversation, createConversation, navigate]);
 
   return (
     // 颜色统一走 main.tsx 注入 :root 的 --axn-*：这里原先另起了一套侧栏级局部变量，
@@ -266,23 +329,115 @@ export default function GlobalSidebar() {
             <span>{item.label}</span>
           </button>
         ))}
+        {EXTRA_NAV.map((item) => (
+          <button
+            key={item.path}
+            className="axn-gs-nav-item"
+            data-testid={item.testId}
+            onClick={() => guardDirty('打开一期系统嵌入', () => navigate(item.path))}
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </button>
+        ))}
       </nav>
 
-      {/* 4. 对话搜索 */}
+      {/* 4. 建设四智能体：点击后下方仅展示该智能体阶段关联的可选事件 */}
+      <div className="axn-gs-agents" data-testid="sidebar-agents">
+        <div className="axn-gs-agents-head">
+          <span>建设智能体</span>
+          {activeAgentId ? (
+            <button
+              type="button"
+              className="axn-gs-agents-clear"
+              onClick={() => setActiveAgentId(null)}
+              data-testid="sidebar-agent-clear"
+            >
+              全部
+            </button>
+          ) : null}
+        </div>
+        <div className="axn-gs-agents-grid" role="listbox" aria-label="建设智能体筛选">
+          {SIDEBAR_AGENTS.map((agent) => {
+            const active = activeAgentId === agent.id;
+            return (
+              <button
+                key={agent.id}
+                type="button"
+                role="option"
+                aria-selected={active}
+                className={`axn-gs-agent-chip${active ? ' is-active' : ''}`}
+                title={`${agent.name} · ${agent.scene}`}
+                data-testid={`sidebar-agent-${agent.id}`}
+                onClick={() => {
+                  setActiveAgentId((prev) => (prev === agent.id ? null : agent.id));
+                  if (activeNav !== 'assistant') {
+                    guardDirty('切换到智能助理', () => navigate(NAV_PATH.assistant));
+                  }
+                }}
+              >
+                <span className="axn-gs-agent-chip-icon" aria-hidden>
+                  {SIDEBAR_AGENT_ICONS[agent.id]}
+                </span>
+                <span className="axn-gs-agent-chip-text">
+                  <span className="axn-gs-agent-chip-name">{agent.shortName}</span>
+                  <span className="axn-gs-agent-chip-scene">{agent.scene}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 5. 对话搜索 */}
       <div className="axn-gs-search">
         <Input
           allowClear
           prefix={<Search style={{ color: 'var(--axn-faint)' }} />}
-          placeholder="搜索对话或事件"
+          placeholder={activeAgentId ? '搜索关联事件' : '搜索对话或事件'}
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           data-testid="conversation-search"
         />
       </div>
 
-      {/* 5. 历史会话 */}
+      {/* 6. 历史会话 / 智能体关联可选事件 */}
       <div className="axn-gs-history" data-testid="conversation-history">
-        {filtered.length === 0 ? (
+        {activeAgentId ? (
+          relatedEvents.length === 0 ? (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={keyword ? `未找到与「${keyword}」匹配的关联事件` : '暂无该智能体关联的可选事件'}
+              style={{ marginTop: 32 }}
+            />
+          ) : (
+            <div data-testid="sidebar-related-events">
+              <div className="axn-gs-group-label">
+                {SIDEBAR_AGENTS.find((a) => a.id === activeAgentId)?.scene ?? '关联'} · 可选事件
+              </div>
+              {relatedEvents.map((event) => {
+                const linked = filtered.find((c) => c.eventId === event.eventId);
+                const active = linked?.id === activeConversationId;
+                return (
+                  <button
+                    key={event.eventId}
+                    type="button"
+                    className={`axn-gs-event${active ? ' is-active' : ''}`}
+                    data-testid={`sidebar-event-${event.eventId}`}
+                    aria-current={active ? 'true' : undefined}
+                    onClick={() => openEventConversation(event)}
+                  >
+                    <span className="axn-gs-event-title">{event.name}</span>
+                    <span className="axn-gs-event-meta">
+                      {event.stage} · {event.category}
+                      {linked ? ' · 已有会话' : ''}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )
+        ) : filtered.length === 0 ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description={keyword ? `未找到与「${keyword}」匹配的会话` : '暂无历史会话'}

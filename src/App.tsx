@@ -42,6 +42,13 @@ const NavPageContent = lazy(() => import('@/components/nav/NavPages').then(m => 
 const DisasterEventsPage = lazy(() => import('@/components/events/DisasterEventsPage'));
 const OriginalSystemWorkspace = lazy(() => import('@/components/workspace/OriginalSystemWorkspace'));
 const PrintView = lazy(() => import('@/components/doc/PrintView'));
+const MobileAssistantPreview = lazy(() => import('@/components/mobile/MobileAssistantPreview'));
+const Phase1HostPage = lazy(() => import('@/components/phase1/Phase1HostPage'));
+
+/** 手机端预览页：独立全屏舞台，不走桌面侧栏外壳。 */
+const MOBILE_PREVIEW_PATH = '/mobile';
+/** 一期系统嵌入页：原系统全屏背景 + 悬浮安小能，不走桌面侧栏外壳。 */
+const PHASE1_HOST_PREFIX = '/phase1';
 
 /** 工作区抽屉目标（资源/知识面板由对话任务卡触发的抽屉承载）。 */
 export type WorkspaceTab = 'resource' | 'knowledge';
@@ -85,6 +92,7 @@ export default function AppRoot() {
 
   // URL 是导航的唯一权威；store 的 activeNav 只跟着 URL 走，用来驱动侧栏高亮。
   useUrlNavSync();
+  const location = useLocation();
 
   // 刷新恢复：让业务上下文（事件/会话）对齐已持久化的 activeConversation
   useEffect(() => {
@@ -106,7 +114,6 @@ export default function AppRoot() {
   // 阈值必须与 global.css 的 @media (max-width: 767px) 一致，否则 JS 状态与 CSS 定位脱节。
   const isCompact = useMediaQuery('(max-width: 767px)');
   const [navOpen, setNavOpen] = useState(false);
-  const location = useLocation();
   const navToggleRef = useRef<HTMLButtonElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
   const pendingNavFocusRef = useRef(false);
@@ -154,6 +161,30 @@ export default function AppRoot() {
       : undefined,
     [isCompact, sidebarCollapsed],
   );
+
+  // 手机端预览：全屏舞台 + iPhone 边框，内嵌 /assistant，不渲染桌面侧栏。
+  if (location.pathname === MOBILE_PREVIEW_PATH) {
+    return (
+      <Suspense fallback={<div className="axn-mobile-preview" />}>
+        <MobileAssistantPreview />
+      </Suspense>
+    );
+  }
+
+  // 一期系统嵌入：原系统为背景，右下角悬浮安小能（默认收起）。
+  if (location.pathname === PHASE1_HOST_PREFIX || location.pathname.startsWith(`${PHASE1_HOST_PREFIX}/`)) {
+    const phase1System = location.pathname.slice(PHASE1_HOST_PREFIX.length).replace(/^\//, '');
+    if (!phase1System) {
+      return <Navigate to={`${PHASE1_HOST_PREFIX}/coordination`} replace />;
+    }
+    return (
+      <Suspense fallback={<div className="axn-phase1-host" />}>
+        <Routes>
+          <Route path="/phase1/:system?" element={<Phase1HostPage />} />
+        </Routes>
+      </Suspense>
+    );
+  }
 
   return (
     <div className="axn-shell">

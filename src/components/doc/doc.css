@@ -560,6 +560,13 @@
   .doc-detail-scroll { padding: var(--space-4); }
 }
 
+/* 窄屏：文书顶栏避让固定汉堡，避免与标题/操作重叠 */
+@media (max-width: 767px) {
+  .doc-detail-toolbar--full {
+    padding-left: 52px;
+  }
+}
+
 .doc-detail-toolbar--full .ant-btn { border-radius: 7px; box-shadow: none; font-size: var(--fs-body); height: 32px; }
 .doc-detail-toolbar--full .ant-btn-default { border-color: var(--axn-border); }
 .doc-detail-breadcrumb > .ant-tag { font-size: var(--fs-meta); color: var(--axn-muted); background: var(--axn-canvas); }

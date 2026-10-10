@@ -25,15 +25,26 @@ describe('agentFlow', () => {
     expect(judgment.primary.map((item) => item.label)).toEqual(['生成灾情摘要', '生成态势报告', '核对道路天气']);
     expect(judgment.secondary.some((item) => item.label === '评估救援效果')).toBe(true);
     expect(judgment.secondary.some((item) => item.label === '生成灾情摘要')).toBe(false);
+    expect(judgment.loopLabels).toEqual([]);
 
     const rescue = splitQuickTasksByStage('救援中');
     expect(rescue.primary.map((item) => item.label)).toEqual([
-      '核对资源状态',
       '生成救援方案',
       '生成应急要情',
+      '核对资源状态',
     ]);
     expect(rescue.primary.some((item) => item.label === '生成会议纪要')).toBe(false);
     expect(rescue.secondary.some((item) => item.label === '生成会议纪要')).toBe(false);
+    expect(rescue.secondary.some((item) => item.label === '生成灾情摘要')).toBe(true);
+    expect(rescue.loopLabels).toEqual(['返回力量投送', '补充态势研判']);
+
+    const force = splitQuickTasksByStage('力量投送中');
+    expect(force.primary.map((item) => item.label)).toEqual([
+      '查询周边救援资源',
+      '生成周边资源报告',
+      '生成救援方案',
+    ]);
+    expect(force.secondary.some((item) => item.label === '生成应急要情')).toBe(true);
   });
 
   it('无阶段时全部进入折叠区', () => {
