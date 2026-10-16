@@ -45,7 +45,10 @@ export default defineConfig({
   optimizeDeps: {
     // 图标已迁移至 lucide-react，@ant-design/icons 仅作为 antd / @ant-design/x 的
     // 间接依赖存在，这里无需再显式预构建。
-    include: ['antd'],
+    // jszip 由 prototypeExports 动态 import（只在导出文书时才加载），启动扫描发现不了；
+    // 不预声明的话，首次点击导出会触发中途 re-optimize + 强制整页 reload，
+    // 并且已打开的页面会因 deps chunk 哈希改名而报 “file does not exist”。
+    include: ['antd', 'jszip'],
   },
   test: {
     pool: 'vmThreads',

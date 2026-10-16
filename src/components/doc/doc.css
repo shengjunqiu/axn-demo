@@ -283,9 +283,52 @@
 .axn-redhead-body p {
   font-size: 21px;
   line-height: 1.78;
-  margin: 0 0 2px;
+  margin: 0 0 0.55em;
   text-align: justify;
   text-indent: 2em;
+  overflow-wrap: anywhere;
+}
+
+/* 节内小标题 / 编号条目：顶格、略加重，与正文段区分 */
+.axn-redhead-body p.axn-redhead-subhead {
+  text-indent: 0;
+  font-weight: 600;
+  margin-top: 0.85em;
+  margin-bottom: 0.3em;
+  text-align: left;
+}
+
+.axn-redhead-body p.axn-redhead-subhead:first-child {
+  margin-top: 0;
+}
+
+/* 建设场景表格章节（监测数据 / 资源候选等）：管道文本还原为正式表 */
+.axn-redhead-table-wrap {
+  margin: var(--space-2) 0 var(--space-3);
+  overflow-x: auto;
+}
+
+.axn-redhead-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.axn-redhead-table th,
+.axn-redhead-table td {
+  border: 1px solid #333;
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+  text-indent: 0;
+  word-break: break-word;
+}
+
+.axn-redhead-table th {
+  background: #f3f3f3;
+  font-weight: 600;
+  text-align: center;
 }
 
 /* 富文本正文（正文在 store 里以 HTML 片段存放）：execCommand 会产出 <div>/<ul>/<font size>，
@@ -458,7 +501,8 @@
 .doc-library-page { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .doc-workspace { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .doc-workspace-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-.doc-workspace .doc-center { flex: 1; min-height: 0; }
+.doc-workspace .doc-center,
+.doc-workspace .axn-resource-panel { flex: 1; min-height: 0; }
 .doc-center--library { flex: 1; min-height: 0; }
 .doc-library-drafts { display: flex; flex-direction: column; gap: var(--space-3); }
 .doc-center-empty {
@@ -550,13 +594,23 @@
 @media (prefers-reduced-motion: reduce) { .doc-sample-row, .doc-file-arrow { transition: none; } }
 
 .doc-detail-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.doc-detail-toolbar--full { flex-shrink: 0; flex-wrap: wrap; padding: var(--space-3-5) var(--space-6); background: var(--axn-surface); border-bottom: 1px solid var(--axn-border); }
-.doc-toolbar-heading { flex: 1; min-width: 120px; }
+.doc-detail-toolbar--full { container: document-actions / inline-size; flex-shrink: 0; flex-wrap: wrap; padding: var(--space-3-5) var(--space-6); background: var(--axn-surface); border-bottom: 1px solid var(--axn-border); }
+.doc-toolbar-heading { flex: 1; min-width: 0; }
 .doc-toolbar-title { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
-.doc-toolbar-title h2 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-h4); line-height: var(--lh-normal); font-weight: 600; }
+.doc-toolbar-title h2 { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-h4); line-height: var(--lh-normal); font-weight: 600; }
 .doc-toolbar-title .ant-tag { flex-shrink: 0; font-size: var(--fs-meta); color: var(--axn-muted); }
 .doc-toolbar-subtitle { font-size: var(--fs-body); color: var(--axn-muted); margin-top: var(--space-1); }
 .doc-toolbar-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-2); }
+.doc-toolbar-navigation { display: flex; align-items: center; flex-shrink: 0; gap: 4px; }
+.doc-toolbar-navigation .ant-btn { width: 32px; padding: 0; }
+.doc-detail-toolbar--full .ant-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+@container document-actions (max-width: 580px) {
+  .doc-toolbar-heading { flex: 1 0 100%; box-sizing: border-box; }
+  .doc-toolbar-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 8px; }
+  .doc-toolbar-actions > .ant-btn { width: 100%; min-width: 0; padding-inline: 8px; }
+  .doc-toolbar-actions > .ant-btn:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .doc-toolbar-subtitle { font-size: var(--fs-meta); }
+}
 .doc-detail-scroll { overflow-y: auto; min-height: 0; padding: var(--space-7); scrollbar-width: thin; scrollbar-color: var(--axn-border) transparent; }
 .doc-document-meta { display: flex; gap: var(--space-4); flex-wrap: wrap; color: var(--axn-muted); font-size: var(--fs-meta); }
 .doc-document-meta > span { display: flex; gap: var(--space-2); align-items: center; }
@@ -600,12 +654,18 @@
 .doc-detail-toolbar--full .ant-btn { border-radius: var(--radius-sm); box-shadow: none; font-size: var(--fs-body); height: 32px; }
 .doc-detail-toolbar--full .ant-btn-default { border-color: var(--axn-border); }
 .doc-detail-breadcrumb > .ant-tag { font-size: var(--fs-meta); color: var(--axn-muted); background: var(--axn-canvas); }
-
-/* 触屏：文档库行内的「生成」按钮只有 65×28，手指不好点中，抬到 36px。 */
-@media (hover: none) {
-  .doc-library-row .ant-btn {
-    min-height: 36px;
-  }
+.doc-handoff-note {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2-5) var(--space-6);
+  background: #eff9f5;
+  border-bottom: 1px solid #cbe9da;
+  color: #246b50;
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
 }
 
 /* 选区 AI 操作条：浮在选中文字上方，深色胶囊，和纸面拉开层次 */

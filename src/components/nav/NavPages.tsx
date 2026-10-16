@@ -1,19 +1,19 @@
+import { Flame, Lightbulb, ShieldCheck } from 'lucide-react';
+import { useCustomerOperations } from '@/store/customerOperationsStore';
 /**
  * 一级导航对应的业务页面（需求七）：应急项目 / 智能体与 Skill / 定时任务 / 知识库。
  * 轻量展示页：企业级浅色卡片，全部数据为模拟数据。
  */
 import { useMemo, useState } from 'react';
+import SkillPlanningPage from '@/components/skills/SkillPlanningPage';
 import {
   BookOpen,
   Clock,
   FileCheck,
-  Flame,
   Heart,
-  Lightbulb,
   Network,
   Presentation,
   Search,
-  ShieldCheck,
   Wrench,
   Zap,
 } from 'lucide-react'
@@ -97,7 +97,7 @@ export function ProjectsPage() {
     <div className="axn-np-section" data-testid="projects-page">
       <PageHeader title="应急项目" sub="项目为业务组织维度；进入工作台后继续在智能助理中操作" />
       <div className="axn-np-col">
-        {PROJECTS.map((p) => (
+        {PROJECTS.filter(p => !/值班|值守/.test(p.name)).map((p) => (
           <Card key={p.projectId} size="small" styles={{ body: { display: 'flex', alignItems: 'center', gap: 14 } }}>
             <Presentation className="axn-np-icon-huge" />
             <div className="axn-np-flex-1">
@@ -226,27 +226,15 @@ export function AgentsPage() {
 
 /* ================= 定时任务 ================= */
 
-interface ScheduleRow {
-  scheduleId: string;
-  name: string;
-  cron: string;
-  desc: string;
-  lastRun: string;
-  status: '运行中' | '已暂停';
-}
-
-const SCHEDULES: ScheduleRow[] = [
-  { scheduleId: 'sched-daily', name: '每日值班日报', cron: '每天 08:00', desc: '生成当日值班日报草稿并推送待补录提醒', lastRun: '2026-09-28 08:00', status: '运行中' },
-  { scheduleId: 'sched-patrol', name: '防汛监测巡检', cron: '每 2 小时', desc: '巡检水位监测数据并标记异常', lastRun: '2026-09-28 20:00', status: '运行中' },
-  { scheduleId: 'sched-resource', name: '资源状态检查', cron: '每天 07:30', desc: '检查救援队伍与装备状态并更新可用性', lastRun: '2026-09-28 07:30', status: '已暂停' },
-];
-
 export function SchedulesPage() {
+  const operations = useCustomerOperations();
+  const schedules = operations.rules.map(r => ({ scheduleId: r.id, name: r.name, cron: `每${r.intervalSeconds}秒`, desc: `${r.metric}${r.operator}${r.threshold} → ${r.target}`, lastRun: r.lastRunAt ?? '尚未运行', status: r.enabled ? '页面运行期间启用' : '已暂停' }));
   return (
     <div className="axn-np-section" data-testid="schedules-page">
       <PageHeader title="定时任务" sub="按计划自动执行的值守任务" />
       <div className="axn-np-col">
-        {SCHEDULES.map((s) => (
+        {!schedules.length && <Empty description="暂无监测规则（「资源数据与预警」入口已暂时下线）" />}
+        {schedules.map((s) => (
           <Card key={s.scheduleId} size="small" styles={{ body: { display: 'flex', alignItems: 'center', gap: 14 } }}>
             <Clock className="axn-np-icon-med" />
             <div className="axn-np-flex-1">
@@ -282,7 +270,7 @@ interface KnowledgeLibrary {
 const LIBRARIES: KnowledgeLibrary[] = [
   { libraryId: 'lib-plan', name: '预案库', icon: <FileCheck />, desc: '应急预案与处置流程文档', count: 12 },
   { libraryId: 'lib-law', name: '法规规范库', icon: <BookOpen />, desc: '相关法规、规程与标准条目', count: 8 },
-  { libraryId: 'lib-case', name: '历史案例库', icon: <Network />, desc: '历史事件处置案例与复盘', count: 15 },
+  { libraryId: 'lib-case', name: '典型案例库', icon: <Network />, desc: '中国安能集团抢险救灾典型案例与复盘', count: 15 },
   { libraryId: 'lib-tactic', name: '救援技战法', icon: <Zap />, desc: '典型场景技战法与操作要点', count: 10 },
   { libraryId: 'lib-equipment', name: '装备知识库', icon: <Wrench />, desc: '救援装备参数与使用要点', count: 22 },
   { libraryId: 'lib-team', name: '队伍能力库', icon: <Heart />, desc: '救援队伍能力档案与擅长场景', count: 6 },
@@ -395,7 +383,7 @@ export function NavPageContent({ page }: { page: NavPage }) {
     case 'projects':
       return <ProjectsPage />;
     case 'agents':
-      return <AgentsPage />;
+      return <SkillPlanningPage />;
     case 'schedules':
       return <SchedulesPage />;
     case 'knowledge':

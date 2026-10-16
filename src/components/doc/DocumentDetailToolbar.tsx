@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Modal, Tooltip, Typography } from 'antd';
+import { Button, Modal, Tag, Tooltip, Typography } from 'antd';
 import {
   FileText,
   FileType,
@@ -26,8 +26,14 @@ export default function DocumentDetailToolbar({ title, subtitle, editing = false
   return <>
     <header className="doc-detail-toolbar doc-detail-toolbar--full" data-testid="document-toolbar">
       <div className="doc-toolbar-heading">
-        <div className="doc-toolbar-title"><h2 title={title}>{title}</h2></div>
-        {subtitle && <div className="doc-toolbar-subtitle" aria-live="polite">{subtitle}</div>}
+        <div className="doc-toolbar-title">
+          <h2 title={title}>{title}</h2><Tag variant="filled">模拟</Tag>
+          <div className="doc-toolbar-navigation">
+            {onOpenLibrary && <Tooltip title="文书库"><Button type="text" aria-label="文书库" icon={<FolderOpen />} onClick={onOpenLibrary} data-testid="workspace-library-btn" /></Tooltip>}
+            <Tooltip title="关闭文书，返回对话"><Button type="text" aria-label="关闭文书" icon={<X />} onClick={onBack} data-testid="workspace-close-btn" /></Tooltip>
+          </div>
+        </div>
+        {subtitle && <div className="doc-toolbar-subtitle">{subtitle}</div>}
       </div>
       <div className="doc-toolbar-actions">
         {editing ? <>
@@ -39,8 +45,6 @@ export default function DocumentDetailToolbar({ title, subtitle, editing = false
           <Button aria-label="导出 Word" icon={<FileText />} onClick={() => setExportFormat('Word')}>Word 下载</Button>
           <Button aria-label="导出 PDF" icon={<FileType />} onClick={() => setExportFormat('PDF')}>PDF 下载</Button>
         </>}
-        {onOpenLibrary && <Tooltip title="文书库"><Button type="text" aria-label="文书库" icon={<FolderOpen />} onClick={onOpenLibrary} data-testid="workspace-library-btn" /></Tooltip>}
-        <Tooltip title="关闭文书，返回对话"><Button type="text" aria-label="关闭文书" icon={<X />} onClick={onBack} data-testid="workspace-close-btn" /></Tooltip>
       </div>
     </header>
     <Modal open={!!exportFormat} title={`导出 ${exportFormat ?? ''}`} onCancel={() => setExportFormat(null)} footer={<Button type="primary" onClick={() => setExportFormat(null)}>知道了</Button>}>

@@ -1,3 +1,4 @@
+import { orderReportSections } from '@/services/reportSectionOrder';
 import { useEffect, useMemo, useRef, useState } from 'react';
 // message 反馈走 AntdApp.useApp()：antd v5 静态方法不消费 ConfigProvider 主题，会退回默认 token。
 // useApp() 在 <App> 之外（如直接渲染本组件的单元测试）返回空实现，故调用点用可选链避免抛错。
@@ -36,14 +37,15 @@ export default function MockDocumentDetail({ scope, document, onClose, onOpenLib
   const { message, modal } = AntdApp.useApp();
   // 未保存的工作副本存在 store 里（按会话作用域 + 文档 id），离开详情页不丢，保存或放弃才清除。
   const savedWorking = useMockDocumentStore((s) => s.libraries[scope]?.working[document.id]);
-  const working = savedWorking ?? document;
+  const baseline = useMemo(() => ({ ...document, sections: orderReportSections(document.sections) }), [document]);
+  const working = useMemo(() => savedWorking ? { ...savedWorking, sections: orderReportSections(savedWorking.sections) } : baseline, [savedWorking, baseline]);
   const review = useDocumentReviewStore(s => s.reviews[scope]?.[document.id]);
   const detailsTarget = useDocumentReviewStore(s => s.detailsTarget);
   const reviewOpen = !!review && detailsTarget?.scope === scope && detailsTarget.documentId === document.id;
   const applyWorking = (next: MockDocument) => {
     const store = useMockDocumentStore.getState();
     // 改回原文即视为没有未保存修改，顺手清掉工作副本。
-    if (sameMockDocument(next, document)) store.clearWorking(scope, document.id);
+    if (sameMockDocument(next, baseline)) store.clearWorking(scope, document.id);
     else store.setWorking(scope, next);
   };
   const category = categoryOf(document);
@@ -61,7 +63,7 @@ export default function MockDocumentDetail({ scope, document, onClose, onOpenLib
   const paperField = (key: string, fallback: string) => ({
     fieldKey: key, fallback, value: paper?.[key], onChange: (value: string) => setPaper(key, value, fallback),
   });
-  const dirty = !sameMockDocument(working, document);
+  const dirty = !sameMockDocument(working, baseline);
   const sectionChange = (index: number, part: 0 | 1, value: string) => applyWorking({
     ...working, sections: working.sections.map((section, i) => i === index ? (part === 0 ? [value, section[1]] : [section[0], value]) : section),
   });

@@ -39,32 +39,8 @@
 .axn-controls-drawer p { margin: var(--space-3) 0 0; line-height: var(--lh-relaxed); }
 .axn-controls-drawer blockquote { margin: var(--space-4) 0 0; padding: var(--space-3) var(--space-4); border-left: 3px solid var(--axn-border); background: var(--axn-soft); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; line-height: var(--lh-relaxed); }
 
-/* ===== 对话标本里规范页独有的几个小件 ===== */
-.axn-spec-brand { display: grid; place-items: center; width: 28px; height: 28px; }
-.axn-spec-brand svg { display: block; border-radius: var(--radius-nest-xl); }
-.axn-spec-user { display: flex; justify-content: flex-end; }
-.axn-spec-user > div { max-width: 80%; padding: var(--space-2-5) var(--space-4); border-radius: 18px 18px var(--radius-sm) 18px; background: var(--axn-soft); color: var(--axn-text); font-size: var(--fs-lead); line-height: var(--lh-relaxed); overflow-wrap: anywhere; }
-.axn-spec-file { grid-template-columns: 36px minmax(0, 1fr) auto; }
-.axn-spec-file-copy { display: flex; flex-direction: column; min-width: 0; }
-.axn-spec-file-sub { color: var(--axn-muted); font-size: var(--fs-meta); }
-.axn-spec-clickable { cursor: pointer; border-radius: var(--radius-sm); }
-.axn-spec-clickable:hover { background: var(--axn-soft); }
-/* 真实对话的选项点一次即提交，没有「选中态」；规范页演示单选，补一个选中描边 */
-.axn-doc-choices .axn-doc-choice.ant-btn.is-selected { border-color: var(--axn-primary); box-shadow: inset 0 0 0 1px var(--axn-primary); font-weight: 600; }
-.axn-doc-choices .axn-doc-choice.ant-btn:not(.is-selected) { background: var(--axn-surface); border-color: var(--axn-border); color: var(--axn-text); }
-.axn-spec-notice { display: flex; align-items: flex-start; gap: var(--space-2-5); font-size: var(--fs-body); line-height: var(--lh-normal); }
-.axn-spec-notice > i { flex-shrink: 0; width: 6px; height: 6px; margin-top: 8px; border-radius: 50%; background: var(--axn-primary); }
-.axn-spec-notice.is-ok > i { background: var(--axn-success); }
-.axn-spec-notice.is-warn > i { background: var(--axn-warning); }
-.axn-spec-notice.is-err > i { background: var(--axn-error); }
-.axn-spec-notice strong { font-weight: 600; }
-.axn-spec-notice.is-warn strong { color: var(--axn-warning-text); }
-.axn-spec-notice.is-err strong { color: var(--axn-error-text); }
-.axn-spec-notice p { margin: var(--space-0-5) 0 0; color: var(--axn-muted); }
-
 @media (max-width: 767px) {
   /* 与对话页窄屏一致：安小能头像隐藏，正文用满宽 */
-  .axn-spec-brand { display: none; }
   .axn-controls-page { padding: 64px var(--space-4) var(--space-8); }
   .axn-controls-grid { grid-template-columns: minmax(0, 1fr); }
   .axn-controls-toolbar { align-items: stretch; }

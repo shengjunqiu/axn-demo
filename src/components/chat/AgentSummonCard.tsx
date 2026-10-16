@@ -1,3 +1,4 @@
+import { tenderName } from '@/seed/tenderNames';
 /**
  * 智能体消息：与知识问答等普通 AI 回答同一套版式 ——
  * 左侧 28px 头像列（智能体专属图标）+ 右侧内容列（身份行 → 当前动作 → 选项 → 任务卡）。
@@ -45,7 +46,7 @@ export default function AgentSummonCard({ agentId, agentName, agentRole, action,
     <span className="axn-agent-summon-avatar" aria-hidden><Icon size={16} /></span>
     <div className="axn-agent-summon-body">
       <div className="axn-agent-summon-head">
-        <span className="axn-agent-summon-name">{agentName}</span>
+        <span className="axn-agent-summon-name">{tenderName(agentName)}</span>
         {agentRole && <span className="axn-agent-summon-role">{agentRole}</span>}
         {!hasTask && !awaitingChoice && <span className={`axn-status axn-status--${TONE[status] ?? 'idle'}`}><i aria-hidden />{LABELS[status]}</span>}
       </div>

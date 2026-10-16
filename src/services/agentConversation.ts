@@ -9,6 +9,6 @@ export function summonAgentInConversation(sessionId: string, agentId: string) {
   return store.appendMessage(sessionId, {
     sessionId, role: 'assistant', kind: 'agent', taskId: null,
     agentId, agentName: agent.name, agentRole: agent.role,
-    text: agent.intro, choices: agent.options, hint: agent.hint,
+    text: agent.intro, choices: agent.options.map(option => ({ ...option })), hint: agent.hint,
   });
 }

@@ -1,83 +1,194 @@
-import { generateWorkSummary, submitWorkSummaryImprovement } from '@/services/workSummaryWorkflow';
+import { openInlineSituation } from '@/services/inlineSituation';
+import EmpowermentConversation from '@/pages/v2/chat/EmpowermentConversation';
+import { isEmpowermentKind } from '@/pages/v2/logic/empowerment';
+import RescuePlanChoices from './RescuePlanChoices';
+import InlineSituationFlow from './InlineSituationFlow';
+import StructuredReply from './StructuredReply';
+import { Notice } from '@/components/common/ChatPrimitives';
+import { ArrowUp, ChevronRight } from 'lucide-react';
+import BrandMark from '@/components/brand/BrandMark';
+import { ShieldAlert, Waves, MapPin as RecommendationMapPin, LifeBuoy } from 'lucide-react';
+import IncidentPickerModal from './IncidentPickerModal';
+import { MapPin, ChevronDown } from 'lucide-react';
+import { COMPOSE_EVENT } from '@/components/doc/SelectionAssist';
 import { startWeeklyDynamics, submitDynamicsSources } from '@/services/weeklyDynamicsWorkflow';
-import { formatSize } from '@/shared/format';
+import { floatingActionGroups } from '@/services/floatingActionGroups';
+import type { ComponentRef } from 'react';
+import { replyEmbeddedQa, embeddedQaKind, embeddedStageChoices, embeddedChoiceAttachment } from '@/services/embeddedQa';
+import { V2_AI_MODES, V2_AI_DOCUMENT_CODES } from '@/pages/v2/aiNodes';
+import { EVALUATION_TEXT_ACTIONS, evaluationActionReply, type EvaluationTextAction } from '@/services/evaluationActions';
+import { resourceRecommendationReply } from '@/services/resourceRecommendation';
+import { monitorNoticeReply } from '@/services/monitorNoticeReply';
+import { generateRescuePlanAlternatives } from '@/services/rescuePlanAlternatives';
+import { useCustomerOperations } from '@/store/customerOperationsStore';
+import CustomerRequestPanel, { CUSTOMER_ACTIONS, type CustomerAction } from './CustomerRequestPanel';
+import { catalogAction, LEGACY_QUICK_ACTIONS } from '@/seed/quickActionCatalog';
+import { AGENT_QUICK_TASKS } from '@/seed/agentQuickTasks';
+import { tenderName, tenderTaskPrompt } from '@/seed/tenderNames';
+import { isDutyContent, isMeetingMinutesContent, isResourceDataAlertContent, SHOW_DISASTER_EVENTS_LIBRARY } from '@/seed/prototypeVisibility';
+import { FLOW_TASKS } from './OperationalFlows';
+import { generateWorkSummary, submitWorkSummaryImprovement } from '@/services/workSummaryWorkflow';
+import ResourceAuditReply from './ResourceAuditReply';
+import { resourceAuditSample } from '@/services/resourceAudit';
+import { runEventPrecipitation } from '@/services/eventPrecipitation';
 /**
  * 安小能对话工作流（UI 改版）：会话头（标题 + 关联灾情）+ 消息流（Bubble.List）
- * + 圆角一体化输入区 + 补录表单。
- * 首页引导问题取自已接入知识库的 qa.json；五个智能体入口在当前对话追加自我介绍与功能选项。
- * 会话跟随演示事件切换（ensureSessionForConversation）；消息与任务状态全部订阅 sessionStore，不本地复制。
+ * + 圆角一体化输入区（快捷任务：5 个能力块点击后对话邀请选功能）+ 补录表单。
+ * 首页含建设三场景入口与知识库引导问题；会话跟随演示事件切换。
  * 本界面为模拟数据演示（规则意图识别，不接真实大模型）。
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+/** 与 App / global.css 的 768px 桌面断点一致。 */
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(
+    () => (typeof window !== 'undefined' ? window.matchMedia(query).matches : false),
+  );
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = () => setMatches(mql.matches);
+    onChange();
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
+}
+import { hostPageChipOverride } from '@/seed/hostPageChips';
 import { useSessionTasks } from '@/hooks/useSessionTasks';
 import {
-  ArrowUp,
-  ChevronDown,
-  Globe,
-  LifeBuoy,
-  MapPin,
+  Bell,
+  FileCheck,
+  FileText,
+  Flame,
+  Lightbulb,
   MessageSquare,
+  Paperclip,
   PanelLeftClose,
   PanelLeftOpen,
-  Paperclip,
-  ShieldAlert,
-  Waves,
+  ShieldCheck,
+  Wrench,
+  X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { Alert, App as AntdApp, Button, Input, Space, Switch, Tag, Tooltip, Typography, Upload, theme } from 'antd';
+import { Alert, App as AntdApp, Badge, Button, Input, Popover, Space, Tag, Tooltip, Typography, theme } from 'antd';
 import { Bubble, Sender } from '@ant-design/x';
 import type { BubbleItemType } from '@ant-design/x';
+import type { AttachmentWorkflow, ChatAttachment, ChatMessage } from '@/domain/types';
 import { useConversationStore } from '@/store/conversationStore';
 import { useDemoStore } from '@/store/demoStore';
 import { useMockDocumentStore } from '@/store/mockDocumentStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { useActiveScope, useWorkspaceStore } from '@/store/workspaceStore';
 import { sendMessage, cancelTask } from '@/services/taskRunner';
-import { AGENT_INVITATIONS } from '@/seed/agentInvitations';
-import { summonAgentInConversation } from '@/services/agentConversation';
-import { AGENT_ICONS } from './agentIcons';
+import {
+  normalizeCompletedAction,
+  resolveActionPrompt,
+} from '@/services/agentFlow';
+import {
+  buildStageEventContext,
+  LOCAL_FILE_ACCEPT,
+  PLAIN_TEXT_EXT,
+  PLAIN_TEXT_MAX_BYTES,
+  PLAIN_TEXT_MAX_CHARS,
+  simulateAttachment,
+  stageChoices,
+  type StageChoice,
+} from '@/services/stageConversation';
 import { WELCOME_QUESTIONS } from '@/seed/welcomeQuestions';
 import { factText, incidentById } from '@/seed/scenario';
 import { eventDisplayName } from '@/services/factLookup';
+import {
+  buildEventSwitchBriefing,
+  buildEventUnlinkBriefing,
+  resolveEventStage,
+} from '@/services/eventSwitchBriefing';
+import { documentGeneratedReply, glanceFromSections } from '@/services/documentGeneratedReply';
+import { scheduleAutoSituationReport } from '@/services/autoSituationReport';
 import TaskCard from './TaskCard';
 import DocumentGenerationCard from './DocumentGenerationCard';
 import { DocumentReviewCard } from '@/components/doc/DocumentReview';
 import AgentSummonCard from './AgentSummonCard';
-import IncidentPickerModal from './IncidentPickerModal';
-import BrandMark from '@/components/brand/BrandMark';
-import { COMPOSE_EVENT } from '@/components/doc/SelectionAssist';
+import EventSwitchBriefingCard from './EventSwitchBriefingCard';
+import SessionMaterialsDrawer from './SessionMaterialsDrawer';
 import './chat.css';
 
 const { Text } = Typography;
 
 export interface ChatPanelProps {
-  onOpenDrawer: (target: 'resource' | 'knowledge') => void;
+  /** 悬浮嵌入等场景可不传；资源/知识抽屉仅在主工作台打开 */
+  onOpenDrawer?: (target: 'resource' | 'knowledge', options?: { tab?: 'list' | 'map' }) => void;
   compact?: boolean;
 }
 
 const AVATAR = <div className="axn-chat-avatar"><BrandMark size={28} /></div>;
 
-// 语音输入模拟用的示例话语（标注 vibe_1791960862035）：点麦克风逐字「转写」这句话。
-const SPEECH_SAMPLE = '请汇总南堤堤防管涌险情的最新处置进展，并生成一份情况报告';
-
-// 首页推荐卡：与 WELCOME_QUESTIONS 按下标一一对应的图标与分类（问题本身取自知识库原文）。
 const QUESTION_META: { icon: LucideIcon; tag: string }[] = [
   { icon: ShieldAlert, tag: '险情识别' },
   { icon: Waves, tag: '水情研判' },
-  { icon: MapPin, tag: '路线规划' },
+  { icon: RecommendationMapPin, tag: '路线规划' },
   { icon: LifeBuoy, tag: '现场急救' },
 ];
 
-/** 五类智能体共用的功能选择区。文书入口保留已有测试定位。 */
-function AgentInviteChoices({ agentId, options, hint, disabled, onPick }: {
-  agentId?: string;
+const BLANK_LINK = '__blank__';
+
+const AGENT_CHIP_ICONS: Record<string, LucideIcon> = {
+  'agent-doc': FileCheck,
+  'agent-situation': Flame,
+  'agent-resource': Wrench,
+  'agent-plan': Lightbulb,
+  'agent-eval': ShieldCheck,
+};
+
+/** 五个能力块统一：点 chip → 对话里召唤智能体 + 功能选项（对齐文书生成）。 */
+const AGENT_INVITES: Record<string, {
+  name: string;
+  role: string;
+  intro: string;
+  hint: string;
+}> = {
+  'agent-doc': {
+    name: '文书生成智能体',
+    role: '文书撰写',
+    intro: '您好，我是文书生成智能体，可以帮您撰写各类文书。请选择您要生成的文书类型：',
+    hint: '您也可以直接把生成要求告诉我；需要参考的文件、要写进文书的图片，都可以上传给我。',
+  },
+  'agent-situation': {
+    name: '态势感知智能体',
+    role: '灾情研判',
+    intro: '您好，我是态势感知智能体，可以帮您汇聚多源数据、生成灾情摘要、研判态势并生成报告。请选择要执行的功能：',
+    hint: '您也可以直接描述研判需求；相关监测、影像与接报材料可上传给我。',
+  },
+  'agent-resource': {
+    name: '救援资源管理智能体',
+    role: '力量投送',
+    intro: '您好，我是救援资源管理智能体，可以帮您检索周边资源、比较编组建议和核验物资；查询与核验直接在对话中展示，需要报告时再生成。请选择要执行的功能：',
+    hint: '您也可以直接说明需要的人装与投送条件；台账或清单材料可上传给我。',
+  },
+  'agent-plan': {
+    name: '救援方案生成智能体',
+    role: '方案编制',
+    intro: '您好，我是救援方案生成智能体，可以帮您比较处置方向，确认后生成工程救援处置方案，并根据现场变化对比修订。请选择要执行的功能：',
+    hint: '您也可以直接说明方案边界与约束；相关预案与现场反馈可上传给我。',
+  },
+  'agent-eval': {
+    name: '救援效果评估智能体',
+    role: '复盘评估',
+    intro: '您好，我是救援效果评估智能体，可以帮您对照投入与成效、梳理时间轴和问题清单，需要正式总结时再生成总结报告。请选择要执行的功能：',
+    hint: '您也可以直接说明复盘范围与关注点；过程材料可上传给我。',
+  },
+};
+
+/** 智能体邀请气泡里的功能选项（文书 / 态势 / 资源 / 方案 / 评估共用）。 */
+function AgentInviteChoices({ options, hint, disabled, onPick }: {
   options: { label: string; task: string }[];
   hint: string;
   disabled: boolean;
   onPick: (task: string) => void;
 }) {
   return (
-    <div className="axn-doc-choices" data-testid={agentId === 'agent-doc' || !agentId ? 'doc-agent-choices' : 'agent-invite-choices'} data-agent-id={agentId}>
+    <div className="axn-doc-choices" data-testid="agent-invite-choices">
       <div className="axn-doc-choice-row">
         {options.map(({ label, task }) => (
           <Button key={task} size="small" className="axn-doc-choice" data-choice-task={task} disabled={disabled} onClick={() => onPick(task)}>
@@ -90,9 +201,23 @@ function AgentInviteChoices({ agentId, options, hint, disabled, onPick }: {
   );
 }
 
-export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelProps) {
+const noopOpenDrawer: NonNullable<ChatPanelProps['onOpenDrawer']> = () => {};
+
+export default function ChatPanel(props: ChatPanelProps) {
+  const location = useLocation();
+  const mode = new URLSearchParams(location.search).get('embedded') ?? '';
+  const kind = mode.startsWith('v2-workflow-') ? mode.slice('v2-workflow-'.length) : null;
+  if (isEmpowermentKind(kind)) return <EmpowermentConversation key={kind} kind={kind} />;
+  return <StandardChatPanel {...props} />;
+}
+
+function StandardChatPanel({ onOpenDrawer = noopOpenDrawer, compact = false }: ChatPanelProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const embeddedMessageList = useRef<ComponentRef<typeof Bubble.List>>(null);
+  const isEmbeddedAssistant = typeof window !== 'undefined' && window.parent !== window;
   const { token } = theme.useToken();
-  const { modal, message } = AntdApp.useApp();
+  const { modal, message: notice } = AntdApp.useApp();
   const currentEventId = useDemoStore((s) => s.currentEventId);
   const sidebarCollapsed = useDemoStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useDemoStore((s) => s.toggleSidebar);
@@ -104,63 +229,30 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   const tasks = useSessionTasks(session);
   const scope = useActiveScope();
 
-  const [input, setInput] = useState('');
-  const [clarifyValue, setClarifyValue] = useState('');
-  // 文书选区 AI 操作条（SelectionAssist）把「指令 + 原文」送进输入框，等用户确认后再发
-  useEffect(() => {
-    const onCompose = (e: Event) => {
-      const text = (e as CustomEvent<string>).detail;
-      if (typeof text !== 'string') return;
-      setInput(text);
-      requestAnimationFrame(() => {
-        const el = document.querySelector<HTMLTextAreaElement>('.axn-composer textarea, .ant-sender textarea');
-        el?.focus();
-        el?.setSelectionRange(el.value.length, el.value.length);
-      });
-    };
-    window.addEventListener(COMPOSE_EVENT, onCompose);
-    return () => window.removeEventListener(COMPOSE_EVENT, onCompose);
-  }, []);
-  // 上传的文件：演示环境没有上传接口，不落盘也不读取内容，只把文件名与大小随消息记下来
-  const [attachments, setAttachments] = useState<{ uid: string; name: string; size: number }[]>([]);
-  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
-
-  const addAttachments = (files: File[]) => {
-    setAttachments((prev) => [
-      ...prev,
-      ...files.map((f, i) => ({ uid: `${f.name}-${f.size}-${Date.now()}-${i}`, name: f.name, size: f.size })),
-    ]);
-  };
-  const removeAttachment = (uid: string) => setAttachments((prev) => prev.filter((f) => f.uid !== uid));
-
-  // 语音输入（标注 vibe_1791960862035）：演示环境没有麦克风/语音识别，点语音按钮改为
-  // 「模拟实时转写」——逐字把一段示例话语填进输入框，按钮同步显示录音中的动画。
-  const [transcribing, setTranscribing] = useState(false);
-  const speechTimer = useRef<number | null>(null);
-  const stopTranscribing = useCallback(() => {
-    if (speechTimer.current != null) {
-      window.clearInterval(speechTimer.current);
-      speechTimer.current = null;
+  const openFlowWorkspace = (tab: typeof FLOW_TASKS[number]) => {
+    if (tab === '态势研判预警' || tab === '预警推送') {
+      if (!session) return;
+      openInlineSituation(session.sessionId, tab);
+      useWorkspaceStore.getState().close(scope);
+      return;
     }
-    setTranscribing(false);
-  }, []);
-  const startTranscribing = useCallback(() => {
-    stopTranscribing();
-    setInput('');
-    setTranscribing(true);
-    let i = 0;
-    speechTimer.current = window.setInterval(() => {
-      i += 1;
-      setInput(SPEECH_SAMPLE.slice(0, i));
-      if (i >= SPEECH_SAMPLE.length) stopTranscribing();
-    }, 70);
-  }, [stopTranscribing]);
-  // 卸载/切会话时别把 interval 留住
-  useEffect(() => () => stopTranscribing(), [stopTranscribing]);
+    useWorkspaceStore.getState().select(scope, { kind: 'flow', id: tab });
+  };
+  const monitorNotices = useCustomerOperations(s => s.notices);
+  const unreadMonitorCount = monitorNotices.filter(n => n.eventId === session?.eventId && n.status === '待处理').length;
+  const [customerAction, setCustomerAction] = useState<CustomerAction | null>(null);
+  const [input, setInput] = useState('');
   useEffect(() => {
-    stopTranscribing();
-    setInput(''); setClarifyValue(''); setAttachments([]);
-  }, [session?.sessionId, stopTranscribing]);
+    const compose = (event: Event) => setInput((event as CustomEvent<string>).detail);
+    window.addEventListener(COMPOSE_EVENT, compose);
+    return () => window.removeEventListener(COMPOSE_EVENT, compose);
+  }, []);
+  const [clarifyValue, setClarifyValue] = useState('');
+  const [pendingAttachment, setPendingAttachment] = useState<ChatAttachment | null>(null);
+  const [queuedChoice, setQueuedChoice] = useState<StageChoice | null>(null);
+  const [stagePromptOpen, setStagePromptOpen] = useState(false);
+  const [materialsOpen, setMaterialsOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 事件切换/重置后确保会话存在并跟随当前事件
   useEffect(() => {
@@ -171,6 +263,8 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
     }
   }, [activeConversation, currentEventId]);
 
+  useEffect(() => { setCustomerAction(null); }, [session?.sessionId]);
+
   const runningTask = useMemo(
     () =>
       Object.values(tasks).find(
@@ -180,93 +274,457 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   );
   const generatingDocument = useMockDocumentStore(s => s.libraries[session?.sessionId ?? '']?.generatingCode);
   const busy = runningTask != null || !!generatingDocument;
-  // 素材依赖型文书（周工作动态）正在等参考文档/附件：气泡里不做上传入口，入口就是输入框的 📎，
-  // 所以这时候在 📎 上出箭头动画把目光带过去（用户 m00810），要传什么写在气泡里。卡片与输入框共用这一份判断。
-  const waitingUpload = session?.messages.find(message => message.documentWorkflow?.stage === 'waiting_upload') ?? null;
-  /** 只传了附件、输入框里还没打字：等材料期间这就算一条完整输入，回车与发送按钮都交得出去。 */
-  const submittingSources = waitingUpload != null && attachments.length > 0;
 
-  const handleSend = (raw: string) => {
-    const text = raw.trim();
+  const eventStage = session && !session.eventId.startsWith('evt-blank-')
+    ? resolveEventStage(session.eventId, session)
+    : null;
+  const incident = incidentById.get(currentEventId);
+  const isBlankEvent = currentEventId.startsWith('evt-blank-');
+  const embeddedEventTitle = V2_AI_MODES.includes(new URLSearchParams(location.search).get('embedded') ?? '')
+    ? session?.messages.find(m => V2_AI_DOCUMENT_CODES.includes(m.documentWorkflow?.documentCode ?? ''))
+      ?.documentWorkflow?.elements.find(item => item.label === '当前事件')?.value
+    : undefined;
+  const suppliesEventTitle = new URLSearchParams(location.search).get('embedded') === 'v2-supplies'
+    ? session?.messages.find(message => message.agentRole === 'v2-supplies')?.text?.split('\n')[0]?.replace('当前事件：', '') : undefined;
+  const embeddedKind = isEmbeddedAssistant ? embeddedQaKind(session, new URLSearchParams(location.search).get('embedded')) : null;
+  const pickerGroups = embeddedKind ? embeddedStageChoices(embeddedKind) : floatingActionGroups(eventStage);
+  const eventTitle = suppliesEventTitle ?? embeddedEventTitle ?? (incident
+    ? factText(incident.factRefs.title) || currentEventId
+    : isBlankEvent
+      ? '空白对话（未关联事件）'
+      : currentEventId);
+
+  const clearPending = () => {
+    if (queuedChoice && input === queuedChoice.prompt) setInput('');
+    setPendingAttachment(null);
+    setQueuedChoice(null);
+  };
+
+  const replyResourceRecommendation = () => {
     if (!session || busy) return;
-    // 附件随本条消息送出后清空。消费附件的两条路：周工作动态的上传门（下面）、默认问答。
-    const pendingAttachments = attachments;
-    // 上传门开着时，把文件直接发过来 = 上传并开始生成，所以允许只传文件不写字。
-    if (!text && !(waitingUpload && pendingAttachments.length)) return;
-    setInput('');
-    setAttachments([]);
-    if (waitingUpload && pendingAttachments.length) {
-      void submitDynamicsSources(session.sessionId, waitingUpload.messageId, pendingAttachments);
+    const store = useSessionStore.getState();
+    const sessionId = session.sessionId;
+    store.appendMessage(sessionId, { sessionId, role: 'user', kind: 'text', text: '资源建议', taskId: null });
+    store.appendMessage(sessionId, { sessionId, role: 'assistant', kind: 'text', text: resourceRecommendationReply(session.eventId), taskId: null });
+  };
+
+  const replyMonitorNoticesInChat = () => {
+    if (!session) return;
+    const store = useSessionStore.getState();
+    const sessionId = session.sessionId;
+    const text = monitorNoticeReply(session.eventId, useCustomerOperations.getState().notices);
+    store.appendMessage(sessionId, { sessionId, role: 'user', kind: 'text', text: '查看当前监测问题', taskId: null });
+    store.appendMessage(sessionId, { sessionId, role: 'assistant', kind: 'text', text, taskId: null });
+    openFlowWorkspace('资源预警通知');
+  };
+
+  const replyResourceAuditInChat = (prompt = '资源数据校验对比') => {
+    if (!session || busy) return;
+    const sessionId = session.sessionId;
+    const store = useSessionStore.getState();
+    store.appendMessage(sessionId, { sessionId, role: 'user', kind: 'text', text: prompt, taskId: null });
+    store.appendMessage(sessionId, {
+      sessionId, role: 'assistant', kind: 'text', taskId: null,
+      text: '物资核验结果（模拟台账）',
+      resourceAudit: { rows: resourceAuditSample('异常样例'), checkedAt: new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) },
+    });
+  };
+
+  const replyEventPrecipitationInChat = (prompt = '事件沉淀') => {
+    if (!session || busy) return;
+    if (session.eventId.startsWith('evt-blank-')) {
+      notice.info('请先关联有效灾情后再做事件沉淀');
       return;
     }
+    const sessionId = session.sessionId;
+    const store = useSessionStore.getState();
+    store.appendMessage(sessionId, { sessionId, role: 'user', kind: 'text', text: prompt, taskId: null });
+    store.appendMessage(sessionId, {
+      sessionId,
+      role: 'assistant',
+      kind: 'agent',
+      taskId: null,
+      text: '正在汇总本事件案例要点并写入知识库（模拟）',
+      agentName: '救援效果评估智能体',
+      agentRole: '事件沉淀',
+    });
+    const { reply } = runEventPrecipitation(session.eventId);
+    store.appendMessage(sessionId, {
+      sessionId,
+      role: 'assistant',
+      kind: 'text',
+      taskId: null,
+      text: reply,
+    });
+    store.recordFlowProgress(sessionId, '事件沉淀');
+    onOpenDrawer('knowledge');
+  };
+
+  const replyEvaluationAction = (action: EvaluationTextAction) => {
+    if (!session || busy) return;
+    const store = useSessionStore.getState();
+    store.appendMessage(session.sessionId, { sessionId: session.sessionId, role: 'user', kind: 'text', text: action, taskId: null });
+    store.appendMessage(session.sessionId, { sessionId: session.sessionId, role: 'assistant', kind: 'text', text: evaluationActionReply(action, session.eventId, session.sessionId), taskId: null });
+  };
+
+  const handleSend = (raw: string, attachmentOverride?: ChatAttachment | null, sendOpts?: {
+    skipAssess?: boolean;
+    attachmentMode?: 'reference' | 'check' | null;
+  }) => {
+    const text = raw.trim();
+    const attachment = attachmentOverride !== undefined ? attachmentOverride : pendingAttachment;
+    const uploadGate = session?.messages.find(m => m.documentWorkflow?.stage === 'waiting_upload');
+    if (session && uploadGate && attachment) {
+      setInput(''); setPendingAttachment(null);
+      void submitDynamicsSources(session.sessionId, uploadGate.messageId, [{ name: attachment.name, size: 0 }]);
+      return;
+    }
+    if (!session || busy) return;
+    if (!text && !attachment) return;
+    if (isEmbeddedAssistant && replyEmbeddedQa(session.sessionId, new URLSearchParams(location.search).get('embedded'), text, attachment)) {
+      requestAnimationFrame(() => embeddedMessageList.current?.scrollTo({ top: 'bottom' }));
+      setInput('');
+      clearPending();
+      return;
+    }
+    if (text && isDutyContent(text)) { notice.info('值班相关内容暂时隐藏'); return; }
+    setInput('');
+    clearPending();
+    if (isMeetingMinutesContent(text)) {
+      notice.info('会议纪要入口暂时隐藏');
+      return;
+    }
+    if (isResourceDataAlertContent(text)) {
+      notice.info('「资源数据与预警」暂时下线');
+      return;
+    }
+    if (text === '物资核验' || text.includes('物资核验') || text === '资源数据校验对比' || text.includes('资源数据校验对比')) {
+      replyResourceAuditInChat(text.includes('物资核验') ? '物资核验' : '资源数据校验对比');
+      return;
+    }
+    if (text === '事件沉淀' || text.includes('事件沉淀')) {
+      replyEventPrecipitationInChat('事件沉淀');
+      return;
+    }
+    if (EVALUATION_TEXT_ACTIONS.includes(text as EvaluationTextAction)) { replyEvaluationAction(text as EvaluationTextAction); return; }
+    if (text.includes('生成救援方案') || tenderTaskPrompt(text) === '生成救援方案' || normalizeCompletedAction(text) === '生成救援方案') { generateRescuePlanAlternatives(session.sessionId, session.eventId); return; }
+    if (text.includes('资源建议')) { replyResourceRecommendation(); return; }
+    const directAction = CUSTOMER_ACTIONS.find(action => text.includes(action) || tenderTaskPrompt(text) === action || normalizeCompletedAction(text) === action);
+    if (directAction) { setCustomerAction(directAction); return; }
+    const requestedFlow = FLOW_TASKS.filter(name => name !== '现场智能勘察' && name !== '编组确认').find(name => text === name || text === tenderName(name));
+    if (requestedFlow) { openFlowWorkspace(requestedFlow); return; }
     const waitingSummary = session.messages.find(message => message.documentWorkflow?.stage === 'waiting_input');
-    if (waitingSummary) {
+    if (waitingSummary && text) {
       void submitWorkSummaryImprovement(session.sessionId, waitingSummary.messageId, text);
       return;
     }
-    if (/生成.*工作总结|工作总结.*生成/.test(text)) {
-      void generateWorkSummary(session.sessionId, text);
+    if (text && /复盘总结|生成.*工作总结|工作总结.*生成|生成全面总结|全面总结|抢险总结/.test(text)) {
+      void generateWorkSummary(session.sessionId, /复盘总结/.test(text) ? '复盘总结' : text);
       return;
     }
-    void sendMessage(session.sessionId, { text, attachments: pendingAttachments.length ? pendingAttachments : undefined });
+    void sendMessage(session.sessionId, {
+      text: text || (attachment ? '请读取附件并确认材料用途。' : ''),
+      attachment,
+      skipAssess: sendOpts?.skipAssess,
+      attachmentMode: sendOpts?.attachmentMode,
+    });
   };
 
-  /** 只传了附件、输入框里没打字时的提交：Sender 内部按输入值拦提交（内部 state，props 改不了），所以这条路自己走。
-   *  与 handleSend 里“上传门开着时直接发文件”是同一条路（那边管的是“打了字又带了附件”）。 */
-  const startDynamicsWithSources = () => {
-    if (!session || !waitingUpload || attachments.length === 0) return;
-    const files = attachments;
-    setAttachments([]);
-    void submitDynamicsSources(session.sessionId, waitingUpload.messageId, files);
+  const selectStageChoice = (id: string) => {
+    if (!id || !session) { return; }
+    if (!embeddedKind && id.startsWith('legacy-quick:')) {
+      const label = id.slice('legacy-quick:'.length);
+      if (LEGACY_QUICK_ACTIONS.includes(label)) { handleQuickTask(label); }
+      return;
+    }
+    const choice = pickerGroups.flatMap(g => g.options).find(c => c.id === id);
+    if (!choice) { return; }
+    const apply = () => {
+      setQueuedChoice(choice);
+      setInput(choice.prompt);
+      if (choice.kind === 'file') {
+        if (embeddedKind) setPendingAttachment(embeddedChoiceAttachment(embeddedKind, session));
+        else {
+          const ctx = buildStageEventContext(session.eventId, session);
+          setPendingAttachment(simulateAttachment(choice, ctx));
+        }
+      } else {
+        setPendingAttachment(null);
+      }
+    };
+    if ((input.trim() || pendingAttachment) && (input !== choice.prompt || pendingAttachment)) {
+      modal.confirm({
+        title: '替换当前未发送内容？',
+        content: '用所选示例替换当前输入框与待发附件。',
+        okText: '替换',
+        cancelText: '取消',
+        onOk: apply,
+      });
+      return;
+    }
+    apply();
   };
 
-  const handleQuickTask = async (text: string) => {
-    if (text === '生成工作总结') {
-      if (session && !busy) await generateWorkSummary(session.sessionId, text);
+  const handleLocalUpload = async (fileList: FileList | null) => {
+    if (!session || !fileList?.length) return;
+    const store = useSessionStore.getState();
+    const added: { id: string; name: string; content: string; status: string; kind: string; selected: boolean }[] = [];
+    for (const file of Array.from(fileList)) {
+      const id = crypto.randomUUID();
+      const plain = PLAIN_TEXT_EXT.test(file.name) && file.size <= PLAIN_TEXT_MAX_BYTES;
+      let content = '';
+      try {
+        if (plain) content = (await file.text()).slice(0, PLAIN_TEXT_MAX_CHARS);
+      } catch {
+        notice.error(`文件读取失败：${file.name}`);
+        continue;
+      }
+      const status = content
+        ? '已读取文本 · 来源待核'
+        : '仅登记文件名 · 正文未解析';
+      added.push({ id, name: file.name, content, status, kind: '本次补充', selected: true });
+      store.appendMessage(session.sessionId, {
+        sessionId: session.sessionId,
+        role: 'assistant',
+        kind: 'text',
+        taskId: null,
+        text: content
+          ? `已读取“${file.name}”的文本（演示截断），已加入会话资料区。正式分析请粘贴关键正文并核对来源与时间。`
+          : `已附上“${file.name}”。本原型仅登记该格式的文件名，请粘贴关键正文以用于分析。`,
+      });
+    }
+    if (added.length) {
+      store.addSessionMaterials(session.sessionId, added);
+      setMaterialsOpen(true);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const resolveAttachmentWorkflow = (
+    message: ChatMessage,
+    action: 'plan' | 'bulletin' | 'check' | 'reference' | 'bind' | 'replace' | 'current',
+  ) => {
+    const workflow = message.workflow;
+    if (!session || !workflow || workflow.resolved || busy) return;
+    if (workflow.eventId !== session.eventId) {
+      notice.warning('请回到材料所属事件继续处理');
       return;
     }
-    // 素材依赖型文书：先落一张上传门，等参考文档/附件到位再收要素并生成。
-    if (text === '生成应急救援周工作动态') {
-      if (session && !busy) startWeeklyDynamics(session.sessionId, text);
+    useSessionStore.getState().updateAttachmentWorkflow(session.sessionId, message.messageId, {
+      ...workflow,
+      resolved: true,
+    });
+    if (action === 'replace') {
+      notice.info('请从下拉菜单重新选择本事件材料，再发送。');
       return;
     }
-    const code = text === '生成值班日报' ? 'DUTY_DAILY' : text === '生成应急要情' ? 'EMERGENCY_BRIEF' : null;
+    if (action === 'current') {
+      const groups = stageChoices(eventStage ?? '待研判');
+      const first = groups[0]?.options[0];
+      if (first) {
+        setQueuedChoice(first);
+        setInput(first.prompt);
+        setPendingAttachment(null);
+      }
+      notice.info('当前阶段提问已填入输入框，请核对后发送。');
+      return;
+    }
+    let attachment: ChatAttachment = { ...workflow.attachment };
+    let mode: 'reference' | 'check' | null = null;
+    if (action === 'reference') {
+      if (!attachment.content) {
+        attachment = {
+          ...attachment,
+          id: attachment.id || crypto.randomUUID(),
+          name: attachment.name || '用户提供的历史说明',
+          content: workflow.prompt,
+          eventId: session.eventId,
+          simulated: true,
+          kind: attachment.kind || '模拟 Word 附件',
+          status: attachment.status || '模拟正文 · 非真实文件解析',
+        };
+      }
+      mode = 'reference';
+    } else if (action === 'check') {
+      mode = 'check';
+    } else if (action === 'bind') {
+      attachment = { ...attachment, eventId: session.eventId, eventName: eventTitle };
+    } else if (action === 'plan') {
+      attachment = { ...attachment, type: 'advice' };
+    } else if (action === 'bulletin') {
+      attachment = { ...attachment, type: 'bulletin' };
+    }
+    const confirmText =
+      mode === 'reference'
+        ? '确认作为历史参考，仅提取参考结构，不纳入当前事件事实。'
+        : mode === 'check'
+          ? '确认仅检查附件内容，不提交原系统。'
+          : action === 'bind'
+            ? '确认该附件属于当前事件，请继续整理初稿。'
+            : `确认将附件整理为${action === 'plan' ? '处置方案' : '阶段要情'}初稿。`;
+    handleSend(confirmText, attachment, { skipAssess: true, attachmentMode: mode });
+  };
+
+  const renderWorkflowActions = (workflow: AttachmentWorkflow, message: ChatMessage) => {
+    if (workflow.resolved) {
+      return <Typography.Text type="secondary" className="axn-intent-resolved">已确认用途（演示）</Typography.Text>;
+    }
+    const btn = (label: string, action: Parameters<typeof resolveAttachmentWorkflow>[1], testId: string) => (
+      <Button
+        key={action}
+        size="small"
+        disabled={busy}
+        data-testid={testId}
+        onClick={() => resolveAttachmentWorkflow(message, action)}
+      >
+        {label}
+      </Button>
+    );
+    if (workflow.kind === 'ambiguous') {
+      return (
+        <div className="axn-intent-actions" data-testid="attachment-workflow-actions">
+          {btn('整理为方案', 'plan', 'workflow-plan')}
+          {btn('提炼为要情', 'bulletin', 'workflow-bulletin')}
+          {btn('仅检查材料', 'check', 'workflow-check')}
+        </div>
+      );
+    }
+    if (workflow.kind === 'mismatch') {
+      return (
+        <div className="axn-intent-actions" data-testid="attachment-workflow-actions">
+          {btn('作为历史参考', 'reference', 'workflow-reference')}
+          {btn('整理当前阶段资料', 'current', 'workflow-current')}
+        </div>
+      );
+    }
+    if (workflow.kind === 'wrongEvent') {
+      return (
+        <div className="axn-intent-actions" data-testid="attachment-workflow-actions">
+          {btn('更换本事件材料', 'replace', 'workflow-replace')}
+        </div>
+      );
+    }
+    return (
+      <div className="axn-intent-actions" data-testid="attachment-workflow-actions">
+        {btn('绑定本事件', 'bind', 'workflow-bind')}
+        {btn('更换材料', 'replace', 'workflow-replace')}
+      </div>
+    );
+  };
+
+  const handleQuickTask = async (raw: string) => {
+    if (raw === '生成应急救援周工作动态') {
+      if (session && !busy) startWeeklyDynamics(session.sessionId, raw);
+      return;
+    }
+    const text = normalizeCompletedAction(resolveActionPrompt(raw)) || resolveActionPrompt(raw);
+    if (text === '物资核验' || tenderName(text) === '物资核验' || text === '资源数据校验对比' || tenderName(text) === '资源数据校验对比') {
+      replyResourceAuditInChat(text);
+      return;
+    }
+    if (text === '事件沉淀' || tenderName(text) === '事件沉淀') {
+      replyEventPrecipitationInChat(text);
+      return;
+    }
+    if (EVALUATION_TEXT_ACTIONS.includes(text as EvaluationTextAction)) { replyEvaluationAction(text as EvaluationTextAction); return; }
+    if (text === '生成救援方案' || tenderTaskPrompt(text) === '生成救援方案') { if (session && !busy) generateRescuePlanAlternatives(session.sessionId, session.eventId); return; }
+    if (text === '资源建议') { replyResourceRecommendation(); return; }
+    if (text === '预警推送' || text === '态势研判预警') { openFlowWorkspace(text); return; }
+    if (CUSTOMER_ACTIONS.includes(text as CustomerAction)) { setCustomerAction(text as CustomerAction); return; }
+    const flowLabel = FLOW_TASKS.filter(name => name !== '现场智能勘察' && name !== '编组确认').find(
+      (name) => text === name || text === tenderName(name) || tenderTaskPrompt(text) === name,
+    );
+    const catalog = catalogAction(text) ?? (flowLabel ? catalogAction(flowLabel) : undefined);
+    if (catalog?.kind === 'flow' || flowLabel) {
+      openFlowWorkspace((flowLabel ?? catalog!.label) as typeof FLOW_TASKS[number]);
+      return;
+    }
+    if (text === '复盘总结' || text === '生成工作总结' || text === '生成全面总结') {
+      if (session && !busy) {
+        const prompt = text === '生成全面总结' ? '生成全面总结' : text === '复盘总结' ? '复盘总结' : text;
+        await generateWorkSummary(session.sessionId, prompt);
+        useSessionStore.getState().recordFlowProgress(session.sessionId, text === '复盘总结' ? '复盘总结' : text);
+      }
+      return;
+    }
+    if (isDutyContent(text)) { notice.info('值班相关内容暂时隐藏'); return; }
+    if (isMeetingMinutesContent(text)) { notice.info('会议纪要入口暂时隐藏'); return; }
+    if (isResourceDataAlertContent(text)) { notice.info('「资源数据与预警」暂时下线'); return; }
+    const code = text === '生成会议纪要' ? 'MEETING_MINUTES' : text === '生成应急要情' ? 'EMERGENCY_BRIEF' : null;
     if (!code) { handleSend(text); return; }
     if (!session || busy) return;
     const sessionId = session.sessionId;
     useSessionStore.getState().appendMessage(sessionId, { sessionId, role: 'user', kind: 'text', text, taskId: null });
     const elements = [
-      { label: '文书类型', value: code === 'DUTY_DAILY' ? '值班日报' : '应急要情' },
-      { label: '编制单位', value: '应急指挥中心' },
-      { label: '报送对象', value: '相关应急工作部门' },
-      { label: code === 'DUTY_DAILY' ? '值班时段' : '关联事项', value: code === 'DUTY_DAILY' ? '当日 08:00—20:00' : eventTitle },
-      { label: code === 'DUTY_DAILY' ? '交接要求' : '内容要求', value: code === 'DUTY_DAILY' ? '持续跟踪重点风险、核实待报信息并做好交接' : '汇总基本情况、先期处置和下一步工作；未核实信息保留待核实标记' },
+      { label: '文书类型', value: code === 'MEETING_MINUTES' ? '会议纪要' : '应急抢险要情' },
+      { label: '编制单位', value: '应急指挥中心（模拟）' },
+      { label: '报送对象', value: '相关应急工作部门（模拟）' },
+      { label: '关联事项', value: eventTitle },
+      { label: '内容要求', value: code === 'MEETING_MINUTES' ? '整理议题、参会岗位、议定事项和责任分工；缺项保留待核标记' : '汇总基本情况、先期处置和下一步工作；未核实信息保留待核实标记' },
       { label: '文书格式', value: '红头格式，包含标题、正文与落款' },
     ];
     const invocation = useSessionStore.getState().appendMessage(sessionId, {
       sessionId, role: 'assistant', kind: 'agent', text: '根据已收集的文书要素生成红头文书', taskId: null,
-      agentId: 'agent-doc', agentName: '文书生成智能体', agentRole: text,
+      agentName: '文书生成智能体', agentRole: text,
       documentWorkflow: { stage: 'collecting', elements },
     });
     const document = await useMockDocumentStore.getState().generate(sessionId, code, {
       elements,
-      // 逐条上报进度，气泡里的收集进度条才有东西走（用户 m01044）。
-      onCollected: count => useSessionStore.getState().updateDocumentWorkflow(sessionId, invocation.messageId, { stage: 'collecting', elements, collectedCount: count }),
       onStage: stage => useSessionStore.getState().updateDocumentWorkflow(sessionId, invocation.messageId, { stage, elements }),
     });
     useSessionStore.getState().updateDocumentWorkflow(sessionId, invocation.messageId, {
       stage: document ? 'completed' : 'interrupted', elements, documentId: document?.id,
     });
-    // 不再追加「已生成《…》，已在右侧文书工作区打开」这条消息：气泡自己就是这条消息，
-    // 同一件事说两遍（用户 m00705「气泡里只展示一个要素收集的过程，其他不要了」）。
+    if (document && useSessionStore.getState().sessions[sessionId]) {
+      useSessionStore.getState().recordFlowProgress(sessionId, text);
+      useSessionStore.getState().appendMessage(sessionId, {
+        sessionId, role: 'assistant', kind: 'text', taskId: null,
+        text: documentGeneratedReply(document.title, glanceFromSections(document.sections)),
+      });
+    }
   };
 
+  /** 点能力块：对话里召唤对应智能体 + 功能选项（五块统一，不就地展开）。 */
   const handleAgentInvite = (agentId: string) => {
     if (!session || busy) return;
-    summonAgentInConversation(session.sessionId, agentId);
+    const invite = AGENT_INVITES[agentId];
+    const group = AGENT_QUICK_TASKS.find((item) => item.agentId === agentId);
+    if (!invite || !group) return;
+    const { sessionId } = session;
+    useSessionStore.getState().appendMessage(sessionId, {
+      sessionId,
+      role: 'assistant',
+      kind: 'agent',
+      taskId: null,
+      agentId,
+      agentName: invite.name,
+      agentRole: invite.role,
+      text: invite.intro,
+      choices: group.tasks.map(({ label, task }) => ({ label, task })),
+      hint: invite.hint,
+    });
   };
 
-  const pending = session?.pendingClarification ?? null;
+  // 右侧内嵌业务流程发出的快捷任务：关闭工作区后在对话中执行
+  const quickTaskRef = useRef(handleQuickTask);
+  quickTaskRef.current = handleQuickTask;
+  useEffect(() => {
+    const onFlowTask = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      const text = (event.detail as { text?: unknown } | null)?.text;
+      if (typeof text === 'string' && text.trim()) void quickTaskRef.current(text);
+    };
+    window.addEventListener('axn:flow-task', onFlowTask);
+    return () => window.removeEventListener('axn:flow-task', onFlowTask);
+  }, []);
+
+  /** 一期嵌入页（如 W02）可覆盖底部 chips；其余走 5 能力块。 */
+  const pageChipOverride = useMemo(
+    () => hostPageChipOverride(location.pathname, location.search),
+    [location.pathname, location.search],
+  );
+
+  const pending = session?.pendingClarification && tasks[session.pendingClarification.taskId]?.intent !== 'doc_daily' ? session.pendingClarification : null;
   const submitClarification = () => {
     const value = clarifyValue.trim();
     if (!session || !pending || !value) return;
@@ -275,25 +733,42 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
     setClarifyValue('');
   };
 
-  const incident = incidentById.get(currentEventId);
-  const isBlankEvent = currentEventId.startsWith('evt-blank-');
-  const eventTitle = incident
-    ? factText(incident.factRefs.title) || currentEventId
-    : isBlankEvent
-      ? '空白对话（未关联事件）'
-      : currentEventId;
-
   // 关联灾情（对话界面内切换）：evt-blank- 前缀或未绑定 → 未关联；否则为绑定事件
   const linkConversationToEvent = useConversationStore((s) => s.linkConversationToEvent);
-  const BLANK = '__blank__';
   const linkValue =
     !activeConversation || !activeConversation.eventId || activeConversation.eventId.startsWith('evt-blank-')
-      ? BLANK
+      ? BLANK_LINK
       : activeConversation.eventId;
+  const notifyEventLinked = (conversationId: string, value: string) => {
+    const sessionId = useSessionStore.getState().sessionByConversation[conversationId];
+    if (!sessionId) return;
+    const linkedSession = useSessionStore.getState().sessions[sessionId];
+    const text = value === BLANK_LINK
+      ? buildEventUnlinkBriefing()
+      : buildEventSwitchBriefing(value, linkedSession);
+    useSessionStore.getState().appendMessage(sessionId, {
+      sessionId,
+      role: 'assistant',
+      kind: 'text',
+      text,
+      taskId: null,
+      eventBriefingEventId: value === BLANK_LINK ? null : value,
+    });
+    // 关联有效实战事件后自动汇总态势报告（模拟）
+    if (value !== BLANK_LINK) {
+      scheduleAutoSituationReport(sessionId, value, 'event_link', 0);
+    }
+  };
+
   const handleLinkChange = (value: string) => {
     if (!activeConversation) return;
+    // 未实际变更时不重复提示（例如再次点选当前项）。
+    if (value === linkValue) return;
     // undefined → 会话回到专属虚拟事件（保留其独立消息）
-    const proceed = () => linkConversationToEvent(activeConversation.id, value === BLANK ? undefined : value);
+    const proceed = () => {
+      linkConversationToEvent(activeConversation.id, value === BLANK_LINK ? undefined : value);
+      notifyEventLinked(activeConversation.id, value);
+    };
     const workspace = useWorkspaceStore.getState();
     if (!workspace.isDirty(scope)) { proceed(); return; }
     modal.confirm({
@@ -306,34 +781,35 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
     });
   };
 
-  // 关联灾情：输入框右下角的关联按钮，点开居中的选择弹窗（带事件名称搜索）。
-  // 未关联时显示 placeholder「选择关联灾情事件」（标注 vibe_1791787570681）。
+  // 电脑端：关联灾情放发送钮左侧（右下角）；手机端独立成行，避免 suffix 挤爆输入框
+  const isDesktopComposer = useMediaQuery('(min-width: 768px)');
   const [incidentPickerOpen, setIncidentPickerOpen] = useState(false);
   const incidentSelect = (
     <>
       <button
         type="button"
-        className={`axn-cp-select${linkValue === BLANK ? ' is-empty' : ''}`}
+        className={`axn-cp-select${linkValue === BLANK_LINK ? ' is-empty' : ''}`}
         onClick={() => setIncidentPickerOpen(true)}
         aria-label="关联灾情"
         aria-haspopup="dialog"
         data-testid="chat-link-incident"
       >
         <MapPin size={14} aria-hidden />
-        <span className="axn-cp-select-text">{linkValue === BLANK ? '选择关联灾情事件' : eventDisplayName(linkValue)}</span>
+        <span className="axn-cp-select-text">{linkValue === BLANK_LINK ? '选择关联灾情事件' : eventDisplayName(linkValue)}</span>
         <ChevronDown size={12} aria-hidden className="axn-cp-select-caret" />
       </button>
       <IncidentPickerModal
         open={incidentPickerOpen}
-        value={linkValue === BLANK ? 'none' : linkValue}
+        value={linkValue === BLANK_LINK ? 'none' : linkValue}
         onClose={() => setIncidentPickerOpen(false)}
-        onSelect={(id) => { if (id !== linkValue) handleLinkChange(id === 'none' ? BLANK : id); }}
+        onSelect={(id) => { if (id !== linkValue) handleLinkChange(id === 'none' ? BLANK_LINK : id); }}
       />
     </>
+
   );
 
   const items: BubbleItemType[] = useMemo(() => {
-    const messages = session?.messages ?? [];
+    const messages = (session?.messages ?? []).filter(m => !isDutyContent(m.taskId ? tasks[m.taskId]?.intent ?? '' : ''));
     const summonedTasks = new Set(messages.filter(message => message.kind === 'agent' && message.taskId && tasks[message.taskId]).map(message => message.taskId));
     return messages.filter(message => !(message.kind === 'task' && summonedTasks.has(message.taskId))).map((m) => {
       if (m.reviewDocumentId) {
@@ -347,7 +823,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         return {
           key: m.messageId,
           role: 'task',
-          content: task?.displayTitle ?? '任务',
+          content: tenderName(task?.displayTitle ?? '任务'),
           avatar: AVATAR,
           // 任务卡占满会话栏可用宽度（默认气泡 fit-content 会把长内容挤成窄条）
           styles: {
@@ -357,9 +833,16 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
           },
           contentRender: () =>
             task ? (
-              <TaskCard task={task} onOpenDrawer={onOpenDrawer} />
+              <TaskCard
+                task={task}
+                onOpenDrawer={onOpenDrawer}
+                busy={busy}
+                onTask={(prompt) => { void handleQuickTask(prompt); }}
+                onNavigate={(path) => { navigate(path); }}
+                onOpenFlow={(tab) => { openFlowWorkspace(tab as typeof FLOW_TASKS[number]); }}
+              />
             ) : (
-              <Tag color="error">任务数据缺失</Tag>
+              <Tag color="error">任务数据缺失（模拟数据）</Tag>
             ),
         };
       }
@@ -367,59 +850,63 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         return {
           key: m.messageId,
           role: 'task',
-          content: m.agentName ?? '智能体协同',
+          content: tenderName(m.agentName ?? '智能体协同'),
           avatar: null,
           styles: {
             root: { flex: '1 1 auto', width: 'auto', minWidth: 0, alignSelf: 'stretch', paddingInlineEnd: 0 },
             body: { flex: '1 1 auto', width: '100%', minWidth: 0, maxWidth: '100%' },
             content: { width: '100%', padding: 0, background: 'transparent' },
           },
-          contentRender: () => m.documentWorkflow ? <DocumentGenerationCard message={m} /> : (
+          contentRender: () => m.documentWorkflow ? (
+            <DocumentGenerationCard
+              message={m}
+            />
+          ) : (
             <AgentSummonCard
               agentId={m.agentId}
               agentName={m.agentName ?? '智能体协同'}
               agentRole={m.agentRole ?? ''}
               action={m.text ?? ''}
               status={m.choices ? 'queued' : m.taskId ? tasks[m.taskId]?.status : undefined}
-              // 自我介绍式召唤（文书生成）：文书类型选项 + 一句「也可以直接提要求 / 传文件」的提示，
-              // 放在正文列末尾（bodyExtra）——与姓名下的文字左对齐（标注 vibe_1791874890135）
-              // 选项按当前 seed 渲染，不用消息里的快照：会话存在 localStorage 里，快照会让旧会话
-              // 永远停在当时那几项上，新加的文书类型进不来（标注 vibe_1791945318621）。m.choices 只当标记用。
               bodyExtra={m.choices ? (
                 <AgentInviteChoices
-                  agentId={m.agentId}
-                  options={AGENT_INVITATIONS.find(agent => agent.agentId === m.agentId)?.options ?? m.choices}
+                  options={m.choices}
                   hint={m.hint ?? ''}
                   disabled={!session || busy}
                   onPick={(task) => { void handleQuickTask(task); }}
                 />
               ) : null}
             >
-              {m.taskId && tasks[m.taskId] && <TaskCard task={tasks[m.taskId]} onOpenDrawer={onOpenDrawer} />}
+              {m.taskId && tasks[m.taskId] && (
+                <TaskCard
+                  task={tasks[m.taskId]}
+                  onOpenDrawer={onOpenDrawer}
+                  busy={busy}
+                  onTask={(prompt) => { void handleQuickTask(prompt); }}
+                  onNavigate={(path) => { navigate(path); }}
+                  onOpenFlow={(tab) => { openFlowWorkspace(tab as typeof FLOW_TASKS[number]); }}
+                />
+              )}
             </AgentSummonCard>
           ),
         };
       }
       if (m.role === 'user') {
-        const files = m.attachments ?? [];
         return {
           key: m.messageId,
           role: 'user',
           content: m.text ?? '',
-          // 附件标记：发出去之后仍能看到随行的文件（否则选完文件一发送就没痕迹了）
-          contentRender: files.length
+          contentRender: m.attachment
             ? () => (
-                <div>
-                  <div>{m.text}</div>
-                  <div className="axn-msg-attach" data-testid="message-attachments">
-                    {files.map((f) => (
-                      <span key={`${f.name}-${f.size}`} className="axn-msg-attach-item">
-                        <Paperclip size={12} />{f.name}
-                      </span>
-                    ))}
-                  </div>
+              <div className="axn-user-bubble-body">
+                <div>{m.text}</div>
+                <div className="axn-sent-file">
+                  <FileText size={14} aria-hidden />
+                  <span>{m.attachment!.name}</span>
+                  <small>{m.attachment!.simulated ? '模拟附件 · 已发送' : '附件'}</small>
                 </div>
-              )
+              </div>
+            )
             : undefined,
         };
       }
@@ -431,14 +918,108 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
           styles: { content: { fontSize: 'var(--fs-body)', color: 'var(--axn-muted)' } },
         };
       }
-      return { key: m.messageId, role: 'ai', content: m.text ?? '', avatar: AVATAR };
+      if (m.inlineSituation) {
+        return { key: m.messageId, role: 'ai', content: m.text ?? '', avatar: AVATAR,
+          contentRender: () => <InlineSituationFlow eventId={m.inlineSituation!.eventId} sessionId={m.sessionId} initial={m.inlineSituation!.kind} /> };
+      }
+      if (m.rescuePlans) {
+        return {
+          key: m.messageId, role: 'ai', content: m.text ?? '', avatar: AVATAR,
+          contentRender: () => <RescuePlanChoices message={m} />,
+        };
+      }
+      if (m.resourceAudit) {
+        return {
+          key: m.messageId, role: 'ai', content: m.text ?? '', avatar: AVATAR,
+          styles: { root: { alignSelf: 'stretch', minWidth: 0, width: '100%', paddingInlineEnd: 0 }, body: { flex: '1 1 0%', width: '100%', maxWidth: '100%', minWidth: 0 }, content: { width: '100%', maxWidth: '100%', minWidth: 0 } },
+          contentRender: () => <ResourceAuditReply rows={m.resourceAudit!.rows} checkedAt={m.resourceAudit!.checkedAt} />,
+        };
+      }
+      if (m.eventBriefingEventId) {
+        return {
+          key: m.messageId,
+          role: 'ai',
+          content: m.text ?? '',
+          avatar: AVATAR,
+          contentRender: () => (
+            <EventSwitchBriefingCard
+              text={m.text ?? ''}
+              eventId={m.eventBriefingEventId!}
+              busy={busy}
+              onTask={(prompt) => { void handleQuickTask(prompt); }}
+              onNavigate={(path) => { navigate(path); }}
+            />
+          ),
+        };
+      }
+      if (m.situationReportAuto) {
+        const auto = m.situationReportAuto;
+        return {
+          key: m.messageId,
+          role: 'ai',
+          content: m.text ?? '',
+          avatar: AVATAR,
+          contentRender: () => (
+            <div className="axn-auto-situation-report" data-testid="auto-situation-report">
+              <Text>{m.text}</Text>
+              <Space wrap size={8} style={{ marginTop: 8 }}>
+                {auto.documentId && (
+                  <Button
+                    size="small"
+                    type="primary"
+                    ghost
+                    icon={<FileText size={14} />}
+                    onClick={() => {
+                      useWorkspaceStore.getState().autoOpen(
+                        m.sessionId,
+                        `auto-situation-open:${auto.documentId}`,
+                        { kind: 'mock', id: auto.documentId! },
+                      );
+                    }}
+                  >
+                    查看态势报告
+                  </Button>
+                )}
+                {auto.openMap && (
+                  <Button
+                    size="small"
+                    type="primary"
+                    aria-label="查看态势地图"
+                    onClick={() => onOpenDrawer('resource', { tab: 'map' })}
+                  >
+                    查看态势地图
+                  </Button>
+                )}
+                <Text type="secondary" className="axn-tc-fs12">模拟数据 · 正式研判须岗位审核</Text>
+              </Space>
+            </div>
+          ),
+        };
+      }
+      if (m.workflow) {
+        return {
+          key: m.messageId,
+          role: 'ai',
+          content: m.text ?? '',
+          avatar: AVATAR,
+          contentRender: () => (
+            <div className="axn-attachment-workflow">
+              <Notice tone="info" title="资料处理提示">{m.text}</Notice>
+              {renderWorkflowActions(m.workflow!, m)}
+            </div>
+          ),
+        };
+      }
+      return { key: m.messageId, role: 'ai', content: m.text ?? '', avatar: AVATAR, contentRender: () => <StructuredReply text={m.text ?? ''} /> };
     });
-  }, [session?.messages, tasks, onOpenDrawer, busy]);
+  }, [session?.messages, tasks, onOpenDrawer, busy, navigate]);
 
   const hasMessages = items.length > 0;
 
   return (
     <div className="axn-chat-page">
+      {customerAction && session && <CustomerRequestPanel key={`${session.sessionId}:${customerAction}`} action={customerAction} sessionId={session.sessionId} eventId={session.eventId} onClose={() => setCustomerAction(null)} />}
+
           {/* 会话头：左侧收起侧边栏 + 标题 */}
       <div className="axn-chat-head">
         <div className="axn-chat-head-row">
@@ -449,9 +1030,12 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             onClick={toggleSidebar}
             aria-label={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
           />
-          {/* 无消息、或对话未关联事件时不显示标题：两者都由下方「关联灾情」选择器承载，
-              标题只是重复（标注 vibe_1791303121889）；关联事件后标题回归。 */}
-          {hasMessages && !isBlankEvent && (
+          {/* 对话未开始（无消息）时不显示事件标题：此时上下文由下方「关联灾情」选择器承载，
+              标题只是重复（标注 vibe_1791303121889）。首条消息出现后标题回归。 */}
+          {SHOW_DISASTER_EVENTS_LIBRARY && (
+            <Button size="small" onClick={() => navigate(`/events?event=${encodeURIComponent(currentEventId)}`)}>灾种事件库</Button>
+          )}
+          {hasMessages && (
             <Text strong className="axn-cp-title" data-testid="header-event">
               {eventTitle}
             </Text>
@@ -462,6 +1046,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
       {/* 消息流 / 首页 */}
       {hasMessages ? (
         <Bubble.List
+          ref={embeddedMessageList}
           className="axn-message-list"
           autoScroll
           items={items}
@@ -470,13 +1055,11 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
               placement: 'start',
               variant: 'filled',
               avatar: AVATAR,
-              // AI 回答不套框：直接铺在白底上，层级靠排版而不是边框（参考 Claude / ChatGPT）
               styles: { content: { background: 'transparent', padding: '4px 0 0', fontSize: 'var(--fs-lead)', lineHeight: 1.75, maxWidth: '100%', overflowWrap: 'anywhere' } },
             },
             user: {
               placement: 'end',
               variant: 'filled',
-              // 用户气泡：中性浅灰底 + 正文色，不再用整块主蓝（主色留给唯一的主操作）
               styles: { content: { background: token.colorFillQuaternary, color: token.colorText, borderRadius: '18px 18px 6px 18px', padding: '10px 16px', lineHeight: 1.7, fontSize: 'var(--fs-lead)', overflowWrap: 'anywhere' } },
             },
             system: { placement: 'start', variant: 'borderless' },
@@ -567,147 +1150,193 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         </div>
       )}
 
-      {/* 智能体入口回到输入框上方，功能在当前对话的介绍卡中选择。 */}
-      <div className="axn-cp-chips-wrap">
-        <div className="axn-chips">
-          {AGENT_INVITATIONS.map(agent => {
-            const Icon = AGENT_ICONS[agent.agentId];
-            return <Button key={agent.agentId} size="small" className="axn-chip" title={agent.name}
-              data-agent-id={agent.agentId} disabled={!session || busy} onClick={() => handleAgentInvite(agent.agentId)}>
-              {Icon && <Icon className="axn-chip-icon" size={13} aria-hidden />}
-              {agent.name}
-            </Button>;
-          })}
-        </div>
-      </div>
-      {/* 关联灾情与发送、语音操作位于输入框右下角。 */}
-      <div className="axn-composer">
-        <div className="axn-composer-shell">
-          {/* 已选文件：输入框上方一行可移除的 chip（上传按钮在输入框左下角） */}
-          {attachments.length > 0 && (
-            <ul className="axn-attach-list" data-testid="composer-attachments">
-              {attachments.map((f) => (
-                <li key={f.uid}>
-                  <Tag
-                    closable
-                    className="axn-attach-tag"
-                    onClose={(e) => {
-                      e.preventDefault();
-                      removeAttachment(f.uid);
-                    }}
-                  >
-                    <Paperclip size={12} />
-                    <span className="axn-attach-name">{f.name}</span>
-                    <span className="axn-attach-size">{formatSize(f.size)}</span>
-                  </Tag>
-                </li>
-              ))}
-            </ul>
+      {/* 快捷任务：5 能力块内联展开；一期嵌入页可用 pageChipOverride 覆盖 */}
+      {!isEmbeddedAssistant && <div className="axn-cp-chips-wrap">
+        <div className="axn-chips" data-testid="quick-task-chips">
+          {pageChipOverride ? (
+            pageChipOverride.primary.map(({ label, agentName, agentId, action, title }) => (
+              <Button
+                key={label}
+                size="small"
+                className="axn-chip"
+                title={title ?? `${tenderName(agentName)} · 独立调用`}
+                data-agent-id={agentId}
+                data-testid={`chip-primary-${label}`}
+                disabled={!session || busy}
+                onClick={() => { void handleQuickTask(action); }}
+              >
+                {tenderName(label)}
+              </Button>
+            ))
+          ) : (
+            AGENT_QUICK_TASKS.map(({ label, agentName, agentId }) => {
+              const ChipIcon = AGENT_CHIP_ICONS[agentId];
+              return (
+                <Button
+                  key={agentId}
+                  size="small"
+                  className="axn-chip"
+                  title={agentName}
+                  data-agent-id={agentId}
+                  disabled={!session || busy}
+                  onClick={() => { handleAgentInvite(agentId); }}
+                >
+                  {ChipIcon && <ChipIcon className="axn-chip-icon" size={13} aria-hidden />}
+                  {label}
+                  {agentId !== 'agent-doc' && <ChevronRight className="axn-chip-arrow" size={12} aria-hidden />}
+                </Button>
+              );
+            })
           )}
+        </div>
+      </div>}
+      {/* 圆角输入区：电脑端关联灾情在发送钮左侧；手机端独立成行避免挤爆 */}
+      <div className={`axn-composer${compact ? ' axn-composer--compact' : ''}${isDesktopComposer ? ' axn-composer--desktop' : ''}`}>
+        <div className="axn-composer-shell">
+          {/* 「资料」入口暂时隐藏；SessionMaterialsDrawer 仍保留，便于后续恢复 */}
+          {pendingAttachment && (
+            <div className="axn-pending-file" data-testid="pending-attachment">
+              <span>
+                <FileText size={14} aria-hidden /> {pendingAttachment.name}
+                <small>模拟附件 · 待发送</small>
+              </span>
+              <Button
+                type="text"
+                size="small"
+                icon={<X size={14} />}
+                aria-label="移除待发附件"
+                onClick={clearPending}
+              />
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={LOCAL_FILE_ACCEPT}
+            className="axn-file-input-hidden"
+            data-testid="chat-file-input"
+            onChange={e => { void handleLocalUpload(e.target.files); }}
+          />
           <Sender
             value={input}
             onChange={(v) => setInput(v)}
             onSubmit={(message) => handleSend(message)}
             loading={runningTask != null}
-            // 受控录音开关：点麦克风在「开始/停止模拟转写」间切换，按钮自己会显示录音中的动画。
-            // 演示环境拿不到真实语音识别，所以只用它做交互外观，转写内容由 startTranscribing 模拟。
-            allowSpeech={{
-              recording: transcribing,
-              onRecordingChange: (recording) => (recording ? startTranscribing() : stopTranscribing()),
-            }}
             onCancel={() => {
               if (runningTask) cancelTask(runningTask.taskId);
             }}
             prefix={(
-              <div className="axn-composer-tools">
-              {/* 上传文件（输入框左下角，标注见本行）：演示环境不落盘也不上传，只把文件名/大小附在消息上。
-                 周工作动态的上传入口在对话气泡的卡里（用户 m00994），所以这里不再挂箭头提示、也不再挂弹出层；
-                 但文件依旧可以在这里交给智能体（上传门开着时＝交材料）。
-                 外面这层 span 只给 Upload 收 ref（antd Upload 不转 ref，直接当 child 会告警）。 */}
-              <span className="axn-composer-upload-wrap">
-              <Upload
-                multiple
-                showUploadList={false}
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.md,.png,.jpg,.jpeg"
-                beforeUpload={(file) => {
-                  addAttachments([file]);
-                  return false; // 没有上传接口：只拦下文件，不让 antd 发起请求
-                }}
-              >
+              <Tooltip title="添加资料（本机文件登记）">
                 <Button
                   type="text"
                   className="axn-composer-upload"
                   icon={<Paperclip size={18} />}
-                  aria-label="上传文件"
-                  title="上传文件"
-                  data-testid="composer-upload"
+                  aria-label="添加资料"
+                  data-testid="chat-attach-button"
+                  disabled={!session || busy}
+                  onClick={() => fileInputRef.current?.click()}
                 />
-              </Upload>
-              </span>
-              <Tooltip classNames={{ root: 'axn-composer-web-search-tooltip' }} title="当前为原型演示，暂未接入真实联网检索">
-                <label className={`axn-composer-web-search${webSearchEnabled ? ' is-on' : ''}`}>
-                  <Globe size={14} aria-hidden />
-                  <span className="axn-composer-web-search-label">联网<span className="axn-composer-web-search-full">搜索</span></span>
-                  <Switch
-                    size="small"
-                    checked={webSearchEnabled}
-                    onChange={(on) => {
-                      setWebSearchEnabled(on);
-                      // 触屏上看不到悬停提示：开 / 关时用一句轻提示交代状态与演示边界
-                      if (window.matchMedia?.('(hover: none)').matches) {
-                        message.open({ key: 'web-search', type: 'info', content: on ? '已开启联网搜索（演示环境暂未接入真实检索）' : '已关闭联网搜索' });
-                      }
-                    }}
-                    aria-label="联网搜索"
-                  />
-                </label>
               </Tooltip>
-              </div>
             )}
             suffix={(_, { components: { LoadingButton, SendButton, SpeechButton } }) => (
               <div className="axn-composer-actions">
-                {incidentSelect}
-                {/* 空输入→语音，有文字→发送，运行中→停止（可取消当前任务）；模拟转写中保持语音按钮，
-                    再点一下可中途停下（此时输入框已有字，否则会被换成发送按钮）
-                    同一位置同一动作槽：语音按钮与发送按钮同形（实心圆形主色容器）。
-                    只传了附件时不走 Sender 的提交（空文本会被它内部的 submitDisabled 拦住），
-                    所以等材料期间这里换成自己这个按钮把附件交出去，不然“传完没反应”。 */}
-                {runningTask != null ? <LoadingButton aria-label="停止生成" title="停止生成" /> : submittingSources
-                  ? <Button type="primary" shape="circle" icon={<ArrowUp size={16} />} aria-label="发送附件并开始生成" data-testid="composer-submit-sources" onClick={startDynamicsWithSources} />
-                  : (
-                    // 发送按钮常驻（空输入时禁用）——主操作位置固定；语音降为次要的文字按钮，
-                    // 输入框有字后收起（转写中保留，可中途停下）
-                    <>
-                      {(transcribing || !input.trim()) && (
-                        <SpeechButton
-                          type="text"
-                          shape="circle"
-                          className="axn-composer-speech"
-                          aria-label={transcribing ? '停止语音输入' : '语音输入'}
-                          title={transcribing ? '停止语音输入' : '语音输入'}
-                          data-testid="composer-speech"
-                        />
-                      )}
-                      <SendButton aria-label="发送" title="发送" />
-                    </>
-                  )}
+                {!isEmbeddedAssistant && incidentSelect}
+                {runningTask != null ? (
+                  <LoadingButton aria-label="停止生成" title="停止生成" />
+                ) : pendingAttachment && !input.trim() ? (
+                  <Button type="primary" shape="circle" icon={<ArrowUp size={16} />}
+                    aria-label="发送附件" data-testid="send-attachment-only"
+                    onClick={() => handleSend('', pendingAttachment)} />
+                ) : (
+                  <>
+                    {!input.trim() && <SpeechButton type="text" shape="circle"
+                      className="axn-composer-speech" aria-label="语音输入" title="语音输入"
+                      data-testid="composer-speech" />}
+                    <SendButton aria-label="发送" title="发送" />
+                  </>
+                )}
               </div>
             )}
-            /* 最小 2 行 = 54px（用户 m01370 要求输入框再高一些；1 行只有 32px 显得太扁）。
-               输入框独占第一行（见 chat.css 的 .ant-sender-input { flex: 1 1 100% }），
-               三个控件在第二行，所以留白在输入区内、不会把控件推到盒子底部。
-               原 minRows: 3 时输入框恒为 76px 且控件与文字同一行（备注 m01301、m01342）。 */
-            autoSize={{ minRows: 2, maxRows: 6 }}
+            autoSize={compact ? { minRows: 2, maxRows: 4 } : { minRows: 2, maxRows: 6 }}
             placeholder={
               session
-                // 触屏没有实体 Enter 键，提示只留前半句
-                ? (window.matchMedia?.('(hover: none)').matches ? '向安小能发送指令' : '向安小能发送指令，Enter 发送')
+                ? (pendingAttachment
+                  ? (compact ? '可补充说明后发送' : '可补充说明后发送，或直接发送附件')
+                  : (compact ? '输入指令…' : '向安小能发送指令，Enter 发送'))
                 : '会话初始化中…'
             }
             disabled={!session || !!generatingDocument}
           />
         </div>
       </div>
+      <SessionMaterialsDrawer
+        open={materialsOpen}
+        sessionId={session?.sessionId}
+        eventId={session?.eventId ?? currentEventId}
+        onClose={() => setMaterialsOpen(false)}
+      />
+      {createPortal(
+        <div style={{ position: 'fixed', right: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 100 }}>
+          <Popover
+            title="模拟发送／阶段提问／模拟文件／监测通知"
+            trigger="click"
+            placement="left"
+            open={stagePromptOpen}
+            onOpenChange={setStagePromptOpen}
+            destroyOnHidden
+            content={
+              <div className="axn-floating-actions" data-testid="floating-action-list">
+                <div className="axn-floating-actions-context">
+                  {embeddedKind ? '当前节点相关操作优先展示' : eventStage ? `当前事件阶段：${eventStage} · 相关操作优先展示` : '未关联事件 · 展示常用操作'}
+                </div>
+                <div className="axn-floating-actions-scroll">
+                  {unreadMonitorCount > 0 && (
+                    <Button block icon={<Bell size={15} aria-hidden />} danger disabled={!session}
+                      onClick={() => { setStagePromptOpen(false); replyMonitorNoticesInChat(); }} data-testid="floating-monitor-notices">
+                      监测通知（{unreadMonitorCount}）
+                    </Button>
+                  )}
+                  {pickerGroups.map(group => (
+                    <section className="axn-floating-action-group" key={group.label} aria-label={group.label}>
+                      <div className="axn-floating-action-group-title">{group.label}</div>
+                      {group.options.map(option => (
+                        <button type="button" className="axn-floating-action-item" key={option.id}
+                          data-choice-id={option.id} disabled={!session || busy}
+                          onClick={() => { selectStageChoice(option.id); setStagePromptOpen(false); }}>
+                          <span>{option.label}</span>
+                          <small>{option.id.startsWith('legacy-quick:') ? '执行' : option.kind === 'file' ? '附件' : '填入'}</small>
+                        </button>
+                      ))}
+                    </section>
+                  ))}
+                  {unreadMonitorCount === 0 && (
+                    <Button block icon={<Bell size={15} aria-hidden />} disabled={!session}
+                      onClick={() => { setStagePromptOpen(false); replyMonitorNoticesInChat(); }} data-testid="floating-monitor-notices">
+                      监测通知（0）
+                    </Button>
+                  )}
+                </div>
+                <div className="axn-floating-actions-hint">
+                  {!session ? '会话初始化中，请稍候。' : busy ? '当前任务处理中，完成后即可选择。' : '标记“执行”的操作直接运行；提问和附件先填入输入区，由你发送。'}
+                </div>
+              </div>
+            }
+          >
+            <Button
+              shape="circle"
+              size="large"
+              icon={<Badge count={unreadMonitorCount} size="small"><MessageSquare size={18} /></Badge>}
+              aria-label="阶段提问／模拟文件／监测通知"
+              aria-expanded={stagePromptOpen}
+              title="模拟发送／阶段提问／模拟文件／监测通知"
+              data-testid="stage-prompt-toggle"
+              style={{ boxShadow: token.boxShadowSecondary }}
+            />
+          </Popover>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

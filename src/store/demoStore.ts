@@ -10,6 +10,7 @@ import {
   actorById,
   demoMeta,
 } from '@/seed/scenario';
+import { resolveSelectableEventId } from '@/seed/disasterScenarios';
 import type { Actor, DemoConfig, DemoPace } from '@/domain/types';
 import { clearPersist, loadPersist, schedulePersist } from './persistence.js';
 
@@ -123,7 +124,7 @@ if (malformedManualFacts) {
   const contextSequenceValue = demoPersisted?.contextSequence ?? (demoPersisted?.waterOverride ? 2 : 1);
 export const useDemoStore = create<DemoState>()((set, get) => ({
   actorId: demoPersisted?.actorId ?? DEFAULT_ACTOR_ID,
-  currentEventId: demoPersisted?.currentEventId ?? DEFAULT_EVENT_ID,
+  currentEventId: resolveSelectableEventId(demoPersisted?.currentEventId) ?? DEFAULT_EVENT_ID,
   demoClock: demoPersisted?.demoClock ?? DEMO_CLOCK,
   pace: demoPersisted?.pace ?? 'normal',
   faults: demoPersisted?.faults ?? {},
@@ -143,6 +144,11 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
     if (kind === 'event' && shift.incidentIds.includes(id)) keys.push(`shift:${shift.shiftId}`);
     set(s => ({ contextSequence: version, contextVersions: { ...s.contextVersions, ...Object.fromEntries(keys.map(key => [key, version])) } }));
     useDocumentStore.getState().markBusinessDataChanged(kind, id);
+    // 业务数据变更旁路：指纹变化时自动推送态势报告（不替代 stale 标记）
+    // 动态 import，避免 demoStore ↔ autoSituationReport ↔ factLookup 循环依赖
+    if (kind === 'event') {
+      void import('@/services/autoSituationReport').then((m) => m.notifySituationDataChanged(id));
+    }
   },
 
   getActor: () => {

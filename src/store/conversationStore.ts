@@ -16,11 +16,26 @@ import { clearPersist, loadPersist, schedulePersist } from './persistence.js';
 import { useDemoStore } from './demoStore.js';
 import { useSessionStore } from './sessionStore.js';
 import { DEMO_CLOCK } from '@/seed/scenario';
+import { DEFAULT_FOCUS_COMBAT_EVENT_ID, resolveSelectableEventId } from '@/seed/disasterScenarios';
 
 interface ConversationPersist {
   conversations: Record<string, Conversation>;
   activeConversationId: string | null;
   settings: ConversationSettings;
+}
+
+function sanitizeConversation(conversation: Conversation): Conversation {
+  const nextEventId = resolveSelectableEventId(conversation.eventId);
+  if (nextEventId === conversation.eventId) return conversation;
+  return { ...conversation, eventId: nextEventId };
+}
+
+function sanitizeConversationMap(map: Record<string, Conversation>): Record<string, Conversation> {
+  const out: Record<string, Conversation> = {};
+  for (const [id, conversation] of Object.entries(map)) {
+    out[id] = sanitizeConversation(conversation);
+  }
+  return out;
 }
 
 const persisted = loadPersist<ConversationPersist>('conversation');
@@ -56,40 +71,40 @@ export interface ConversationSeedRow {
  */
 export const seedConversationRows: ConversationSeedRow[] = [
   {
-    id: 'conv-seed-nandi',
-    title: '南堤堤防管涌险情',
+    id: 'conv-seed-landslide',
+    title: '青岭村山体滑坡（模拟）',
     type: 'emergency',
-    eventId: 'evt-demo-001',
-    summary: '研判任务进行中',
+    eventId: 'evt-sim-landslide',
+    summary: '待研判 · 三类实战场景',
     status: 'processing',
     createdAt: '2026-09-28T10:24:00+08:00',
     updatedAt: '2026-09-28T10:24:00+08:00',
   },
   {
-    id: 'conv-seed-zhanghe',
-    title: '漳河镇水位上涨预警',
+    id: 'conv-seed-breach',
+    title: '南湾堤段洪涝决口（模拟）',
     type: 'emergency',
-    eventId: 'evt-demo-002',
-    summary: '预警信息整理',
+    eventId: 'evt-sim-breach',
+    summary: '力量投送中',
     status: 'processing',
     createdAt: '2026-09-28T09:56:00+08:00',
     updatedAt: '2026-09-28T09:56:00+08:00',
   },
   {
-    id: 'conv-seed-g5f13',
-    title: 'G5F13边坡滑坡事件',
+    id: 'conv-seed-debris',
+    title: '石溪沟泥石流清障（模拟）',
     type: 'general',
-    eventId: 'evt-demo-001',
-    summary: '动态跟踪中',
+    eventId: 'evt-sim-debris',
+    summary: '救援中',
     status: 'active',
     createdAt: '2026-09-28T09:31:00+08:00',
     updatedAt: '2026-09-28T09:31:00+08:00',
   },
   {
     id: 'conv-seed-daily-draft',
-    title: '值班日报整理',
+    title: '青岭村现场日报整理',
     type: 'daily',
-    eventId: 'evt-demo-001',
+    eventId: DEFAULT_FOCUS_COMBAT_EVENT_ID,
     summary: '今日交接班信息收集中',
     status: 'draft',
     createdAt: '2026-09-28T08:40:00+08:00',
@@ -97,9 +112,9 @@ export const seedConversationRows: ConversationSeedRow[] = [
   },
   {
     id: 'conv-seed-dispatch',
-    title: '防汛资源调度',
+    title: '南湾堤段资源调度',
     type: 'resource',
-    eventId: 'evt-demo-001',
+    eventId: 'evt-sim-breach',
     summary: '投送建议已生成',
     status: 'completed',
     createdAt: '2026-09-27T16:40:00+08:00',
@@ -107,9 +122,9 @@ export const seedConversationRows: ConversationSeedRow[] = [
   },
   {
     id: 'conv-seed-0920-brief',
-    title: '9月20日值班要情',
+    title: '石溪沟阶段要情',
     type: 'daily',
-    eventId: 'evt-demo-001',
+    eventId: 'evt-sim-debris',
     summary: '要情第4稿已归档',
     status: 'completed',
     createdAt: '2026-09-20T18:00:00+08:00',
@@ -152,9 +167,16 @@ interface ConversationState {
   resetAll: () => void;
 }
 
+const initialConversations = sanitizeConversationMap(persisted?.conversations ?? buildSeedMap());
+const initialActiveId = (() => {
+  const preferred = persisted?.activeConversationId ?? 'conv-seed-landslide';
+  if (preferred && initialConversations[preferred]) return preferred;
+  return Object.keys(initialConversations)[0] ?? null;
+})();
+
 export const useConversationStore = create<ConversationState>()((set, get) => ({
-  conversations: persisted?.conversations ?? buildSeedMap(),
-  activeConversationId: persisted?.activeConversationId ?? 'conv-seed-nandi',
+  conversations: initialConversations,
+  activeConversationId: initialActiveId,
   activeNav: 'assistant',
   settings: { ...DEFAULT_SETTINGS, ...(persisted?.settings ?? {}) },
 
@@ -167,7 +189,10 @@ export const useConversationStore = create<ConversationState>()((set, get) => ({
       type: input.type,
       // 未绑定事件的会话（如“空白对话”）分配专属虚拟事件 → ensureSessionForEvent
       // 会为其创建全新的空 session，不复用当前事件的历史消息。
-      eventId: input.eventId ?? `evt-blank-${id}`,
+      // 显式传入已下线灾种时回落到三类实战默认事件。
+      eventId: input.eventId == null
+        ? `evt-blank-${id}`
+        : (resolveSelectableEventId(input.eventId) ?? `evt-blank-${id}`),
       summary: input.summary,
       status: input.status ?? 'active',
       createdAt: now,
@@ -194,7 +219,10 @@ export const useConversationStore = create<ConversationState>()((set, get) => ({
     const conversation = get().conversations[conversationId];
     if (!conversation) return;
     // eventId 为 undefined：回到该会话专属虚拟事件（保留其独立消息），不落入当前事件。
-    const nextEventId = eventId ?? `evt-blank-${conversationId}`;
+    // 已下线灾种回落到三类实战默认事件，避免选择器显示原始 ID。
+    const nextEventId = eventId == null
+      ? `evt-blank-${conversationId}`
+      : (resolveSelectableEventId(eventId) ?? `evt-blank-${conversationId}`);
     if (conversation.eventId === nextEventId) return;
     const updated = { ...conversation, eventId: nextEventId, updatedAt: new Date().toISOString() };
     set((s) => ({ conversations: { ...s.conversations, [conversationId]: updated } }));
@@ -252,7 +280,7 @@ export const useConversationStore = create<ConversationState>()((set, get) => ({
     clearPersist('conversation');
     set({
       conversations: buildSeedMap(),
-      activeConversationId: 'conv-seed-nandi',
+      activeConversationId: 'conv-seed-landslide',
       activeNav: 'assistant',
       settings: { ...DEFAULT_SETTINGS },
     });

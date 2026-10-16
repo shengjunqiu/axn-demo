@@ -1,3 +1,4 @@
+import { startOperationsScheduler } from '@/store/customerOperationsStore';
 /**
  * 应用入口（UI 改版 · 参考图外壳）：
  * 左侧 260px 中性侧栏（品牌 / 功能导航含独立文书库 / 新建 / 搜索 / 历史 / 底部角色与设置），
@@ -20,8 +21,8 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer, Spin } from 'antd';
 import { Menu } from 'lucide-react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { useUrlNavSync } from '@/components/nav/navRoutes';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { NAV_PATH, useUrlNavSync } from '@/components/nav/navRoutes';
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { useConversationStore } from '@/store/conversationStore';
@@ -29,6 +30,8 @@ import { useActiveScope, useWorkspaceStore } from '@/store/workspaceStore';
 import ChatPanel from '@/components/chat/ChatPanel';
 import GlobalSidebar from '@/components/nav/GlobalSidebar';
 import WorkspaceSync from '@/components/workspace/WorkspaceSync';
+import EmbeddedResourceReportBridge from '@/components/chat/EmbeddedResourceReportBridge';
+import { SHOW_DISASTER_EVENTS_LIBRARY } from '@/seed/prototypeVisibility';
 import SplitResizer from '@/components/workspace/SplitResizer';
 import SelectionAssist from '@/components/doc/SelectionAssist';
 
@@ -38,10 +41,27 @@ import SelectionAssist from '@/components/doc/SelectionAssist';
 /** 工作区抽屉中按需渲染的面板。 */
 const DocumentLibraryPage = lazy(() => import('@/components/workspace/DocumentLibraryPage'));
 const DocumentWorkspace = lazy(() => import('@/components/workspace/DocumentWorkspace'));
-const ResourcePanel = lazy(() => import('@/components/workspace/ResourcePanel'));
 const KnowledgePanel = lazy(() => import('@/components/workspace/KnowledgePanel'));
 const NavPageContent = lazy(() => import('@/components/nav/NavPages').then(m => ({ default: m.NavPageContent })));
+const DisasterEventsPage = lazy(() => import('@/components/events/DisasterEventsPage'));
+const OriginalSystemWorkspace = lazy(() => import('@/components/workspace/OriginalSystemWorkspace'));
 const PrintView = lazy(() => import('@/components/doc/PrintView'));
+const MobileAssistantPreview = lazy(() => import('@/components/mobile/MobileAssistantPreview'));
+const MobileWorkbenchHost = lazy(() => import('@/components/mobile/MobileWorkbenchHost'));
+const Phase1HostPage = lazy(() => import('@/components/phase1/Phase1HostPage'));
+const V2PrototypePage = lazy(() => import('@/pages/v2/V2PrototypePage'));
+const DesktopPortalHost = lazy(() => import('@/components/phase1/DesktopPortalHost'));
+
+/** 手机端预览页：独立全屏舞台，不走桌面侧栏外壳。 */
+const MOBILE_PREVIEW_PATH = '/mobile';
+/** 手机工作台嵌入页：仿安能通工作台 + 悬浮安小能。 */
+const MOBILE_WORKBENCH_PATH = '/mobile-workbench';
+/** 电脑端门户入口：四系统 + 安小能。 */
+const DESKTOP_PORTAL_PATH = '/portal';
+/** 一期系统嵌入页：原系统全屏背景 + 悬浮安小能，不走桌面侧栏外壳。 */
+const PHASE1_HOST_PREFIX = '/phase1';
+/** V2 独立原型：应急救援综合协调保障系统，不走安小能主壳。 */
+const V2_PROTOTYPE_PREFIX = '/v2';
 const ChatControlsPage = lazy(() => import('@/components/settings/ChatControlsPage'));
 const ChatBubbleExamplesPage = lazy(() => import('@/components/settings/ChatBubbleExamplesPage'));
 
@@ -68,6 +88,7 @@ function useMediaQuery(query: string): boolean {
 }
 
 export default function AppRoot() {
+  useEffect(() => startOperationsScheduler(), []);
   const storageWarning = useDemoStore((s) => s.storageWarning);
   const activeConversationId = useConversationStore((s) => s.activeConversationId);
   const conversations = useConversationStore((s) => s.conversations);
@@ -77,11 +98,21 @@ export default function AppRoot() {
     return !!scopeState && (scopeState.generating || scopeState.selection !== null);
   });
 
-  // 资源/知识面板抽屉（由对话任务卡触发）
-  const [panelDrawer, setPanelDrawer] = useState<'resource' | 'knowledge' | null>(null);
+  // 知识面板仍用抽屉；资源与态势改入右侧工作区（与公文同槽）。
+  const [panelDrawer, setPanelDrawer] = useState<'knowledge' | null>(null);
+  const navigate = useNavigate();
+  const openPanelDrawer = (target: 'resource' | 'knowledge', options?: { tab?: 'list' | 'map' }) => {
+    if (target === 'resource') {
+      useWorkspaceStore.getState().select(scope, { kind: 'resource', id: options?.tab ?? 'list' });
+      navigate(NAV_PATH.assistant);
+      return;
+    }
+    setPanelDrawer(target);
+  };
 
   // URL 是导航的唯一权威；store 的 activeNav 只跟着 URL 走，用来驱动侧栏高亮。
   useUrlNavSync();
+  const location = useLocation();
 
   // 刷新恢复：让业务上下文（事件/会话）对齐已持久化的 activeConversation
   useEffect(() => {
@@ -103,7 +134,6 @@ export default function AppRoot() {
   // 阈值必须与 global.css 的 @media (max-width: 767px) 一致，否则 JS 状态与 CSS 定位脱节。
   const isCompact = useMediaQuery('(max-width: 767px)');
   const [navOpen, setNavOpen] = useState(false);
-  const location = useLocation();
   const navToggleRef = useRef<HTMLButtonElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
   const pendingNavFocusRef = useRef(false);
@@ -152,6 +182,60 @@ export default function AppRoot() {
     [isCompact, sidebarCollapsed],
   );
 
+  // 手机端预览：全屏舞台 + iPhone 边框，内嵌手机工作台入口页，不渲染桌面侧栏。
+  if (location.pathname === MOBILE_PREVIEW_PATH) {
+    return (
+      <Suspense fallback={<div className="axn-mobile-preview" />}>
+        <MobileAssistantPreview />
+      </Suspense>
+    );
+  }
+
+  // 手机工作台嵌入：安能通风格工作台背景 + 悬浮安小能。
+  if (location.pathname === MOBILE_WORKBENCH_PATH) {
+    return (
+      <Suspense fallback={<div className="axn-mw-host" />}>
+        <MobileWorkbenchHost />
+      </Suspense>
+    );
+  }
+
+  // 电脑端门户入口：截图氛围 + 五模块（最右安小能直达助理）。
+  if (location.pathname === DESKTOP_PORTAL_PATH) {
+    return (
+      <Suspense fallback={<div className="axn-portal-host" />}>
+        <DesktopPortalHost />
+      </Suspense>
+    );
+  }
+
+  // V2 独立原型全屏展示，不套安小能侧栏。
+  if (location.pathname === V2_PROTOTYPE_PREFIX || location.pathname.startsWith(`${V2_PROTOTYPE_PREFIX}/`)) {
+    return (
+      <Suspense fallback={<div className="v2-app" />}>
+        <Routes>
+          <Route path="/v2" element={<Navigate to="/v2/resources" replace />} />
+          <Route path="/v2/:page" element={<V2PrototypePage />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
+  // 一期系统嵌入：原系统为背景，右下角悬浮安小能（默认收起）。
+  if (location.pathname === PHASE1_HOST_PREFIX || location.pathname.startsWith(`${PHASE1_HOST_PREFIX}/`)) {
+    const phase1System = location.pathname.slice(PHASE1_HOST_PREFIX.length).replace(/^\//, '');
+    if (!phase1System) {
+      return <Navigate to={`${PHASE1_HOST_PREFIX}/coordination`} replace />;
+    }
+    return (
+      <Suspense fallback={<div className="axn-phase1-host" />}>
+        <Routes>
+          <Route path="/phase1/:system?" element={<Phase1HostPage />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
   return (
     <div className="axn-shell">
       {/* 窄屏遮罩：点按关闭导航抽屉（纯装饰） */}
@@ -171,9 +255,7 @@ export default function AppRoot() {
         style={sidebarStyle}
         tabIndex={-1}
       >
-        {/* onClose 只在窄屏抽屉形态传入：桌面侧栏是常驻列，不该出现关闭按钮。
-            复用 closeNav，与点遮罩关闭同一套语义（含焦点交还汉堡按钮）。 */}
-        <GlobalSidebar onClose={isCompact ? closeNav : undefined} />
+        <GlobalSidebar />
       </aside>
 
       {/* 窄屏汉堡按钮：打开导航抽屉 */}
@@ -191,9 +273,7 @@ export default function AppRoot() {
       )}
 
       {/* 主区：HashRouter 路由分发 */}
-      {/* 抽屉打开时主区 inert：手写抽屉没有 antd 的焦点陷阱（见上方注释），
-          否则 Tab 会跑到遮罩后面看不见的内容上。窄屏才可能打开抽屉，用 isCompact 收口。 */}
-      <main className="axn-shell-main" inert={isCompact && navOpen}>
+      <main className="axn-shell-main">
         {/* 常驻协调：即使文书库/工作区未挂载也观察真实草稿任务与模拟文书流程 */}
         <WorkspaceSync />
 
@@ -203,7 +283,8 @@ export default function AppRoot() {
           <Route path="/assistant" element={
             <div className={`axn-assistant${workspaceOpen ? ' axn-assistant--split' : ''}`}>
               <div className="axn-chat-pane">
-                <ChatPanel compact={workspaceOpen} onOpenDrawer={(target: 'resource' | 'knowledge') => setPanelDrawer(target)} />
+                <EmbeddedResourceReportBridge />
+                <ChatPanel compact={workspaceOpen} onOpenDrawer={openPanelDrawer} />
               </div>
               {workspaceOpen && <SplitResizer />}
               {workspaceOpen && (
@@ -212,6 +293,17 @@ export default function AppRoot() {
                   <SelectionAssist scope=".axn-workspace-pane .axn-redhead-paper, .axn-workspace-pane .doc-paper-editing" />
                 </div>
               )}
+            </div>
+          } />
+          <Route
+            path="/events"
+            element={SHOW_DISASTER_EVENTS_LIBRARY
+              ? <Suspense><DisasterEventsPage /></Suspense>
+              : <Navigate to={NAV_PATH.assistant} replace />}
+          />
+          <Route path="/originalSystems/:system?" element={
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <Suspense><OriginalSystemWorkspace /></Suspense>
             </div>
           } />
           <Route path="/library" element={<Suspense><DocumentLibraryPage /></Suspense>} />
@@ -249,10 +341,7 @@ export default function AppRoot() {
         </Routes>
       </main>
 
-      <Drawer title="资源与态势" size={760} open={panelDrawer === 'resource'} onClose={() => setPanelDrawer(null)} destroyOnHidden>
-        <Suspense>{panelDrawer === 'resource' && <ResourcePanel />}</Suspense>
-      </Drawer>
-      <Drawer title="建议与知识" size={560} open={panelDrawer === 'knowledge'} onClose={() => setPanelDrawer(null)} destroyOnHidden>
+      <Drawer title="建议与知识（模拟）" size={560} open={panelDrawer === 'knowledge'} onClose={() => setPanelDrawer(null)} destroyOnHidden>
         <Suspense>{panelDrawer === 'knowledge' && <KnowledgePanel />}</Suspense>
       </Drawer>
       <Suspense><PrintView /></Suspense>

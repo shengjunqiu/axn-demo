@@ -1,23 +1,21 @@
+import { ResultNotice as Alert } from '@/components/common/AgentResultPrimitives';
+import { Confidence, FileRow, InlineFlag, KvTable, Notice, ResourceList, RunBar, Section, SourceList, type Tone } from '@/components/common/ChatPrimitives';
+import StructuredReply from './StructuredReply';
+import './agent-results.css';
+import MultiSourceSummary from './MultiSourceSummary';
+import { tenderName } from '@/seed/tenderNames';
 /**
  * 任务执行卡（T-006）：渲染 assistant 任务消息的执行步骤、产物摘要、流式文本与操作。
  * 数据全部来自 sessionStore.tasks（zustand 订阅），本组件不复制任务状态。
  * 所有数值/文本均取自种子事实或任务产物，界面为模拟数据环境。
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Alert, Button, Space, Tooltip, Typography } from 'antd';
+import { useState, type ReactNode } from 'react';
+import { publishConstructionMaterial } from '@/services/agentMaterialDocument';
+import { needsResultDocument } from '@/services/resultPresentation';
+import type { ConstructionCapability } from '@/seed/constructionScenarios';
+import {  Button, Space, Typography } from 'antd';
 import {
-  CircleCheck,
-  CircleMinus,
-  CirclePause,
-  ChevronRight,
-  CircleX,
-  Clock,
-  LoaderCircle,
-  BookOpen,
   FileText,
-  Map as MapIcon,
-  Users,
-  Warehouse,
 } from 'lucide-react'
 import type {
   AgentTask,
@@ -27,309 +25,270 @@ import type {
   ProposalArtifact,
   QaKnowledgeArtifact,
   ResourceResultArtifact,
-  StepStatus,
+  ScenarioSectionsArtifact,
   SummaryArtifact,
   TaskArtifactPayload,
   TaskStatus,
 } from '@/domain/types';
 import { cancelTask, retryTask } from '@/services/taskRunner';
-import { factDisplay, resolveFact } from '@/services/factLookup';
+import { scenarioLabelForId } from '@/services/agentFlow';
+import { buildFollowUpNextStepActions } from '@/services/eventSwitchBriefing';
+import { resolveFact } from '@/services/factLookup';
 import { useSessionStore } from '@/store/sessionStore';
 import { useDocumentStore } from '@/store/documentStore';
+import { useMockDocumentStore } from '@/store/mockDocumentStore';
 import { useDocumentNavigation } from '@/components/workspace/useDocumentNavigation';
 import { qaStatusLabel } from '@/services/qaKnowledge';
 import { factText, getFact, knowledgeById, teamById, warehouseById } from '@/seed/scenario';
-import Typewriter from './Typewriter';
+import NextStepActionsBar from './NextStepActionsBar';
+import TaskSkillPanel from '@/components/skills/TaskSkillPanel';
 
 const { Text } = Typography;
 
 export interface TaskCardProps {
   task: AgentTask;
-  onOpenDrawer: (target: 'resource' | 'knowledge') => void;
+  onOpenDrawer: (target: 'resource' | 'knowledge', options?: { tab?: 'list' | 'map' }) => void;
+  onTask?: (prompt: string) => void;
+  onNavigate?: (path: string) => void;
+  /** 打开业务流程补充抽屉并定位到指定流程 Tab */
+  onOpenFlow?: (tab: string) => void;
+  busy?: boolean;
 }
 
-// 状态用「圆点 + 文字」的轻量徽标，不再用一排彩色 Tag 抢正文的视觉权重。
-const STATUS_META: Record<TaskStatus, { label: string; tone: 'idle' | 'busy' | 'ok' | 'warn' | 'err' }> = {
-  queued: { label: '排队中', tone: 'idle' },
-  running: { label: '执行中', tone: 'busy' },
-  succeeded: { label: '已完成', tone: 'ok' },
-  partial: { label: '部分完成', tone: 'warn' },
-  waiting_input: { label: '待补充信息', tone: 'warn' },
-  failed: { label: '失败', tone: 'err' },
-  cancelled: { label: '已取消', tone: 'idle' },
+const STATUS_META: Record<TaskStatus, { label: string; color: string }> = {
+  queued: { label: '排队中', color: 'default' },
+  running: { label: '执行中', color: 'processing' },
+  succeeded: { label: '已完成', color: 'blue' },
+  partial: { label: '部分完成', color: 'warning' },
+  waiting_input: { label: '待补充信息', color: 'warning' },
+  failed: { label: '失败', color: 'error' },
+  cancelled: { label: '已取消', color: 'default' },
 };
-
-/** 知识文档标题去掉自带的书名号与「（模拟）」后缀——外层统一加《》，演示标识只在全局出现一次。 */
-function cleanDocTitle(title: string): string {
-  return title.replace(/^《|》$/g, '').replace(/（模拟）$/, '');
-}
-
-/** 置信度分档：≥80% 高 / ≥60% 中 / 其余低——颜色只表达可信程度，不做装饰。 */
-function confidenceTone(c: number): { level: string; tone: 'high' | 'mid' | 'low' } {
-  if (c >= 0.8) return { level: '高', tone: 'high' };
-  if (c >= 0.6) return { level: '中', tone: 'mid' };
-  return { level: '低', tone: 'low' };
-}
-
-function StepIcon({ status }: { status: StepStatus }) {
-  switch (status) {
-    case 'completed':
-      return <CircleCheck className="axn-tc-green" />;
-    case 'running':
-      return <LoaderCircle className="axn-tc-blue axn-spin" />;
-    case 'failed':
-      return <CircleX className="axn-tc-red" />;
-    case 'cancelled':
-      return <CircleMinus className="axn-tc-muted" />;
-    default:
-      return <Clock className="axn-tc-muted" />;
-  }
-}
 
 function fmtSeconds(ms: number | null): string {
   if (ms == null) return '';
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-/** 种子里的时间是 ISO 串（2026-09-28T20:18:00+08:00），对话里展示成「2026-09-28 20:18」 */
-function readableTime(text: string): string {
-  return text.replace(/(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?/g, '$1 $2');
-}
-
-/**
- * 纯文本回答的轻量版式：「一、…」成小标题，「xx依据：/说明：」成脚注，首行短标题加粗，
- * 空行只当段间距（不再渲染成一整行空白）。逐字输出时也按这套版式长出来。
- */
-function FormattedAnswer({ text }: { text: string }) {
-  const lines = text.split('\n');
-  const firstIdx = lines.findIndex((l) => l.trim());
-  const nodes: ReactNode[] = [];
-  lines.forEach((raw, i) => {
-    const line = raw.trim();
-    if (!line) return;
-    if (/^[一二三四五六七八九十]+、/.test(line)) {
-      nodes.push(<h4 key={i} className="axn-answer-h">{line}</h4>);
-    } else if (/^(评估依据|数据依据|依据|说明|备注)：/.test(line)) {
-      nodes.push(<p key={i} className="axn-answer-foot">{line}</p>);
-    } else if (i === firstIdx && line.length <= 40 && !/[。；！？]$/.test(line) && lines.length > 2) {
-      nodes.push(<p key={i} className="axn-answer-title">{line}</p>);
-    } else {
-      const kv = /^([^：]{2,8})：(.+)$/.exec(line);
-      nodes.push(kv
-        ? <p key={i} className="axn-answer-p"><span className="axn-answer-k">{kv[1]}</span>{kv[2]}</p>
-        : <p key={i} className="axn-answer-p">{line}</p>);
-    }
-  });
-  return <div className="axn-answer">{nodes}</div>;
-}
-
 function factValueText(factId: string, override?: string): string {
-  if (override) return readableTime(override);
-  const text = readableTime(factText(factId));
+  if (override) return override;
+  const text = factText(factId);
   const unit = getFact(factId)?.unit;
   if (!text) return '（来源缺失）';
   return unit ? `${text} ${unit}` : text;
 }
 
-function SummaryBlock({ payload }: { payload: SummaryArtifact }) {
+function SummaryBlock({
+  payload,
+  onOpenFlow,
+}: {
+  payload: SummaryArtifact;
+  onOpenFlow?: (tab: string) => void;
+}) {
   const isPending = (id: string) => resolveFact(id, { kind: 'event', eventId: payload.eventId })?.verification !== 'confirmed';
-  const pendingKeys = payload.pendingKeys.filter(isPending);
-  return (
-    <div className="axn-artifact">
-      {payload.rows.map((row) => (
-        <div key={row.label + row.factId} className="axn-artifact-row">
-          <span className="axn-artifact-label">{row.label}</span>
-          <span className="axn-artifact-value">
-            {factValueText(row.factId, row.displayOverride)}
-            {row.emphasize === 'suggested' && (
-              <span className="axn-inline-flag is-info">建议值</span>
-            )}
-            {row.emphasize === 'pending' && isPending(row.factId) && (
-              <span className="axn-inline-flag is-warn">待确认</span>
-            )}
-          </span>
-        </div>
-      ))}
-      {pendingKeys.length > 0 && (
-        <Alert
-          type="warning"
-          showIcon
-          className="axn-tc-mt8"
-          title={`待确认字段：${pendingKeys.map(id => payload.rows.find(row => row.factId === id)?.label ?? '待补充信息').join('、')}`}
-          description="以上字段暂无可靠来源，需人工补录后才会进入正式产物。"
-        />
-      )}
-      {payload.sourceUnavailable && (
-        <Alert type="info" showIcon className="axn-tc-mt8" title={payload.sourceUnavailable} />
-      )}
-      <div className="axn-artifact-foot">数据时间：{readableTime(payload.dataTime)}</div>
-    </div>
-  );
+  return <div data-testid="event-summary-text">
+    <KvTable rows={payload.rows.map(row => ({ label: row.label, value: <>{factValueText(row.factId, row.displayOverride)} {row.emphasize === 'suggested' ? <InlineFlag tone="info">建议值</InlineFlag> : row.emphasize === 'pending' && isPending(row.factId) ? <InlineFlag tone="warn">待确认</InlineFlag> : null}</> }))}
+      foot={`数据时间：${payload.dataTime} · 模拟数据`}
+      actions={onOpenFlow && <Button size="small" data-testid="open-situation-warning" onClick={() => onOpenFlow('预警推送')}>打开预警推送</Button>} />
+    {payload.sourceUnavailable && <Notice tone="warn" title="资料待补充">{payload.sourceUnavailable}</Notice>}
+  </div>;
 }
 
-function ResourceBlock({ payload, onOpenDrawer }: { payload: ResourceResultArtifact; onOpenDrawer: TaskCardProps['onOpenDrawer'] }) {
-  const teamCount = payload.resourceIds.filter((id) => teamById.has(id)).length;
-  const warehouseCount = payload.resourceIds.length - teamCount;
-  return (
-    <div className="axn-artifact">
-      <div className="axn-artifact-row">
-        <span className="axn-artifact-label">查询结果</span>
-        <span className="axn-artifact-value">
-          {teamCount} 支队伍 · {warehouseCount} 处仓库
-        </span>
-      </div>
-      <div className="axn-resource-results" data-testid="resource-result-details">
-        {payload.resourceIds.map(id => {
-          const team = teamById.get(id);
-          const warehouse = warehouseById.get(id);
-          const refs = team?.factRefs ?? warehouse?.factRefs;
-          if (!refs) return null;
-          const value = (factId: string) => factDisplay(factId, { kind: 'event', eventId: payload.eventId });
-          const Icon = team ? Users : Warehouse;
-          return <div className="axn-resource-result" key={id}>
-            <span className={`axn-resource-icon${team ? '' : ' is-store'}`} aria-hidden><Icon size={15} /></span>
-            <div className="axn-resource-main">
-              <div className="axn-resource-name">{value(refs.name)}<span className="axn-resource-kind">{team ? '救援队伍' : '物资仓库'}</span></div>
-              <div className="axn-resource-meta">{team
-                ? `人员 ${value(team.factRefs.peopleCount)} · 挖掘机 ${value(team.factRefs.excavatorCount)}`
-                : warehouse ? `${value(warehouse.factRefs.materialName)} · 库存 ${value(warehouse.factRefs.stockQuantity)}` : ''}</div>
-            </div>
-            {team && <div className="axn-resource-eta">
-              <strong>{value(team.factRefs.etaMinutes)}</strong>
-              <span>{value(team.factRefs.distanceKm)}</span>
-            </div>}
-          </div>;
-        })}
-      </div>
-      {payload.excluded.map((ex) => {
-        const team = teamById.get(ex.resourceId);
-        const name = team ? factText(team.factRefs.name) || ex.resourceId : ex.resourceId;
-        return (
-          <div key={ex.resourceId} className="axn-artifact-row">
-            <span className="axn-artifact-label">未列入</span>
-            <span className="axn-artifact-value">
-              {name}：{ex.reason}
-            </span>
-          </div>
-        );
-      })}
-      {payload.note && <div className="axn-artifact-foot">{payload.note}</div>}
-      <div className="axn-artifact-actions">
-        <Button size="small" icon={<MapIcon size={14} />} onClick={() => onOpenDrawer('resource')}>
-          查看资源与态势
-        </Button>
-      </div>
-    </div>
-  );
+/** 产物单行条：类型 + 名称（省略）+ 右侧查看，避免多行卡片占位。 */
+function ResultLine({
+  label,
+  name,
+  actions,
+  testId,
+}: {
+  label: string;
+  name: string;
+  actions: ReactNode;
+  testId?: string;
+}) {
+  return <div data-testid={testId}><FileRow name={name} sub={label} action={<Space size={6} wrap>{actions}</Space>} /></div>;
+}
+
+function ResourceBlock({
+  payload,
+  onOpenDrawer,
+  onOpenFlow,
+}: {
+  payload: ResourceResultArtifact;
+  onOpenDrawer: TaskCardProps['onOpenDrawer'];
+  onOpenFlow?: TaskCardProps['onOpenFlow'];
+}) {
+  const teamCount = payload.resourceIds.filter(id => teamById.has(id)).length;
+  const warehouseCount = payload.resourceIds.filter(id => warehouseById.has(id)).length;
+  const items = payload.resourceIds.flatMap(id => {
+    const team = teamById.get(id);
+    const warehouse = warehouseById.get(id);
+    const entity = team ?? warehouse;
+    if (!entity) return [];
+    return [{ name: factText(entity.factRefs.name) || id, kind: team ? 'team' as const : 'store' as const,
+      meta: team ? `人员 ${factText(team.factRefs.peopleCount)} · 挖掘机 ${factText(team.factRefs.excavatorCount)}` : '仓储明细与可用库存待核对',
+    }];
+  });
+  return <div data-testid="resource-result-compact"><ResourceList summary={{ label: '查询结果', value: items.length ? `${teamCount} 支队伍 · ${warehouseCount} 处仓库` : `${payload.resourceIds.length} 处周边资源示意点` }}
+    items={items} foot={payload.note ?? `数据时间：${payload.dataTime} · 候选资源不等于已调派`}
+    actions={<Space wrap size={6}><Button size="small" aria-label="查看资源列表" onClick={() => onOpenDrawer('resource', { tab: 'list' })}>列表</Button><Button size="small" type="primary" aria-label="查看态势地图" onClick={() => onOpenDrawer('resource', { tab: 'map' })}>地图</Button>{onOpenFlow && <Button size="small" data-testid="open-resource-warning" onClick={() => onOpenFlow('资源预警通知')}>打开资源预警通知</Button>}</Space>} />
+    {payload.excluded.length > 0 && <Notice tone="warn" title={`${payload.excluded.length} 项未列入`}>{payload.excluded.map(item => `${item.resourceId}：${item.reason}`).join('；')}</Notice>}
+  </div>;
 }
 
 function KnowledgeBlock({ payload, onOpenDrawer }: { payload: KnowledgeArtifact; onOpenDrawer: TaskCardProps['onOpenDrawer'] }) {
   const chunks = payload.chunkIds
     .map((id) => knowledgeById.get(id))
     .filter((c): c is NonNullable<typeof c> => Boolean(c));
-  return (
-    <div className="axn-artifact">
-      {chunks.length === 0 ? (
-        <Text type="secondary">引用知识条目缺失</Text>
-      ) : (
-        chunks.map((c) => (
-          <div key={c.chunkId} className="axn-artifact-row">
-            <span className="axn-artifact-label">{c.category}</span>
-            <span className="axn-artifact-value">
-              《{c.title}》· {c.sourceLabel}
-            </span>
-          </div>
-        ))
-      )}
-      <div className="axn-artifact-actions">
-        <Button size="small" icon={<BookOpen size={14} />} onClick={() => onOpenDrawer('knowledge')}>
-          查看建议与知识
-        </Button>
-      </div>
-    </div>
-  );
+  return <div><SourceList sources={chunks.map(c => ({ title: c.title, section: c.category, excerpt: c.sourceLabel }))} /><Button size="small" onClick={() => onOpenDrawer('knowledge')}>查看建议与知识</Button></div>;
 }
 
-/**
- * 抢险救援知识问答：不再套框，按「结论 → 建议动作 / 禁忌 / 上报 → 依据」的阅读顺序平铺；
- * 来源以编号脚注呈现，置信度做成带语义色的徽标（qa.json，模拟数据）。
- */
+/** 抢险救援知识问答卡：结构化答案 + 模拟文档溯源（qa.json，模拟数据）。 */
 function QaKnowledgeBlock({ payload }: { payload: QaKnowledgeArtifact }) {
-  const conf = confidenceTone(payload.confidence);
-  const sections = [
-    { title: '建议动作', body: payload.keyActions },
-    { title: '禁忌提醒', body: payload.doNot, warn: true },
-    { title: '协同上报', body: payload.supportAndReporting },
-  ].filter((x) => x.body);
-  return (
-    <div className="axn-qa">
-      <div className="axn-qa-meta">
-        <span className="axn-qa-category">{payload.category}</span>
-        <span className={`axn-confidence axn-confidence--${conf.tone}`} title={qaStatusLabel(payload.answerStatus)}>
-          置信度 {conf.level} · {Math.round(payload.confidence * 100)}%
-        </span>
-      </div>
-      <p className="axn-qa-lead">
-        {payload.summary}
-        {payload.sources.map((src, i) => (
-          <sup key={i} className="axn-cite" title={`《${cleanDocTitle(src.title)}》${src.section}`}>{i + 1}</sup>
-        ))}
-      </p>
-      {sections.map((sec) => (
-        <section key={sec.title} className={`axn-qa-section${sec.warn ? ' is-warn' : ''}`}>
-          <h4>{sec.title}</h4>
-          <p>{sec.body}</p>
-        </section>
-      ))}
-      {payload.liveDataNeeded.length > 0 && (
-        <div className="axn-qa-live">
-          <span>需结合现场实时数据</span>
-          {payload.liveDataNeeded.map((d) => (
-            <span key={d} className="axn-qa-live-chip">{d}</span>
-          ))}
-        </div>
-      )}
-      <div className="axn-qa-sources">
-        <div className="axn-qa-sources-title">依据来源 · {payload.sources.length}</div>
-        <ol>
-          {payload.sources.map((s, i) => (
-            <li key={`${s.docId}-${s.section}`} className="axn-qa-source">
-              <span className="axn-cite" aria-hidden>{i + 1}</span>
-              <div className="axn-qa-source-body">
-                <div className="axn-qa-source-title">《{cleanDocTitle(s.title)}》<span>{s.section}</span></div>
-                <div className="axn-qa-source-quote">{s.excerpt}</div>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </div>
-      <p className="axn-qa-disclaimer">
-        {qaStatusLabel(payload.answerStatus)}。AI 生成内容仅供参考，现场处置以指挥体系、现行标准与专业判断为准。
-      </p>
-    </div>
-  );
+  return <div className="axn-qa">
+    <p className="axn-qa-lead">{payload.summary}</p>
+    <div className="axn-agent-result-meta"><span>{payload.category} · {qaStatusLabel(payload.answerStatus)}</span><Confidence level={payload.confidence >= 0.8 ? 'high' : payload.confidence >= 0.6 ? 'mid' : 'low'} value={Math.round(payload.confidence * 100)} /></div>
+    {payload.keyActions && <Section title="建议动作"><p>{payload.keyActions}</p></Section>}
+    {payload.doNot && <Section title="禁忌提醒" warn><p>{payload.doNot}</p></Section>}
+    {payload.supportAndReporting && <Section title="协同上报"><p>{payload.supportAndReporting}</p></Section>}
+    {payload.liveDataNeeded.length > 0 && <Notice tone="warn" title="需结合现场实时数据">{payload.liveDataNeeded.join('、')}</Notice>}
+    <SourceList sources={payload.sources.map(source => ({ title: source.title, section: source.section, excerpt: source.excerpt }))} />
+    <Notice tone="info" title="模拟数据，非正式技术规范">现场处置以现场指挥体系、现行法规标准与专业技术人员判断为准。</Notice>
+  </div>;
 }
 
 function ProposalBlock({ payload, onOpenDrawer }: { payload: ProposalArtifact; onOpenDrawer: TaskCardProps['onOpenDrawer'] }) {
   const proposal = useSessionStore(s => s.proposals[payload.proposalId]);
+  const name = proposal?.title ?? '险情处置工作建议';
   return (
-    <div className="axn-artifact">
-      <div className="axn-artifact-row">
-        <span className="axn-artifact-label">处置建议</span>
-        <span className="axn-artifact-value">
-          已生成（版本 {payload.version} · 待人工审核）
-        </span>
-      </div>
-      {proposal && proposal.sections.length > 0 && (
-        <ol className="axn-proposal-steps">
-          {proposal.sections.map(section => <li key={section.id}><strong>{section.title}</strong><p>{section.text}</p></li>)}
-        </ol>
-      )}
-      <div className="axn-artifact-actions">
-        <Button size="small" icon={<BookOpen size={14} />} onClick={() => onOpenDrawer('knowledge')}>
-          查看建议与知识
+    <ResultLine
+      testId="proposal-result"
+      label="处置建议"
+      name={name}
+      actions={(
+        <Button
+          size="small"
+          type="primary"
+          ghost
+          aria-label="查看建议与知识"
+          onClick={() => onOpenDrawer('knowledge')}
+        >
+          查看
         </Button>
-      </div>
+      )}
+    />
+  );
+}
+
+const RESOURCE_SCENARIO_CAPABILITIES = new Set(['search', 'resourceReport', 'update', 'group']);
+
+/** 四智能体建设材料：单行名称 +「查看」，正文在右侧红头工作区。 */
+function ScenarioSectionsBlock({
+  payload,
+  sessionId,
+  onOpenDrawer,
+  onOpenFlow,
+}: {
+  payload: ScenarioSectionsArtifact;
+  sessionId: string;
+  onOpenDrawer: TaskCardProps['onOpenDrawer'];
+  onOpenFlow?: TaskCardProps['onOpenFlow'];
+}) {
+  const openDocument = useDocumentNavigation();
+  const [attachmentId, setAttachmentId] = useState<string | null>(null);
+  const document = useMockDocumentStore((s) =>
+    (attachmentId || payload.documentId)
+      ? s.libraries[sessionId]?.documents.find((item) => item.id === (attachmentId || payload.documentId))
+      : undefined,
+  );
+  const openInWorkspace = () => {
+    if (!document) return;
+    openDocument(sessionId, { kind: 'mock', id: document.id });
+  };
+  const showResourceMap = RESOURCE_SCENARIO_CAPABILITIES.has(payload.capability);
+  const inline = !needsResultDocument(payload.capability);
+  const exportAttachment = () => {
+    const created = document ?? publishConstructionMaterial(sessionId, payload.capability as ConstructionCapability,
+      { ...payload, capability: payload.capability as ConstructionCapability }, { attachment: true });
+    if (!created) return;
+    setAttachmentId(created.id);
+    openDocument(sessionId, { kind: 'mock', id: created.id });
+  };
+  const materialName = document?.title ?? payload.title;
+  return (
+    <div data-testid="scenario-sections">
+      {inline ? <Section title={payload.title}>
+        <Space wrap size={6}>
+          <Button size="small" onClick={exportAttachment}>按需整理为附件</Button>
+          {showResourceMap && <>
+            <Button size="small" aria-label="查看资源列表" onClick={() => onOpenDrawer('resource', { tab: 'list' })}>列表</Button>
+            <Button size="small" aria-label="查看态势地图" onClick={() => onOpenDrawer('resource', { tab: 'map' })}>地图</Button>
+          </>}
+        </Space>
+      </Section> : <ResultLine
+        label="报告 / 方案草稿 · 模拟"
+        name={materialName}
+        actions={(
+          <>
+            {document ? (
+              <Button
+                aria-label="查看文书"
+                size="small"
+                type="primary"
+                ghost
+                icon={<FileText />}
+                onClick={openInWorkspace}
+                data-testid="agent-material-preview"
+              >
+                查看
+              </Button>
+            ) : (
+              <Text type="secondary" className="axn-tc-fs12">结果已整理</Text>
+            )}
+            {showResourceMap && (
+              <>
+                <Button
+                  size="small"
+                  type="primary"
+                  ghost
+                  aria-label="查看资源列表"
+                  onClick={() => onOpenDrawer('resource', { tab: 'list' })}
+                >
+                  列表
+                </Button>
+                <Button
+                  size="small"
+                  type="primary"
+                  aria-label="查看态势地图"
+                  onClick={() => onOpenDrawer('resource', { tab: 'map' })}
+                >
+                  地图
+                </Button>
+              </>
+            )}
+          </>
+        )}
+      />}
+      <p className="axn-agent-result-lead">{payload.summary}</p>
+      {payload.sections.map((section, index) => <details className="axn-result-details" key={`${index}-${section.title}`} open={index === 0}>
+        <summary>{section.title}</summary><StructuredReply text={section.text} />
+      </details>)}
+      {[...(payload.table ? [{ title: '明细记录', ...payload.table }] : []), ...(payload.tables ?? [])].map((table, index) => <details className="axn-result-details" key={index}><summary>{table.title} · {table.rows.length} 条</summary>
+        {table.rows.map((row, rowIndex) => <KvTable key={rowIndex} rows={table.headers.map((label, col) => ({ label, value: row[col] ?? '—' }))} />)}
+      </details>)}
+      <Notice tone="info" title="编制说明">{payload.notice} · 数据时间：{payload.dataTime}</Notice>
+      {showResourceMap && onOpenFlow && (
+        <Button
+          size="small"
+          type="primary"
+          ghost
+          className="axn-tc-mt8"
+          data-testid="open-resource-warning-material"
+          onClick={() => onOpenFlow('资源预警通知')}
+        >
+          打开资源预警通知
+        </Button>
+      )}
     </div>
   );
 }
@@ -357,37 +316,56 @@ function DocumentBlock({ payload, sessionId }: { payload: DocumentLinkArtifact; 
           showIcon
           className="axn-tc-mt8"
           title={`缺少必填字段：${payload.missingFields.join('、')}`}
-          description="请在对话中按提示补录（补录内容确认后生成来源记录）。"
+          description="请在对话中按提示补录（补录内容确认后生成模拟来源记录）。"
         />
       )}
       {payload.state === 'draft_created' && draft && (
-        <div className="axn-artifact-actions">
-          <Button size="small" icon={<FileText size={14} />} onClick={openDraft} data-testid="task-open-draft">
-            预览/打开真实草稿
-          </Button>
-        </div>
+        <Button size="small" type="primary" ghost onClick={openDraft} className="axn-tc-mt8" data-testid="task-open-draft">
+          预览/打开真实草稿
+        </Button>
       )}
     </div>
   );
 }
 
-function ArtifactBlock({ payload, onOpenDrawer, sessionId }: { payload: TaskArtifactPayload; onOpenDrawer: TaskCardProps['onOpenDrawer']; sessionId: string }) {
+function ArtifactBlock({
+  payload,
+  onOpenDrawer,
+  onOpenFlow,
+  sessionId,
+}: {
+  payload: TaskArtifactPayload;
+  onOpenDrawer: TaskCardProps['onOpenDrawer'];
+  onOpenFlow?: TaskCardProps['onOpenFlow'];
+  sessionId: string;
+}) {
   switch (payload.kind) {
     case 'summary':
-      return <SummaryBlock payload={payload} />;
+      return payload.displayMode === 'multi_source' && payload.multiSource
+        ? <MultiSourceSummary snapshot={payload.multiSource} />
+        : <SummaryBlock payload={payload} onOpenFlow={onOpenFlow} />;
     case 'resources':
-      return <ResourceBlock payload={payload} onOpenDrawer={onOpenDrawer} />;
+      return <ResourceBlock payload={payload} onOpenDrawer={onOpenDrawer} onOpenFlow={onOpenFlow} />;
     case 'knowledge':
       return <KnowledgeBlock payload={payload} onOpenDrawer={onOpenDrawer} />;
     case 'qa_knowledge':
       return <QaKnowledgeBlock payload={payload} />;
     case 'proposal':
       return <ProposalBlock payload={payload} onOpenDrawer={onOpenDrawer} />;
+    case 'scenario_sections':
+      return (
+        <ScenarioSectionsBlock
+          payload={payload}
+          sessionId={sessionId}
+          onOpenDrawer={onOpenDrawer}
+          onOpenFlow={onOpenFlow}
+        />
+      );
     case 'document':
       return <DocumentBlock payload={payload} sessionId={sessionId} />;
     case 'clarification':
       return (
-        <Alert type="info" showIcon title="需要补充信息" description={payload.prompt} className="axn-tc-mt8" />
+        <Notice tone="warn" title="需要补充信息">{payload.prompt}</Notice>
       );
     case 'error': {
       const err: ErrorArtifact = payload;
@@ -406,86 +384,44 @@ function ArtifactBlock({ payload, onOpenDrawer, sessionId }: { payload: TaskArti
   }
 }
 
-export default function TaskCard({ task, onOpenDrawer }: TaskCardProps) {
-  const meta = STATUS_META[task.status] ?? { label: task.status, tone: 'idle' as const };
+export default function TaskCard({ task, onOpenDrawer, onTask, onNavigate, onOpenFlow, busy = false }: TaskCardProps) {
+  const meta = STATUS_META[task.status] ?? { label: task.status, color: 'default' };
   const isRunning = task.status === 'running' || task.status === 'queued';
-  // 执行过程：运行中展开（看得到 AI 在做什么），结束后自动收起成一行摘要，结果成为主角
-  const [stepsOpen, setStepsOpen] = useState(isRunning);
-  // 挂载时仍在生成 → 回答逐字呈现；历史消息（刷新恢复）直接整段显示
-  const liveRef = useRef(isRunning);
-  useEffect(() => { setStepsOpen(isRunning); }, [isRunning]);
-  const doneSteps = task.steps.filter((st) => st.status === 'completed');
-  const totalMs = doneSteps.reduce((sum, st) => sum + (st.elapsedMs ?? 0), 0);
+  const session = useSessionStore((s) => s.sessions[task.sessionId]);
+  const hasMaterialDoc = task.artifacts.some((a) => a.payload.kind === 'scenario_sections');
+  // 文书物化结果本身已带「查看文书」入口，不再叠一层下一步建议，避免对话噪音。
+  const showFollowUps =
+    (task.status === 'succeeded' || task.status === 'partial') && onTask && onNavigate && !hasMaterialDoc;
+  const followUps = showFollowUps
+    ? buildFollowUpNextStepActions(task.displayTitle, task.eventId, session)
+    : [];
+  const handoff = session?.handoffBundle;
 
   return (
-    <div className={`axn-task-card axn-task-card--${task.status}`}>
-      {/* 运行条：一行承载「任务名 · 步数 · 耗时」+ 状态；有步骤时整行可展开执行过程（参考 Claude 的工具调用行） */}
-      <div className={`axn-task-run${stepsOpen ? ' is-open' : ''}${isRunning ? ' is-running' : ''}`}>
-        <div className="axn-task-head">
-          {task.steps.length > 0 ? (
-            <button
-              type="button"
-              className="axn-task-process-toggle"
-              aria-expanded={stepsOpen}
-              aria-label={`${stepsOpen ? '收起' : '展开'}执行过程`}
-              onClick={() => setStepsOpen((v) => !v)}
-            >
-              <ChevronRight size={14} aria-hidden className="axn-task-process-caret" />
-              <Text className="axn-task-title">{task.displayTitle}</Text>
-              <span className="axn-task-process-meta">
-                {isRunning ? '正在执行 · ' : ''}{doneSteps.length}/{task.steps.length} 步{totalMs > 0 ? ` · ${fmtSeconds(totalMs)}` : ''}
-              </span>
-            </button>
-          ) : (
-            <Text className="axn-task-title">{task.displayTitle}</Text>
-          )}
-          <div className="axn-task-head-side">
-            {task.attempt > 1 && <span className="axn-status axn-status--idle">第 {task.attempt} 次尝试</span>}
-            <span className={`axn-status axn-status--${meta.tone}`}><i aria-hidden />{meta.label}</span>
-            {isRunning && (
-              <Button size="small" type="text" className="axn-task-cancel" onClick={() => cancelTask(task.taskId)}>
-                取消
-              </Button>
-            )}
-            {task.status === 'failed' && (
-              <Button size="small" type="primary" onClick={() => void retryTask(task.taskId)}>
-                重试
-              </Button>
-            )}
-            {task.status === 'waiting_input' && (
-              <Tooltip title="请在下方补录表单或对话中回复所需信息">
-                <Button size="small" icon={<CirclePause />} disabled>
-                  等待输入
-                </Button>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-        {stepsOpen && task.steps.length > 0 && (
-        <ul className="axn-task-steps">
-          {task.steps.map((step) => (
-            <li key={step.stepId} className={`axn-task-step axn-step-${step.status}`}>
-              <StepIcon status={step.status} />
-              <span className="axn-step-name">{step.name}</span>
-              {step.outputSummary && <span className="axn-step-output">{step.outputSummary}</span>}
-              {step.status === 'running' && <span className="axn-step-output">执行中…</span>}
-              {step.elapsedMs != null && step.status === 'completed' && (
-                <span className="axn-step-time">{fmtSeconds(step.elapsedMs)}</span>
-              )}
-            </li>
-          ))}
-        </ul>
-        )}
-      </div>
+    <div className={`axn-task-card axn-agent-result axn-task-card--${task.status}`}>
+      <RunBar title={tenderName(task.displayTitle)} status={{ tone: ({ queued: 'busy', running: 'busy', succeeded: 'ok', partial: 'warn', waiting_input: 'warn', failed: 'err', cancelled: 'idle' } as Record<TaskStatus, Tone>)[task.status], label: meta.label }}
+        steps={task.steps.map(step => ({ name: tenderName(step.name), status: step.status === 'cancelled' ? 'pending' : step.status, output: step.outputSummary ?? (step.status === 'running' ? '执行中…' : undefined), time: step.elapsedMs == null ? undefined : fmtSeconds(step.elapsedMs) }))}
+        defaultOpen={isRunning} meta={task.attempt > 1 ? `第 ${task.attempt} 次尝试 · 模拟` : '模拟数据'}
+        side={isRunning ? <Button size="small" onClick={() => cancelTask(task.taskId)}>取消</Button> : task.status === 'failed' ? <Button size="small" onClick={() => void retryTask(task.taskId)}>重试</Button> : null} />
+      {handoff && <Notice tone="info" title={`场景交接 · ${scenarioLabelForId(handoff.fromScenario)}`}><span data-testid="task-handoff-hint">{handoff.versionLabel}：{handoff.summary}</span></Notice>}
+      {task.steps.length > 0 && <details className="axn-result-details"><summary>查看本次执行与能力分工</summary><TaskSkillPanel task={task} /></details>}
 
-      {task.textAnswer && (
+      {/* 建设材料 / 处置建议已物化时，正文只在右侧或知识抽屉；聊天区不重复长摘要 */}
+      {task.textAnswer
+        && !task.artifacts.some(a => a.payload.kind === 'scenario_sections' || a.payload.kind === 'proposal') && (
         <div className="axn-task-answer">
-          <Typewriter text={task.textAnswer} animate={liveRef.current} render={(t) => <FormattedAnswer text={t} />} />
+          <StructuredReply text={task.textAnswer} />
         </div>
       )}
 
       {task.artifacts.map((artifact) => (
-        <ArtifactBlock key={artifact.artifactId} payload={artifact.payload} onOpenDrawer={onOpenDrawer} sessionId={task.sessionId} />
+        <ArtifactBlock
+          key={artifact.artifactId}
+          payload={artifact.payload}
+          onOpenDrawer={onOpenDrawer}
+          onOpenFlow={onOpenFlow}
+          sessionId={task.sessionId}
+        />
       ))}
 
       {task.error && (
@@ -502,6 +438,16 @@ export default function TaskCard({ task, onOpenDrawer }: TaskCardProps) {
               </Button>
             </Space>
           }
+        />
+      )}
+
+      {showFollowUps && (
+        <NextStepActionsBar
+          actions={followUps}
+          onTask={onTask}
+          onNavigate={onNavigate}
+          busy={busy}
+          testId="task-next-steps"
         />
       )}
     </div>

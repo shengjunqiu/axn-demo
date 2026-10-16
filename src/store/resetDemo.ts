@@ -1,3 +1,4 @@
+import { useCustomerOperations } from './customerOperationsStore';
 /**
  * 演示数据重置（收口）：把各 store 一起恢复到种子状态。
  *
@@ -8,15 +9,18 @@
  * 调用方：设置弹窗的「演示数据」区、兜底错误页，以及 ResourcePanel / KnowledgePanel 的
  * “会话未初始化”提示（原先文案让用户去重置，但界面上没有入口）。
  */
+import { useKnowledgeCaseStore } from '@/services/knowledgePublish';
 import { useConversationStore } from './conversationStore';
 import { useMockDocumentStore } from './mockDocumentStore';
 import { useSessionStore } from './sessionStore';
 import { useWorkspaceStore } from './workspaceStore';
 
 export function resetDemoData(): void {
+  useCustomerOperations.getState().reset();
+  window.localStorage.removeItem('anneng-demo:v1:original-materials');
   useSessionStore.getState().resetAll();
   useConversationStore.getState().resetAll();
   useWorkspaceStore.getState().resetAll();
-  // 红头公文库与版本历史（不在 sessionStore 级联内）
+  useKnowledgeCaseStore.getState().resetAll();
   useMockDocumentStore.getState().reset();
 }

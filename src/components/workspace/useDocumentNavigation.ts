@@ -1,5 +1,6 @@
+import { V2_AI_MODES } from '@/pages/v2/aiNodes';
 import { useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { App } from 'antd';
 import { NAV_PATH } from '@/components/nav/navRoutes';
 import { useActiveScope, useWorkspaceStore, type WorkspaceSelection } from '@/store/workspaceStore';
@@ -9,16 +10,19 @@ export function useDocumentNavigation() {
   const scope = useActiveScope();
   const { modal } = App.useApp();
   const navigate = useNavigate();
+  const location = useLocation();
+  const embedded = location.pathname.startsWith('/phase1')
+    || V2_AI_MODES.includes(new URLSearchParams(location.search).get('embedded') ?? '');
   return useCallback((targetScope: string, selection: WorkspaceSelection) => {
     const workspace = useWorkspaceStore.getState();
     const current = workspace.selectionOf(scope);
     if (targetScope === scope && current?.kind === selection.kind && current.id === selection.id) {
-      navigate(NAV_PATH.assistant);
+      if (!embedded) navigate(NAV_PATH.assistant);
       return;
     }
     const open = () => {
       workspace.select(targetScope, selection);
-      navigate(NAV_PATH.assistant);
+      if (!embedded) navigate(NAV_PATH.assistant);
     };
     if (!workspace.isDirty(scope)) { open(); return; }
     modal.confirm({
@@ -29,5 +33,5 @@ export function useDocumentNavigation() {
       cancelText: '继续编辑',
       onOk: () => { workspace.setDirty(scope, false); workspace.close(scope); open(); },
     });
-  }, [modal, navigate, scope]);
+  }, [modal, navigate, scope, embedded]);
 }

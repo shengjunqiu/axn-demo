@@ -1,0 +1,557 @@
+/* main 1ed92c8 的聊天样式快照，仅用于标准控件展示页。
+ * 先清除业务分支增加的同名样式属性，再应用 main 样式；更新规范时同步快照。
+ */
+@scope (.axn-controls-page, .axn-multi-source, .axn-ms-drawer, .axn-agent-result, .axn-structured-reply, .axn-resource-audit, .axn-workflow-source-reference) {
+.axn-chat-head-row { flex: revert; }
+.axn-chat-avatar { border-radius: revert; background: revert; color: revert; font-size: revert; font-weight: revert; }
+.axn-question-list { justify-items: revert; max-width: revert; }
+.axn-question-item { position: revert; max-width: revert; }
+.axn-question-item:hover:not(:disabled) { background: revert; color: revert; }
+.axn-chips { align-items: revert; overflow-y: revert; -webkit-overflow-scrolling: revert; }
+.axn-chip.ant-btn { display: revert; align-items: revert; justify-content: revert; margin: revert; line-height: revert; white-space: revert; }
+.axn-composer-shell .ant-sender { width: revert; min-width: revert; }
+.axn-composer-shell .ant-sender-content { display: revert; grid-template-columns: revert; grid-template-rows: revert; column-gap: revert; row-gap: revert; width: revert; min-width: revert; box-sizing: revert; }
+.axn-composer-shell .ant-sender-input { min-width: revert; width: revert; min-height: revert; line-height: revert; padding-block: revert; white-space: revert; overflow-wrap: revert; }
+.axn-composer-shell .ant-sender-prefix { grid-row: revert; grid-column: revert; justify-self: revert; }
+.axn-composer-shell .ant-sender-actions-list { grid-row: revert; grid-column: revert; justify-self: revert; align-self: revert; margin-inline: revert; }
+.axn-task-answer { background: revert; padding: revert; border-radius: revert; white-space: revert; box-sizing: revert; }
+.axn-artifact-foot { background: revert; box-sizing: revert; max-width: revert; }
+.axn-resource-results { gap: revert; padding: revert; }
+.axn-resource-result { border: revert; border-radius: revert; background: revert; box-sizing: revert; flex-direction: revert; }
+.axn-qa { padding: revert; }
+.axn-agent-summon-body { flex: revert; }
+.axn-agent-summon-head { justify-content: revert; }
+/* 对话工作区：统一气泡、任务过程和结果的视觉层级。 */
+.axn-chat-page { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--axn-surface); color: var(--axn-text); }
+.axn-chat-head { display: flex; align-items: center; min-height: 48px; padding: 0 var(--space-2); border-bottom: 1px solid var(--axn-border); background: var(--axn-surface); }
+.axn-collapse-btn { margin-left: var(--space-1); color: var(--axn-muted); font-size: var(--icon-md); }
+/* 窄屏的侧栏是覆盖式抽屉，收起 / 展开由汉堡按钮 + 遮罩负责：
+   sidebarCollapsed 在 ≤767px 被刻意置空（见 App.tsx 的 sidebarStyle memo），实测点它侧栏 x/w 不变，
+   却和汉堡按钮并排出现一个无效果的图标，故直接隐藏。 */
+@media (max-width: 767px) {
+  .axn-collapse-btn { display: none; }
+}
+.axn-chat-head-row { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.axn-chat-head .ant-select-selector { border-radius: var(--radius-sm); }
+.axn-chat-avatar { display: grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0; }
+.axn-message-list .ant-bubble-avatar { width: 28px; min-width: 28px; }
+.axn-chat-avatar svg { display: block; border-radius: var(--radius-nest-xl); }
+.axn-message-list { padding: var(--space-6) max(var(--space-6), calc((100% - 880px) / 2)); scrollbar-width: thin; scrollbar-color: var(--axn-border) transparent; background: var(--axn-surface); flex: 1; min-height: 0; }
+.axn-message-list .ant-bubble-content { overflow-wrap: anywhere; }
+.axn-chat-page .ant-tag { border-radius: var(--radius-sm); font-size: var(--fs-meta); line-height: 18px; padding-inline: var(--space-1-5); margin-inline-end: 0; }
+.axn-chat-page .ant-btn-sm { font-size: var(--fs-meta); border-radius: var(--radius-sm); box-shadow: none; }
+.axn-chat-page .ant-alert { border-radius: var(--radius-md); padding: var(--space-3) var(--space-3); line-height: var(--lh-normal); font-size: var(--fs-body); }
+.axn-chat-page .ant-alert-message, .axn-chat-page .ant-alert-title { font-size: var(--fs-body); font-weight: 600; }
+.axn-chat-page .ant-alert-description { font-size: var(--fs-body); color: var(--axn-muted); }
+
+/* 首页：宽敞居中欢迎 + 知识库引导问题。 */
+.axn-home { display: flex; flex-direction: column; align-items: center; }
+.axn-chat-empty-compact { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-10) var(--space-6); text-align: center; color: var(--axn-muted); }
+.axn-chat-empty-compact > svg.lucide { display: grid; place-items: center; width: 48px; height: 48px; border-radius: var(--radius-xl); color: var(--axn-muted); background: var(--axn-soft); font-size: var(--fs-h1); }
+.axn-chat-empty-compact .ant-typography { margin: var(--space-2) 0 0; }
+.axn-home-inner { width: 100%; max-width: var(--measure-chat); padding: 0 var(--space-2-5) var(--space-6); box-sizing: border-box; margin: 0; }
+/* 首屏：品牌图形 + 主标题 + 一句说明，统一居中；下方态势卡 / 推荐卡为满宽块，不再混用两条对齐轴 */
+.axn-home-hero { display: flex; flex-direction: column; align-items: center; text-align: center; margin: 0 0 var(--space-6); padding-top: clamp(16px, 5vh, 64px); animation: axn-rise-in var(--dur-slower) var(--ease-out) backwards; }
+.axn-home-mark { margin-bottom: var(--space-3); filter: drop-shadow(0 6px 16px color-mix(in srgb, var(--axn-primary) 22%, transparent)); }
+.axn-home-title.ant-typography { font-size: var(--fs-hero); font-weight: 600; color: var(--axn-text); margin: 0 0 var(--space-2); letter-spacing: var(--ls-tight); line-height: var(--lh-tight); }
+.axn-home-title.ant-typography > span { display: inline-block; }
+.axn-home-copy.ant-typography { margin: 0; max-width: 40em; text-wrap: balance; font-size: var(--fs-lead); line-height: var(--lh-normal); color: var(--axn-muted); }
+.axn-home-block { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-5); animation: axn-rise-in var(--dur-slower) var(--ease-out) 120ms backwards; }
+.axn-home-block-label.ant-typography { font-size: var(--fs-meta); font-weight: 400; }
+
+/* 推荐卡：2×2 网格，图标 + 分类 + 问题，取代原来长短不一的灰框链接列表 */
+.axn-question-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.axn-question-list > li { display: flex; min-width: 0; }
+.axn-question-item { display: flex; flex-direction: column; gap: var(--space-2); width: 100%; text-align: left; border: 1px solid var(--axn-border); background: var(--axn-surface); color: var(--axn-text); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4) var(--space-3-5); font: inherit; font-size: var(--fs-body); line-height: var(--lh-normal); cursor: pointer; box-shadow: var(--shadow-xs); transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast); }
+.axn-question-head { display: inline-flex; align-items: center; gap: var(--space-1-5); font-size: var(--fs-meta); font-weight: 400; color: var(--axn-muted); }
+.axn-question-head svg.lucide { color: var(--axn-primary); width: 15px; height: 15px; }
+.axn-question-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.axn-question-item:hover:not(:disabled) { border-color: color-mix(in srgb, var(--axn-text) 18%, var(--axn-border)); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.axn-question-item:disabled { color: var(--axn-muted); cursor: not-allowed; opacity: .6; }
+.axn-question-item:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+@media (max-width: 639px) {
+  .axn-question-list { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* 态势卡：等级徽标（应急语义色）+ 事件名 + 地点 / 时间 + 3 个关键数字 */
+.axn-situation { display: flex; align-items: stretch; gap: var(--space-4); padding: var(--space-4) var(--space-5); border: 1px solid var(--axn-border); border-radius: var(--radius-lg); background: linear-gradient(180deg, var(--axn-surface), var(--axn-soft)); box-shadow: var(--shadow-xs); animation: axn-rise-in var(--dur-slower) var(--ease-out) 60ms backwards; }
+.axn-situation-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1-5); }
+.axn-situation-tags { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.axn-level-badge { display: inline-flex; align-items: center; height: 22px; padding: 0 var(--space-2); border-radius: var(--radius-sm); font-size: var(--fs-meta); font-weight: 600; }
+.axn-level-1 { color: var(--axn-level-1-text); background: var(--axn-level-1-bg); }
+.axn-level-2 { color: var(--axn-level-2-text); background: var(--axn-level-2-bg); }
+.axn-level-3 { color: var(--axn-level-3-text); background: var(--axn-level-3-bg); }
+.axn-level-4 { color: var(--axn-level-4-text); background: var(--axn-level-4-bg); }
+.axn-situation-status { display: inline-flex; align-items: center; gap: var(--space-1-5); font-size: var(--fs-meta); color: var(--axn-muted); }
+.axn-situation-status > i { width: 7px; height: 7px; border-radius: 50%; background: var(--axn-level-2); box-shadow: 0 0 0 3px color-mix(in srgb, var(--axn-level-2) 18%, transparent); animation: axn-breathe 2.4s var(--ease-in-out) infinite; }
+.axn-situation-title { font-size: var(--fs-h3); font-weight: 600; color: var(--axn-text); line-height: var(--lh-tight); }
+.axn-situation-meta { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); font-size: var(--fs-meta); color: var(--axn-muted); }
+.axn-situation-meta > span { display: inline-flex; align-items: center; gap: var(--space-1); }
+.axn-situation-meta svg.lucide { color: var(--axn-faint); }
+.axn-situation-metrics { display: flex; gap: var(--space-1); margin: 0; padding-left: var(--space-4); border-left: 1px solid var(--axn-border); }
+.axn-situation-metric { min-width: 76px; padding: 0 var(--space-2); display: flex; flex-direction: column; justify-content: center; gap: var(--space-0-5); }
+.axn-situation-metric dt { font-size: var(--fs-meta); color: var(--axn-muted); }
+.axn-situation-metric dd { margin: 0; font-size: var(--fs-h1); font-weight: 600; color: var(--axn-text); font-variant-numeric: tabular-nums; letter-spacing: var(--ls-tight); }
+.axn-situation-metric dd small { margin-left: 2px; font-size: var(--fs-meta); font-weight: 400; color: var(--axn-muted); }
+@media (max-width: 767px) {
+  .axn-situation { flex-direction: column; padding: var(--space-4); }
+  .axn-situation-metrics { padding: var(--space-3) 0 0; border-left: 0; border-top: 1px solid var(--axn-border); justify-content: space-between; }
+  .axn-situation-metric { padding: 0; min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .axn-home-hero, .axn-home-block, .axn-situation, .axn-situation-status > i { animation: none; }
+}
+.axn-chips { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); padding-right: var(--space-6) !important; display: flex; flex-wrap: nowrap; gap: var(--space-2); padding: 0 var(--space-2); border: 0; background: transparent; flex: 0 0 auto; min-width: 0; max-width: var(--measure-chat); margin: 0 0 var(--space-2); width: 100%; box-sizing: border-box; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; }
+.axn-chips::-webkit-scrollbar { display: none; }
+/* 单行横向滚动条（不再 flex-wrap: wrap）：子项在父按钮右侧展开时，后面的父按钮只往右移、不折行。
+   折行会把后随父按钮甩到第二行左端（实测 x 左移 196px），与「父按钮跟着往右移动」的预期相反。
+   窄屏本来就是这个策略（原 @media 767 块），现在全宽统一。 */
+/* 快捷任务 chips 全部平铺，不再有「更多任务」收纳浮层（原手写浮层与 .axn-more-tasks 规则已删）。 */
+.axn-assistant--split .axn-composer { padding: var(--space-3) var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom, 0px)); }
+/* 蓝底白字（用户要求「把这几个按钮做成蓝底白字的」）：主色 #1A5CFF 上的白字 5.23:1，
+   12px 正文满足 AA。hover 往深里压一档，不用原来的浅色 hover（会把白字冲淡到不可读）。
+   边框与底色同色，只为了不改 27px 的盒模型尺寸。
+   注：展开瞬间子按钮看着偏白不是配色问题——那是 ChatPanel.tsx:116 的 80ms 延迟 +
+   140ms 淡入（opacity 未到 1 时蓝底被白背景冲淡）；插帧实测子按钮的 bg/color 从第一帧
+   就是 rgb(26,92,255)/#fff，稳定后像素同样是 #1A5CFF 底 + 白字。 */
+/* v2：能力块改为中性描边胶囊（只有图标带主色）——原实心蓝底白字比输入框本身还抢眼，
+   主色让给发送按钮。子按钮（下方 [data-subtask]）仍是浅蓝底，父子层级照旧靠反差区分。 */
+.axn-chip.ant-btn { height: 30px; padding: 0 var(--space-3); border: 1px solid var(--axn-border); background: var(--axn-surface); color: var(--axn-text); border-radius: 999px; font-size: var(--fs-meta); font-weight: 400; box-shadow: none; transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast); flex: 0 0 auto; scroll-snap-align: start; }
+.axn-chip.ant-btn:hover:not(:disabled) { background: var(--axn-soft); border-color: color-mix(in srgb, var(--axn-text) 20%, var(--axn-border)); color: var(--axn-text); }
+.axn-chip.ant-btn[aria-expanded="true"] { background: var(--axn-soft); border-color: color-mix(in srgb, var(--axn-text) 24%, var(--axn-border)); }
+.axn-chip.ant-btn .axn-chip-icon { color: var(--axn-primary); }
+.axn-chip.ant-btn .axn-chip-arrow { color: var(--axn-faint); transition: transform var(--transition-fast); }
+.axn-chip.ant-btn[aria-expanded="true"] .axn-chip-arrow { transform: rotate(180deg); }
+/* 子按钮反过来：白底蓝字（用户 m00217「看到的子按钮背景颜色还是蓝色的」）—— 父子反色才能看出层级。
+   浅底色沿用仓里已有的同款（global.css:500 的 .fact-chip / 推荐问题）：--axn-primary-bg 底
+   + 72% 混黑的蓝字，对比度约 7.5:1，12px 也过 AA。hover 只把底色再压深一档。 */
+.axn-chips [data-subtask].ant-btn { background: var(--axn-primary-bg); border-color: var(--axn-primary-100); color: var(--axn-primary-text); }
+.axn-chips [data-subtask].ant-btn:hover:not(:disabled) { background: var(--axn-primary-100); border-color: color-mix(in srgb, var(--axn-primary) 52%, var(--axn-surface)); color: var(--axn-primary-text); }
+.axn-chip:disabled { opacity: .5; }
+/* 能力块图标（标注 vibe_1791862025042）：与右箭头的间距对称，图标本身不参与伸缩。 */
+.axn-chip.ant-btn .axn-chip-icon { flex: none; margin-inline-end: var(--space-1); }
+/* 父按钮里的右箭头（用户 m01620）：提示点开是向右展开一行。 */
+.axn-chip.ant-btn .axn-chip-arrow { flex: none; margin-inline-start: var(--space-1); }
+/* 子任务是内联展开的（见 ChatPanel.tsx 里同尺寸的 .axn-chip 子按钮，颜色走上面的反色规则），不再走 Dropdown 浮层，
+   所以原来的 .axn-chip-menu 系列浮层样式已删（用户 m01646 / m01661：横向一行、父按钮跟着右移）。 */
+
+/* 触屏：首页的快捷 chips（27px）与推荐问题（33px）是主要入口，高度太难点中，
+   统一抬到 ~40px；图标与字号不变。 */
+@media (hover: none) {
+  .axn-chip.ant-btn {
+    height: 40px;
+    padding: 0 var(--space-3);
+  }
+  .axn-question-item {
+    padding-top: var(--space-2-5);
+    padding-bottom: var(--space-2-5);
+  }
+  /* 文书类型选项（气泡内）与上面的能力块一样抬到 40px，触屏才点得中 */
+  .axn-doc-choices .axn-doc-choice.ant-btn {
+    height: 40px;
+  }
+}
+
+/* 原 @media (max-width: 767px) 的单行滚动条 / scroll-snap 规则已提到 .axn-chips 与
+   .axn-chip.ant-btn 基础规则（全宽统一），此处不再重复。 */
+/* 会话头：默认空白，收起侧边栏按钮居左。
+   圆角一体化输入区：快捷 chips 在输入框下方，发送按钮在右下角，与 Sender 共享一层外框；宽屏下限制正文宽度保持留白。 */
+/* 底部让出 iPhone home indicator：输入区贴屏幕底，而发送按钮在右下角，
+   正好与上滑手势抢区域（实测 390×844 下 shell 底边只剩 16px 余量，落在 34px 手势区内）。
+   env() 在无安全区的设备上恒为 0，桌面 / 安卓无副作用。 */
+.axn-composer { padding: var(--space-3) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: center; }
+.axn-composer-shell { width: 100%; max-width: var(--measure-chat); display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-1-5) var(--space-2) var(--space-2); border: 1px solid var(--axn-border); border-radius: var(--radius-xl); background: var(--axn-surface); box-shadow: var(--shadow-md); transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
+.axn-composer-shell:focus-within { border-color: color-mix(in srgb, var(--axn-primary) 45%, var(--axn-border)); }
+.axn-composer-shell .ant-sender { border: 0; background: transparent; box-shadow: none; }
+/* 输入区上方留白：外壳 6px + 这里 6px（原 8+12），收紧但保留呼吸感 */
+.axn-composer-shell .ant-sender-content { padding-top: var(--space-1-5); }
+/* 输入区与三个控件分两行（备注 m01342「输入区域和那三个组件不要是同一行」）：
+   输入框 flex-basis 100% 独占第一行、随内容向上生长；上传 / 关联灾情 / 语音靠 wrap
+   换到第二行（actions 用 margin-left: auto 推到第二行最右）。
+   既不是恒 3 行高的空盒子（原 minRows=3 → 76px），也不挤成一行。 */
+.axn-composer-shell .ant-sender-content { flex-wrap: wrap; align-items: center; }
+.axn-composer-shell .ant-sender-input { flex: 1 1 100%; order: 1; }
+.axn-composer-shell .ant-sender-prefix { order: 2; display: flex; align-items: center; align-self: center; }
+.axn-composer-shell .ant-sender-actions-list { order: 3; margin-left: auto; min-width: 0; align-items: center; }
+.axn-composer-actions { display: flex; align-items: center; gap: 12px; min-width: 0; padding-left: 12px; }
+.axn-composer-actions > .ant-btn { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 32px; width: 32px; min-width: 32px; height: 32px; padding: 0; }
+.axn-composer-shell .ant-sender:focus-within { box-shadow: none; }
+.axn-composer-footer { display: flex; align-items: flex-end; gap: var(--space-2); }
+
+/* 上传文件：输入框左下角的图标按钮（与右下角关联灾情 / 语音同排）。
+   标注 vibe_1791789692727_f6munp2fa：原本是 14px 灰色的细描边图标，在蓝色加粗的关联灾情
+   和蓝色实心麦克风旁边几乎看不见 —— 改为品牌蓝图标 + 10% 品牌蓝圆底。
+   图标尺寸由 antd 的 .ant-btn-icon { width/height: 1em } 决定（lucide 的 size 属性会被它覆盖），
+   所以靠 font-size 放大，TSX 里的 size 只为与之一致。 */
+.axn-composer-upload.ant-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: var(--fs-h3);
+  color: var(--axn-muted);
+  background: transparent;
+  border-radius: 50%;
+}
+.axn-composer-upload.ant-btn:hover,
+.axn-composer-upload.ant-btn:focus-visible {
+  color: var(--axn-text);
+  background: var(--axn-soft);
+}
+/* antd Upload 会在按钮外裹一层 .ant-upload，去掉它自带的行高以免撑高输入行 */
+.axn-composer-shell .ant-upload { line-height: 0; }
+/* 📎 外面包一层 span 给 Upload 收 ref（antd Upload 不转 ref） */
+.axn-composer-upload-wrap { display: inline-flex; }
+
+/* 已选附件：输入框上方的可移除 chip */
+.axn-attach-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+  list-style: none;
+  margin: 0;
+  padding: 0 calc(var(--space-1) + var(--space-1-5)) 0 var(--space-2);
+}
+.axn-attach-tag.ant-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 260px;
+  margin: 0;
+  font-size: var(--fs-meta);
+}
+.axn-attach-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.axn-attach-size { color: var(--axn-muted); font-size: var(--fs-caption); }
+
+/* 用户气泡里的附件标记（气泡底是品牌蓝，所以用白色半透明底 + 继承字色） */
+.axn-msg-attach { display: flex; flex-wrap: wrap; gap: var(--space-1-5); margin-top: var(--space-2); }
+.axn-msg-attach-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px var(--space-1-5);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--axn-text) 6%, transparent);
+  font-size: var(--fs-meta);
+}
+.axn-send-btn { flex-shrink: 0; }
+.axn-clarification { padding: var(--space-2) var(--space-4); border-top: 1px solid var(--axn-border); }
+.axn-clarification .ant-space-compact { margin-top: var(--space-3); }
+
+/* 任务卡与步骤时间线：名称、输出各占一行，长文本不挤压状态图标。 */
+.axn-task-card { display: flex; flex-direction: column; gap: var(--space-3); max-width: 100%; min-width: 0; box-sizing: border-box; }
+/* v2：AI 回答不再套框（气泡本身已透明），任务头是一行轻量标题 + 状态点 */
+.axn-status { display: inline-flex; align-items: center; gap: var(--space-1-5); height: 22px; padding: 0 var(--space-2); border-radius: 999px; font-size: var(--fs-meta); font-weight: 400; color: var(--axn-muted); background: var(--axn-soft); }
+.axn-status > i { width: 6px; height: 6px; border-radius: 50%; background: var(--axn-faint); }
+.axn-status--busy { color: var(--axn-primary-text); background: var(--axn-primary-bg); }
+.axn-status--busy > i { background: var(--axn-primary); animation: axn-breathe 1.6s var(--ease-in-out) infinite; }
+.axn-status--ok { color: var(--axn-success-text); background: var(--axn-success-bg); }
+.axn-status--ok > i { background: var(--axn-success); }
+.axn-status--warn { color: var(--axn-warning-text); background: var(--axn-warning-bg); }
+.axn-status--warn > i { background: var(--axn-warning); }
+.axn-status--err { color: var(--axn-error-text); background: var(--axn-error-bg); }
+.axn-status--err > i { background: var(--axn-error); }
+/* 运行条（v3）：任务名 · 步数 · 耗时 | 状态 —— 一行浅底条，展开后执行过程接在条内 */
+.axn-task-run { border-radius: var(--radius-md); background: var(--axn-soft); overflow: hidden; }
+.axn-task-head { display: flex; align-items: center; gap: var(--space-2); min-height: 36px; padding: 0 var(--space-2) 0 var(--space-1); }
+.axn-task-head > .axn-task-title { padding-inline-start: var(--space-2); }
+.axn-task-title.ant-typography { font-size: var(--fs-body); font-weight: 600; color: var(--axn-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.axn-task-process-toggle { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: var(--space-1-5); height: 36px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: transparent; font: inherit; cursor: pointer; text-align: left; color: var(--axn-text); }
+.axn-task-process-toggle:hover .axn-task-title { color: var(--axn-primary-text); }
+.axn-task-process-toggle:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
+.axn-task-process-caret { flex-shrink: 0; color: var(--axn-faint); transition: transform var(--transition-fast); }
+.axn-task-run.is-open .axn-task-process-caret { transform: rotate(90deg); }
+.axn-task-process-meta { flex-shrink: 0; font-size: var(--fs-meta); color: var(--axn-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.axn-task-process-meta::before { content: '·'; margin-inline-end: var(--space-1-5); }
+.axn-task-head-side { flex-shrink: 0; display: flex; align-items: center; gap: var(--space-1-5); margin-inline-start: auto; }
+.axn-task-run.is-running .axn-task-title { background: linear-gradient(90deg, var(--axn-text) 0%, var(--axn-faint) 50%, var(--axn-text) 100%) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: axn-shimmer-text 2s linear infinite; }
+@keyframes axn-shimmer-text { to { background-position: -200% 0; } }
+/* 展开的步骤：条内时间线，顶部细分隔线 */
+.axn-task-run .axn-task-steps { padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3); border-top: 1px solid var(--axn-border); border-radius: 0; background: transparent; }
+.axn-task-steps { list-style: none; margin: 0; padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); background: var(--axn-soft); border-radius: var(--radius-md); }
+.axn-task-step { position: relative; display: grid; grid-template-columns: 15px minmax(0,1fr) auto; column-gap: var(--space-2); row-gap: var(--space-1); min-height: 22px; font-size: var(--fs-body); line-height: var(--lh-normal); }
+.axn-task-step:not(:last-child)::after { content: ''; position: absolute; left: 6px; top: 21px; bottom: -10px; border-left: 1px solid var(--axn-border); }
+.axn-task-step > svg.lucide { grid-column: 1; grid-row: 1; margin-top: 3px; font-size: var(--fs-body); z-index: 1; }
+.axn-step-name { grid-column: 2; grid-row: 1; color: var(--axn-text); font-weight: 600; overflow-wrap: anywhere; }
+.axn-step-output { grid-column: 2; color: var(--axn-muted); font-size: var(--fs-body); overflow-wrap: anywhere; }
+.axn-step-time { grid-column: 3; grid-row: 1; font-size: var(--fs-meta); color: var(--axn-muted); font-variant-numeric: tabular-nums; }
+.axn-step-pending .axn-step-name, .axn-step-cancelled .axn-step-name { color: var(--axn-muted); }
+.axn-step-running .axn-step-name { color: var(--axn-primary); }
+.axn-step-failed .axn-step-name { color: var(--axn-error-text); }
+.axn-task-answer { font-size: var(--fs-reading); line-height: var(--lh-reading); color: var(--axn-text); overflow-wrap: anywhere; }
+/* 纯文本回答的版式（FormattedAnswer）：小标题 / 键值段 / 脚注，段距代替空行 */
+.axn-answer { display: flex; flex-direction: column; gap: var(--space-1-5); }
+.axn-answer p, .axn-answer h4 { margin: 0; }
+.axn-answer-title { font-weight: 600; font-size: var(--fs-h3); line-height: var(--lh-tight); margin-bottom: var(--space-1) !important; }
+.axn-answer-h { font-size: var(--fs-body); font-weight: 600; color: var(--axn-text); margin-top: var(--space-2) !important; }
+.axn-answer-k { color: var(--axn-muted); margin-inline-end: var(--space-1); }
+.axn-answer-k::after { content: '：'; }
+.axn-answer-foot { margin-top: var(--space-2) !important; padding-top: var(--space-2); border-top: 1px solid var(--axn-border); font-size: var(--fs-meta); line-height: var(--lh-normal); color: var(--axn-muted); }
+
+
+/* 摘要、资源、知识引用和建议。 */
+.axn-artifact { border: 1px solid var(--axn-border); border-radius: var(--radius-md); background: var(--axn-surface); overflow: hidden; min-width: 0; }
+.axn-artifact-row { display: grid; grid-template-columns: 112px minmax(0,1fr); gap: var(--space-3); padding: var(--space-2) var(--space-4); font-size: var(--fs-body); line-height: var(--lh-normal); border-bottom: 1px solid color-mix(in srgb, var(--axn-border) 60%, transparent); }
+.axn-artifact-row:last-child { border-bottom: 0; }
+.axn-artifact-label { color: var(--axn-muted); min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.axn-inline-flag { display: inline-block; margin-inline-start: var(--space-2); padding: 0 var(--space-1-5); border-radius: var(--radius-sm); font-size: var(--fs-meta); line-height: 20px; vertical-align: 1px; }
+.axn-inline-flag.is-info { color: var(--axn-primary-text); background: var(--axn-primary-bg); }
+.axn-inline-flag.is-warn { color: var(--axn-warning-text); background: var(--axn-warning-bg); }
+.axn-artifact-value { color: var(--axn-text); text-align: left; overflow-wrap: anywhere; min-width: 0; }
+.axn-artifact-foot { padding: var(--space-2) var(--space-4); color: var(--axn-muted); font-size: var(--fs-meta); line-height: var(--lh-normal); overflow-wrap: anywhere; border-top: 1px solid var(--axn-border); }
+.axn-artifact > .ant-btn { margin: var(--space-3) var(--space-3) var(--space-3); }
+.axn-artifact-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-2-5) var(--space-4); border-top: 1px solid var(--axn-border); background: color-mix(in srgb, var(--axn-soft) 55%, transparent); }
+.axn-artifact > .ant-alert { margin: var(--space-3); }
+/* 资源清单：一行一项（图标 · 名称/类型 · 关键参数 | 右侧到达时间），行间细分隔线 */
+.axn-resource-results { display: flex; flex-direction: column; }
+.axn-resource-result { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding: var(--space-2-5) var(--space-4); font-size: var(--fs-body); line-height: var(--lh-normal); border-top: 1px solid color-mix(in srgb, var(--axn-border) 60%, transparent); }
+.axn-resource-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--radius-md); color: var(--axn-primary); background: var(--axn-primary-bg); }
+.axn-resource-icon.is-store { color: var(--axn-warning-text); background: var(--axn-warning-bg); }
+.axn-resource-main { min-width: 0; }
+.axn-resource-name { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-2); font-weight: 600; color: var(--axn-text); overflow-wrap: anywhere; }
+.axn-resource-kind { white-space: nowrap; font-size: var(--fs-meta); font-weight: 400; color: var(--axn-faint); }
+.axn-resource-meta { font-size: var(--fs-meta); color: var(--axn-muted); }
+.axn-resource-eta { display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.axn-resource-eta strong { font-size: var(--fs-body); font-weight: 600; color: var(--axn-text); }
+.axn-resource-eta span { font-size: var(--fs-meta); color: var(--axn-faint); }
+/* 处置建议：编号步骤，不再一段一个灰框 */
+.axn-proposal-steps { list-style: none; counter-reset: step; margin: 0; padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); border-top: 1px solid color-mix(in srgb, var(--axn-border) 60%, transparent); }
+.axn-proposal-steps li { position: relative; counter-increment: step; padding-inline-start: 32px; font-size: var(--fs-body); line-height: var(--lh-normal); }
+.axn-proposal-steps li::before { content: counter(step); position: absolute; left: 0; top: 0; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: var(--fs-meta); font-weight: 600; color: var(--axn-primary-text); background: var(--axn-primary-bg); font-variant-numeric: tabular-nums; }
+.axn-proposal-steps strong { display: block; font-weight: 600; color: var(--axn-text); }
+.axn-proposal-steps p { margin: var(--space-0-5) 0 0; color: var(--axn-muted); }
+/* 知识问答（v2）：平铺排版，无外框。结论 → 分节要点 → 现场数据 → 编号来源 → 一行免责 */
+.axn-qa { display: flex; flex-direction: column; gap: var(--space-3); font-size: var(--fs-reading); line-height: var(--lh-reading); color: var(--axn-text); overflow-wrap: anywhere; }
+.axn-qa p { margin: 0; }
+.axn-qa-meta { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.axn-qa-category { font-size: var(--fs-meta); font-weight: 400; color: var(--axn-muted); }
+.axn-qa-category::after { content: ''; display: inline-block; width: 1px; height: 10px; margin-inline-start: var(--space-2); background: var(--axn-border); vertical-align: -1px; }
+.axn-confidence { display: inline-flex; align-items: center; height: 22px; padding: 0 var(--space-2); border-radius: 999px; font-size: var(--fs-meta); font-weight: 600; font-variant-numeric: tabular-nums; }
+.axn-confidence--high { color: var(--axn-success-text); background: var(--axn-success-bg); }
+.axn-confidence--mid { color: var(--axn-warning-text); background: var(--axn-warning-bg); }
+.axn-confidence--low { color: var(--axn-error-text); background: var(--axn-error-bg); }
+.axn-qa-lead { font-size: var(--fs-title-sm); font-weight: 600; line-height: var(--lh-title-sm); }
+.axn-cite { display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 3px; margin-inline-start: 3px; border-radius: var(--radius-nest-md); background: var(--axn-primary-bg); color: var(--axn-primary-text); font-size: 10px /* token-exempt: 角标低于正文刻度是刻意的 */; font-weight: 600; line-height: 1; vertical-align: 3px; font-variant-numeric: tabular-nums; }
+.axn-qa-section h4 { margin: 0 0 var(--space-0-5); font-size: var(--fs-body); font-weight: 600; color: var(--axn-text); }
+.axn-qa-section p { color: color-mix(in srgb, var(--axn-text) 88%, var(--axn-muted)); }
+.axn-qa-section.is-warn h4 { color: var(--axn-warning-text); }
+.axn-qa-live { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1-5); font-size: var(--fs-meta); color: var(--axn-muted); }
+.axn-qa-live > span:first-child { margin-inline-end: var(--space-1); }
+.axn-qa-live-chip { padding: 1px var(--space-2); border-radius: var(--radius-sm); background: var(--axn-soft); border: 1px solid var(--axn-border); color: var(--axn-text); }
+.axn-qa-sources { padding-top: var(--space-3); border-top: 1px solid var(--axn-border); }
+.axn-qa-sources-title { font-size: var(--fs-meta); font-weight: 600; color: var(--axn-muted); margin-bottom: var(--space-2); }
+.axn-qa-sources ol { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+/* 来源条：编号脚注 + 标题 + 引文，靠底色区分即可，左侧不加高亮条（标注反馈，勿再加 border-left）。 */
+.axn-qa-source { display: flex; gap: var(--space-2-5); padding: var(--space-2-5) var(--space-3); border-radius: var(--radius-md); background: var(--axn-soft); font-size: var(--fs-body); line-height: var(--lh-normal); overflow-wrap: anywhere; }
+.axn-qa-source > .axn-cite { margin: 3px 0 0; vertical-align: 0; flex: none; }
+.axn-qa-source-body { min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.axn-qa-source-title { font-weight: 600; color: var(--axn-text); }
+.axn-qa-source-title > span { margin-inline-start: var(--space-1-5); font-weight: 400; color: var(--axn-muted); }
+.axn-qa-source-quote { color: var(--axn-muted); }
+.axn-qa-disclaimer { font-size: var(--fs-caption); color: var(--axn-faint); line-height: var(--lh-normal); }
+
+/* ===== 任务过程动效：结果「长出来」，而不是「跳出来」=====
+ * 任务事件是整块插入的（知识问答卡在同一帧出现全部文字与来源），此前整条链路只有一个 .axn-spin 转圈，
+ * 其余全是硬切，观感是「闪现」而非「生长」。这里只动 transform / opacity：不触发布局，
+ * 不会挤走下方滚动位置，也不影响 e2e / 单测读取的文本（内容全程在 DOM 中，不靠挂载卸载做动画）。
+ * 入场一律用 `backwards` 填充、不写基础 opacity: 0 —— 动画被关闭（减弱动效）时元素照常可见，
+ * 不会留下隐形内容。时长与曲线一律引用动效 token，不裸写 ease。 */
+@keyframes axn-rise-in { from { opacity: 0; transform: translateY(6px); } }
+@keyframes axn-fade-in { from { opacity: 0; } }
+@keyframes axn-slide-in { from { opacity: 0; transform: translateX(-5px); } }
+@keyframes axn-halo-out { 0% { transform: scale(.85); opacity: .5; } 100% { transform: scale(1.6); opacity: 0; } }
+@keyframes axn-breathe { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+
+/* 智能体执行卡（身份 + 步骤 + 结果）整体入场一次；步骤逐条落位 */
+.axn-agent-execution, .axn-task-step { animation: axn-rise-in var(--dur-slower) var(--ease-in-out) backwards; }
+/* 产物卡入场（资源 / 摘要 / 文书 / 知识问答共用）；内容最密的知识问答卡另有错峰规则，见下 */
+.axn-task-card > .axn-artifact { animation: axn-rise-in var(--dur-slower) var(--ease-in-out) backwards; }
+/* 完成后只换图标颜色，而不是「一个 icon 突然变成另一个」；状态标签（执行中 → 已完成）同理渐变 */
+.axn-task-step > svg.lucide { transition: color var(--transition-slow); }
+/* 新出现的步骤结论、结论文字、以及任务结束时替换的说明文字都淡入，不做硬切 */
+.axn-task-step .axn-step-output, .axn-task-answer { animation: axn-fade-in var(--dur-slower) var(--ease-in-out) backwards; }
+.axn-agent-execution:not(.is-running) .axn-agent-summon-action { animation: axn-fade-in var(--dur-slower) var(--ease-in-out) backwards; }
+/* 运行中的步骤：图标外一圈扩散光环（与召唤头像同一语言）+「执行中…」呼吸，同频 2.4s。
+   周期是「循环节奏」而不是过渡时长，故不引用 dur token；但三处必须同频，改就一起改。
+   光环几何对齐图标中心（图标 13px、顶部 3px → 中心 6.5 / 9.5）与步骤连线（left: 6px）。 */
+.axn-step-running::before { content: ''; position: absolute; left: .5px; top: 3.5px; width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--axn-primary); animation: axn-halo-out 2.4s var(--ease-out) infinite; }
+.axn-step-running .axn-step-output { animation: axn-breathe 2.4s var(--ease-in-out) infinite; }
+
+/* 知识问答卡：整卡上浮 + 内容自上而下错峰淡入，读起来是「一条条组装出来」而不是一次性贴出。
+ * 内层只做透明度：相邻行各自位移会让 1px 分隔线出现叠影。
+ * 每行 260ms、间隔 90ms：7 行铺完约 0.8s，肉眼能跟着走一遍，又不至于拖到下一步开始还没落位。
+ * 曲线用 ease-in-out 而非 ease-out：expo-out 前快后慢，440ms 的入场实际 200ms 就「看起来走完了」，
+ * 快到像硬切（标注反馈：动画显示得太快）；对称曲线把位移和透明度摊满整个时长，过程才看得见。
+ * 来源条目从左轻推入位，节奏与卡内其它行一致。 */
+.axn-qa > * { animation: axn-fade-in var(--dur-slow) var(--ease-in-out) backwards; }
+.axn-qa > *:nth-child(2) { animation-delay: 90ms; }
+.axn-qa > *:nth-child(3) { animation-delay: 180ms; }
+.axn-qa > *:nth-child(4) { animation-delay: 270ms; }
+.axn-qa > *:nth-child(5) { animation-delay: 360ms; }
+.axn-qa > *:nth-child(6) { animation-delay: 450ms; }
+.axn-qa > *:nth-child(7) { animation-delay: 540ms; }
+.axn-qa .axn-qa-source { animation: axn-slide-in var(--dur-slow) var(--ease-in-out) backwards; }
+
+/* 智能体身份与任务形成一张连续卡片。 */
+/* 与下方 .axn-document-workflow 同一原则：铺在白底会话流上的内联卡不用阴影。 */
+/* 智能体消息（v3）：与普通 AI 回答同一版式 —— 28px 头像列 + 内容列，不套外框 */
+.axn-agent-execution { display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: var(--space-3); align-items: start; width: 100%; min-width: 0; }
+.axn-agent-summon-avatar { position: relative; display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius-md); color: var(--axn-primary); background: var(--axn-primary-bg); }
+.is-running .axn-agent-summon-avatar::after { content: ''; position: absolute; inset: -3px; border-radius: var(--radius-lg); border: 1px solid var(--axn-primary); animation: axn-summon-pulse 2.4s var(--ease-in-out) infinite; }
+@keyframes axn-summon-pulse { 0% { transform: scale(.95); opacity: .35; } 100% { transform: scale(1.15); opacity: 0; } }
+.axn-agent-summon-body { min-width: 0; display: flex; flex-direction: column; gap: var(--space-2-5); }
+.axn-agent-summon-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); min-height: 28px; }
+.axn-agent-summon-name { font-size: var(--fs-body); font-weight: 600; color: var(--axn-text); }
+.axn-agent-summon-role { font-size: var(--fs-meta); color: var(--axn-faint); }
+.axn-agent-summon-role::before { content: '·'; margin-inline-end: var(--space-2); }
+.axn-agent-summon-head > .axn-status { margin-inline-start: auto; }
+.axn-agent-summon-action { font-size: var(--fs-reading); line-height: var(--lh-reading); color: var(--axn-text); overflow-wrap: anywhere; }
+.is-running .axn-agent-summon-action { color: var(--axn-muted); }
+/* 文书生成智能体气泡里的选项（用户 m00263）：三个文书类型 + 一句提示。
+   放在正文列里（AgentSummonCard 的 bodyExtra）——左边缘与姓名下的文字对齐；
+   原来挂在卡片左边缘、比文字左凸 60px，看着散（标注 vibe_1791874890135）；宽度不够时自动折行。 */
+.axn-doc-choices { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-1); }
+.axn-doc-choice-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.axn-doc-choices .axn-doc-choice.ant-btn { height: 27px; padding: 0 var(--space-3); border: 1px solid var(--axn-primary); background: var(--axn-surface); color: var(--axn-primary-text); border-radius: var(--radius-sm); font-size: var(--fs-meta); box-shadow: none; }
+.axn-doc-choices .axn-doc-choice.ant-btn:hover:not(:disabled) { background: var(--axn-primary-50); border-color: var(--axn-primary-600); color: var(--axn-primary-text); }
+.axn-doc-choices .axn-doc-choice.ant-btn:disabled { border-color: var(--axn-border); color: var(--axn-faint); background: var(--axn-soft); }
+.axn-doc-hint { font-size: var(--fs-meta); line-height: var(--lh-normal); }
+
+/* 文书生成过程、要素摘要与文书预览。 */
+/* 内联文书卡保持平面：它铺在纯白会话底上，阴影没有承接面（白叠白只会让边缘发灰），
+   elevation 留给真正浮起的层（弹层 / 侧栏 / 输入区 / 公文纸）；与同一会话流里的 .axn-task-card
+   （仅描边）保持一致。 */
+/* 卡里只有「要素收集」一块（用户 m00705）：浅底描边的盒子，内部单列堆叠。
+   盒内的明细（逐轮问答）反过来用 surface 白底，才不至于软底压软底糊成一片。 */
+.axn-document-collect { display: grid; gap: var(--space-2-5); }
+.axn-document-collect > .ant-typography { font-size: var(--fs-body); line-height: var(--lh-normal); }
+/* 完成态：一张轻量「文件」行 —— 图标 · 文书名 · 打开按钮 */
+.axn-document-collect-done { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding: var(--space-2-5) var(--space-3); border: 1px solid var(--axn-border); border-radius: var(--radius-md); background: var(--axn-surface); }
+.axn-doc-done-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--radius-md); color: var(--axn-primary); background: var(--axn-primary-bg); }
+.axn-doc-done-text { display: inline-flex; align-items: center; gap: var(--space-1-5); min-width: 0; font-size: var(--fs-body); font-weight: 600; color: var(--axn-text); overflow-wrap: anywhere; }
+.axn-round-source { display: inline-block; margin-inline-end: var(--space-2); padding: 0 var(--space-1-5); border-radius: var(--radius-sm); font-size: var(--fs-meta); line-height: 20px; color: var(--axn-muted); background: var(--axn-soft); }
+.axn-doc-done-text svg.lucide { color: var(--axn-success); flex-shrink: 0; }
+.axn-upload-needed { margin: 0; padding-left: var(--space-4); font-size: var(--fs-body); line-height: var(--lh-normal); color: var(--axn-text); }
+/* 卡里交完材料列出的上传件清单（用户 m00994：上传之后的样式）—— 盒内明细用白底压软底 */
+.axn-source-list { display: grid; gap: var(--space-1-5); margin: 0; padding: 0; list-style: none; }
+.axn-source-list > li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1-5) var(--space-3); border: 1px solid var(--axn-border); border-radius: var(--radius-md); background: var(--axn-surface); }
+.axn-source-list > li > svg.lucide { flex: none; color: var(--axn-primary); }
+.axn-source-name { flex: 1; min-width: 0; overflow: hidden; font-size: var(--fs-body); text-overflow: ellipsis; white-space: nowrap; }
+.axn-source-size { flex: none; color: var(--axn-muted); font-size: var(--fs-meta); }
+/* 要素收集进度（用户 m01044：收集过程要模拟一个动画）。要素表本身不许展示（用户 m00861），
+   所以过程只能抽象成「已经走到第几条」：计数写在标题里，进度条按 collectedCount 逐条推进，
+   一道扫光表示正在核对当前这条（这就是“在做事”的全部视觉信号）。 */
+.axn-collect-progress { position: relative; height: 4px; border-radius: 999px; background: var(--axn-primary-100); overflow: hidden; }
+.axn-collect-progress-bar { height: 100%; border-radius: inherit; background: var(--axn-primary); transition: width var(--dur-slower) var(--ease-out); }
+.axn-collect-progress::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--axn-surface) 72%, transparent), transparent); animation: axn-collect-sweep 1.4s var(--ease-in-out) infinite; }
+@keyframes axn-collect-sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .is-running .axn-agent-summon-avatar::after { animation: none; }
+  .axn-task-run.is-running .axn-task-title { animation: none; color: var(--axn-text); background: none; }
+  .axn-question-item, .axn-chip { transition: none; }
+  /* 动效 token 只归零 transition；animation 必须逐个关掉（见 global.css 的说明） */
+  .axn-agent-execution, .axn-task-step, .axn-task-card > .axn-artifact, .axn-qa > *, .axn-qa .axn-qa-source,
+  .axn-task-step .axn-step-output, .axn-task-answer, .axn-agent-execution:not(.is-running) .axn-agent-summon-action,
+  .axn-step-running::before, .axn-step-running .axn-step-output { animation: none; }
+  .axn-task-step > svg.lucide, .axn-task-head .ant-tag { transition: none; }
+  .axn-summary-round, .axn-collect-progress::after, .axn-summary-round.is-collecting::after { animation: none; }
+}
+
+.axn-summary-collection { display: grid; gap: var(--space-3); margin: var(--space-1) 0 0; }
+.axn-summary-round { padding: var(--space-3) var(--space-4); border: 1px solid var(--axn-border); border-radius: var(--radius-md); background: var(--axn-surface); animation: axn-rise-in var(--dur-slower) var(--ease-in-out) backwards; }
+/* 正在收集的那一轮：描边挑亮 + 扫光，和进度条同一语言（用户 m01044） */
+.axn-summary-round.is-collecting { position: relative; overflow: hidden; border-color: color-mix(in srgb, var(--axn-primary) 30%, var(--axn-border)); }
+.axn-summary-round.is-collecting::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--axn-primary) 9%, transparent), transparent); animation: axn-collect-sweep 1.6s var(--ease-in-out) infinite; }
+.axn-summary-round .ant-typography { line-height: var(--lh-relaxed); }
+.axn-summary-round .ant-typography + .ant-typography { margin: var(--space-2) 0 0; }
+.axn-summary-input { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
+.axn-summary-input > .ant-btn { justify-self: start; }
+
+/* TaskCard 通用工具类：边距/分隔线 */
+.axn-tc-mt8 { margin-top: var(--space-2); }
+.axn-tc-mb4 { margin-bottom: var(--space-1); }
+.axn-tc-ml6 { margin-left: var(--space-2); }
+.axn-tc-m-6-0 { margin: var(--space-2) 0; }
+.axn-tc-heading { margin: var(--space-2) 0 var(--space-1); font-weight: 600; line-height: var(--lh-normal); }
+.axn-tc-divider { border-top: 1px dashed var(--axn-border); padding-top: var(--space-2); margin-top: var(--space-2); }
+
+/* TaskCard 字体 */
+.axn-tc-fs12 { font-size: var(--fs-meta); }
+.axn-tc-fs13 { font-size: var(--fs-body); }
+.axn-tc-pre { white-space: pre-wrap; font-size: var(--fs-body); }
+.axn-tc-fs12-lh16 { font-size: var(--fs-meta); line-height: var(--lh-normal); }
+.axn-tc-body { margin: var(--space-2) 0; font-size: var(--fs-body); line-height: var(--lh-normal); }
+.axn-tc-tag-sm { margin-inline-end: var(--space-1); font-size: var(--fs-meta); }
+
+/* TaskCard 图标颜色（非文本图形，需 ≥3:1；.axn-tc-gray 是文本，需 ≥4.5:1） */
+.axn-tc-green { color: var(--axn-success); }
+.axn-tc-blue { color: var(--axn-primary); }
+.axn-tc-red { color: var(--axn-error); }
+.axn-tc-muted { color: var(--axn-faint); }
+.axn-tc-gray { color: var(--axn-muted); }
+
+/* ChatPanel 工具类 */
+.axn-cp-title { font-size: var(--fs-lead); flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.axn-cp-compact { width: 100%; margin-top: var(--space-2); }
+.axn-cp-chips-wrap { display: flex; justify-content: center; padding: 0 var(--space-4); width: 100%; box-sizing: border-box; }
+/* 与语音、发送统一高度；用独立间距隔开点击区域。 */
+.axn-cp-select { display: inline-flex; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 0; max-width: 240px; height: 32px; box-sizing: border-box; margin: 0; padding: 0 10px; border: 1px solid color-mix(in srgb, var(--axn-primary) 22%, var(--axn-border)); border-radius: var(--radius-md); background: var(--axn-primary-50); color: var(--axn-primary-600); font: inherit; font-size: var(--fs-body); line-height: var(--lh-body); font-weight: 400; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast); }
+.axn-cp-select:hover { background: var(--axn-primary-bg); border-color: var(--axn-primary); }
+.axn-cp-select:focus-visible { outline: 2px solid var(--axn-primary); outline-offset: 2px; }
+.axn-cp-select > svg:first-child { flex-shrink: 0; color: var(--axn-primary); }
+.axn-cp-select-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.axn-cp-select.is-empty .axn-cp-select-text { color: inherit; }
+.axn-cp-select-caret { flex-shrink: 0; color: var(--axn-primary); }
+@media (max-width: 767px) {
+  .axn-composer-actions .axn-cp-select { max-width: min(220px, calc(100vw - 180px)); }
+}
+
+/* ===== 关联灾情选择弹窗 ===== */
+.axn-incident-modal .ant-modal-container, .axn-incident-modal .ant-modal-content { padding: 0; overflow: hidden; border-radius: var(--radius-lg); }
+.axn-incident-picker { display: flex; flex-direction: column; max-height: min(640px, calc(100vh - 96px)); }
+.axn-incident-head, .axn-incident-search, .axn-incident-foot { flex-shrink: 0; }
+.axn-incident-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: var(--space-5) var(--space-5) var(--space-3); }
+.axn-incident-head h2 { margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); font-weight: 600; }
+.axn-incident-head p { margin: var(--space-1) 0 0; color: var(--axn-muted); font-size: var(--fs-body); line-height: var(--lh-body); }
+.axn-incident-close { display: grid; place-items: center; width: 32px; height: 32px; margin: calc(var(--space-1) * -1) calc(var(--space-1) * -1) 0 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--axn-faint); cursor: pointer; }
+.axn-incident-close:hover { background: var(--axn-soft); color: var(--axn-text); }
+.axn-incident-search { display: flex; align-items: center; gap: var(--space-2); margin: 0 var(--space-5) var(--space-3); height: 40px; padding: 0 var(--space-3); border: 1px solid var(--axn-control); border-radius: var(--radius-md); background: var(--axn-surface); color: var(--axn-faint); transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
+.axn-incident-search:focus-within { border-color: var(--axn-primary); box-shadow: 0 0 0 3px var(--axn-primary-50); }
+.axn-incident-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--axn-text); font: inherit; font-size: var(--fs-body); }
+.axn-incident-search input::placeholder { color: var(--axn-faint); }
+.axn-incident-search button { display: grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 50%; background: var(--axn-soft); color: var(--axn-muted); cursor: pointer; }
+.axn-incident-list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 var(--space-3) var(--space-3); border-top: 1px solid var(--axn-divider); overscroll-behavior: contain; }
+.axn-incident-option { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; box-sizing: border-box; padding: var(--space-3) var(--space-2); border-radius: var(--radius-md); cursor: pointer; }
+.axn-incident-option.is-active { background: var(--axn-soft); }
+.axn-incident-option.is-selected { background: var(--axn-primary-50); }
+.axn-level-none { color: var(--axn-muted); background: var(--axn-sunken); font-weight: 400; }
+.axn-incident-copy { display: flex; flex: 1; flex-direction: column; gap: var(--space-0-5); min-width: 0; }
+.axn-incident-title { overflow: hidden; color: var(--axn-text); font-size: var(--fs-body); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.axn-incident-option.is-selected .axn-incident-title { color: var(--axn-primary-600); }
+.axn-incident-check { flex-shrink: 0; color: var(--axn-primary); }
+.axn-incident-none { margin-top: var(--space-2); border-top: 1px solid var(--axn-divider); border-radius: 0 0 var(--radius-md) var(--radius-md); padding-top: var(--space-3); }
+.axn-incident-empty { padding: var(--space-10) var(--space-4); color: var(--axn-muted); font-size: var(--fs-body); text-align: center; }
+.axn-incident-foot { display: flex; gap: var(--space-4); padding: var(--space-2-5) var(--space-5); border-top: 1px solid var(--axn-divider); background: var(--axn-canvas); color: var(--axn-faint); font-size: var(--fs-meta); }
+.axn-incident-foot kbd { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-inline-end: var(--space-0-5); padding: 0 var(--space-1); border: 1px solid var(--axn-border); border-radius: var(--radius-nest-md); background: var(--axn-surface); color: var(--axn-muted); font: inherit; font-size: var(--fs-meta); }
+@media (max-width: 767px) {
+  .axn-incident-foot { display: none; }
+  .axn-incident-picker { max-height: calc(100vh - 64px); }
+}
+/* 语音：次要文字按钮，主色只留给右侧的发送 */
+.axn-composer-speech.ant-btn { color: var(--axn-muted); font-size: var(--fs-h3); }
+.axn-composer-speech.ant-btn:hover { color: var(--axn-text); background: var(--axn-soft); }
+.axn-task-cancel.ant-btn { color: var(--axn-muted); }
+.axn-task-cancel.ant-btn:hover { color: var(--axn-error-text) !important; }
+.axn-message-list .ant-bubble-list-scroll-box, .ant-bubble-list-scroll-box { scrollbar-width: thin; scrollbar-color: var(--axn-border) transparent; }
+
+/* 窄屏（手机）：头像列让位给正文 —— AI 头像隐藏，智能体图标并入身份行 */
+@media (max-width: 640px) {
+  .axn-message-list .ant-bubble-start > .ant-bubble-avatar { display: none; }
+  .axn-agent-execution { display: block; position: relative; }
+  .axn-agent-summon-avatar { position: absolute; top: 2px; left: 0; width: 24px; height: 24px; }
+  .axn-agent-summon-head { padding-inline-start: 32px; }
+  .axn-artifact-row { grid-template-columns: 88px minmax(0, 1fr); padding-inline: var(--space-3); }
+  .axn-resource-result { padding-inline: var(--space-3); }
+}
+
+}

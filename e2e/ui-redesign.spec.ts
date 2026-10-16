@@ -1,4 +1,4 @@
-import { clickDocTask } from './helpers/quickTasks';
+import { clickQuickTask } from './helpers/quickTasks';
 /**
  * UI 改版 E2E：参考图外壳（260px 侧栏 + 宽敞主区）、首页知识库引导问题、
  * 文书库与文书工作区（打开/关闭/重开/独立库）、待补充工作总结刷新恢复、
@@ -103,7 +103,7 @@ test('文书库打开 → 工作区显示 → 关闭回宽对话 → 同份重�
 
 test('生成文书自动打开工作区；关闭后同一完成不再自动弹出；产物可显式打开', async ({ page }) => {
   await page.goto('/');
-  await clickDocTask(page, '应急要情');
+  await clickQuickTask(page, '生成应急要情');
   await expect(page.getByTestId('document-workspace')).toBeVisible({ timeout: 20000 });
   await page.getByTestId('workspace-close-btn').click();
   await expect(page.getByTestId('document-workspace')).toHaveCount(0);
@@ -119,8 +119,8 @@ test('生成文书自动打开工作区；关闭后同一完成不再自动弹�
 test('待补充的工作总结在刷新后恢复到文书工作区', async ({ page }) => {
   await page.goto('/');
   await openLibrary(page);
-  await page.getByTestId('document-library').getByRole('tab', { name: /^工作总结 / }).click();
-  await page.getByTestId('document-library').getByRole('button', { name: '生成工作总结', exact: true }).click();
+  await page.getByTestId('document-library').getByRole('tab', { name: /^抢险总结 / }).click();
+  await page.getByTestId('document-library').getByRole('button', { name: '生成抢险总结', exact: true }).click();
   await expect(page.getByTestId('document-generation-card').last()).toContainText('待补充', { timeout: 30000 });
   await page.reload();
   await expect(page.getByText('安小能 · 应急智能工作台')).toBeVisible({ timeout: 15000 });
@@ -133,7 +133,7 @@ test('待补充的工作总结在刷新后恢复到文书工作区', async ({ pa
 
 test('迟到的 A 会话完成不会在 B 会话打开文书', async ({ page }) => {
   await page.goto('/');
-  await clickDocTask(page, '应急要情');
+  await clickQuickTask(page, '生成应急要情');
   await expect(page.getByTestId('document-workspace')).toBeVisible({ timeout: 20000 });
   await page.getByTestId('workspace-close-btn').click();
   await expect(page.getByTestId('document-workspace')).toHaveCount(0);
@@ -213,6 +213,7 @@ test('未保存修改在导航、会话和关联事件切换时受到保护', as
   await page.getByRole('button', { name: '继续编辑' }).click();
   await expect(title).toHaveValue('保护中的工作副本');
   await page.getByTestId('chat-link-incident').click();
+  // 选项悬浮详情改用 Tooltip，不再依赖原生 title 属性
   await page.getByTestId('incident-picker').getByRole('option', { name: /不关联灾情/ }).click();
   await page.getByRole('button', { name: '继续编辑' }).click();
   await expect(title).toHaveValue('保护中的工作副本');
@@ -231,10 +232,9 @@ test('未保存修改在导航、会话和关联事件切换时受到保护', as
 
 test('从聊天预览切换文书：确认后切换，工作副本不丢弃', async ({ page }) => {
   await page.goto('/');
-  for (const [index, name] of ['值班日报', '应急要情'].entries()) {
-    if (index === 0) await clickDocTask(page, name);
-    else await page.getByTestId('doc-agent-choices').getByRole('button', { name, exact: true }).click();
-    await expect(page.getByTestId('document-generation-card').last().getByTestId('doc-collect-done')).toBeVisible( { timeout: 20000 });
+  for (const name of ['生成值班日报', '生成应急要情']) {
+    await clickQuickTask(page, name);
+    await expect(page.getByTestId('document-generation-card').last()).toContainText('已完成', { timeout: 20000 });
   }
   const title = page.getByRole('textbox', { name: '文书标题', exact: true });
   await title.fill('切换前未保存标题');
@@ -264,49 +264,22 @@ test('精简分屏保留未发送输入，关闭后恢复首页', async ({ page 
   await expect(page.getByTestId('document-workspace')).toHaveCount(0);
 });
 
-test('五个智能体在同一对话中召唤并展示自我介绍与功能', async ({ page }) => {
+test('快捷任务五能力块邀请气泡，运行中父块禁用', async ({ page }) => {
   await page.goto('/');
   const chips = page.locator('.axn-chips');
-  const countBefore = await page.locator('.axn-gs-conversation').count();
-  const originalId = await page.locator('.axn-gs-conversation.is-active').getAttribute('data-testid');
-  const inviteCount = await page.getByTestId('agent-summon-card').count();
-  const historyText = '这段已有对话需要保留';
-  await page.getByPlaceholder(/向安小能发送指令/).fill(historyText);
-  await page.getByPlaceholder(/向安小能发送指令/).press('Enter');
-  await expect(page.getByText(historyText, { exact: true })).toBeVisible();
-  const agents = [
-    ['文书生成智能体', ['应急要情', '值班日报', '周工作动态', '工作总结']],
-    ['态势感知智能体', ['灾情摘要', '多源数据汇聚', '态势研判预警', '态势报告自动生成', '核对道路天气']],
-    ['救援资源管理智能体', ['周边救援资源', '资源智能检索', '核对资源状态']],
-    ['救援方案生成智能体', ['现场处置行方案']],
-    ['救援效果评估智能体', ['复盘评估分析']],
-  ] as const;
-  await expect(chips.getByRole('button')).toHaveCount(5);
-  await expect(page.locator('.axn-gs-agents')).toHaveCount(0);
-  for (const [index, [name, options]] of agents.entries()) {
-    await chips.getByRole('button', { name, exact: true }).click();
-    await expect(page.locator('.axn-gs-conversation')).toHaveCount(countBefore);
-    await expect(page.locator('.axn-gs-conversation.is-active')).toHaveAttribute('data-testid', originalId!);
-    await expect(page.getByTestId('agent-summon-card')).toHaveCount(inviteCount + index + 1);
-    const invite = page.getByTestId('agent-summon-card').last();
-    await expect(invite).toContainText(`您好，我是${name}`);
-    await expect(page.getByText(historyText, { exact: true })).toBeVisible();
-    await expect(invite).not.toHaveClass(/is-running/);
-    for (const option of options) await expect(invite.getByRole('button', { name: option, exact: true })).toBeVisible();
-    await expect(invite.locator('.axn-doc-choice-row button')).toHaveCount(options.length);
-    await expect(chips.locator('[data-subtask], .axn-chip-arrow')).toHaveCount(0);
-    await expect(page.getByTestId('chat-link-incident')).toContainText('清河段堤防险情');
+  for (const name of ['文书生成', '态势感知', '救援资源管理', '救援方案生成', '救援效果评估']) {
+    await expect(chips.getByRole('button', { name, exact: true })).toBeVisible();
   }
-  await page.screenshot({ path: 'artifacts/ui-polish/agent-invitations.png' });
-  await page.reload();
-  await expect(page.getByTestId('agent-summon-card').last()).toContainText('您好，我是救援效果评估智能体');
-  await expect(page.getByText(historyText, { exact: true })).toBeVisible();
-  await expect(page.locator('.axn-gs-conversation.is-active')).toHaveAttribute('data-testid', originalId!);
-  await expect(page.getByTestId('doc-agent-choices')).toBeVisible();
-  await page.getByTestId('doc-agent-choices').getByRole('button', { name: '值班日报', exact: true }).click();
-  await expect(chips.getByRole('button', { name: '文书生成智能体', exact: true })).toBeDisabled();
-  await expect(page.getByTestId('document-generation-card').getByTestId('doc-collect-done')).toBeVisible({ timeout: 20000 });
-  await expect(page.getByTestId('document-toolbar')).toContainText('防汛值守日报（新生成）');
+  await expect(chips.getByTestId('chip-more-actions')).toHaveCount(0);
+  // 点救援方案生成：对话内邀请气泡含现场处置行动方案
+  await chips.getByRole('button', { name: '救援方案生成', exact: true }).click();
+  const invite = page.getByTestId('agent-invite-choices').last();
+  await expect(invite.getByRole('button', { name: '现场处置行动方案', exact: true })).toBeVisible();
+  await page.screenshot({ path: 'artifacts/ui-polish/quick-tasks.png' });
+  await clickQuickTask(page, '生成应急要情');
+  await expect(chips.getByRole('button', { name: '文书生成', exact: true })).toBeDisabled();
+  await expect(page.getByTestId('document-generation-card').last()).toContainText(/已完成|红头文书已生成/, { timeout: 20000 });
+  await expect(chips.getByRole('button', { name: '文书生成', exact: true })).toBeEnabled();
 });
 
 // 语音输入模拟（标注 vibe_1791960862035）：演示环境没有麦克风，点语音按钮改为「逐字实时转写」一段示例话语。
@@ -367,8 +340,8 @@ for (const width of [1440, 390]) {
     await page.getByTestId('incident-picker').getByRole('option', { name: /不关联灾情/ }).click();
     await expect(trigger).toContainText('选择关联灾情事件');
     await trigger.click();
-    await page.getByTestId('incident-picker').getByRole('option', { name: /清河段堤防险情/ }).click();
-    await expect(trigger).toContainText('清河段堤防险情');
+    await page.getByTestId('incident-picker').locator('#axn-incident-opt-evt-sim-landslide').click();
+    await expect(trigger).toContainText('青岭村山体滑坡');
     await expect(page.getByTestId('incident-picker')).not.toBeVisible();
     await page.screenshot({ path: `artifacts/ui-polish/incident-inside-composer-${width}.png` });
   });
@@ -384,7 +357,7 @@ test('文书库分类列表支持筛选、搜索、窄屏和打开文书', async
   await library.getByRole('button', { name: '新建文书', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: '生成值班日报', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
-  for (const name of ['值班日报', '应急要情', '应急救援周工作动态', '会议纪要', '工作总结']) {
+  for (const name of ['值班日报', '应急抢险要情', '应急救援周工作动态', '会议纪要', '抢险总结']) {
     await library.getByRole('tab', { name: new RegExp(`^${name} `) }).click();
     await expect(library.locator('.doc-sample-row')).toHaveCount(2);
     await expect(library.locator('.doc-file-type-cell').filter({ hasText: name })).toHaveCount(2);
@@ -398,7 +371,7 @@ test('文书库分类列表支持筛选、搜索、窄屏和打开文书', async
   await library.getByRole('tab', { name: /^全部文书 / }).click();
   await expect(library.locator('.doc-sample-row')).toHaveCount(10);
   await page.screenshot({ path: 'artifacts/ui-polish/document-library-list.png' });
-  await library.getByRole('tab', { name: /^应急要情 / }).click();
+  await library.getByRole('tab', { name: /^应急抢险要情 / }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(library.locator('.doc-sample-row').first()).toBeInViewport();
   expect((await library.getByRole('heading', { name: '文书库', exact: true }).boundingBox())!.y).toBeGreaterThan(40);

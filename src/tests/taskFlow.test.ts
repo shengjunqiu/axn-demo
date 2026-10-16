@@ -7,7 +7,7 @@ import { recognize } from '@/services/mock/provider';
 import { useSessionStore } from '@/store/sessionStore';
 import { useDemoStore } from '@/store/demoStore';
 import { useDocumentStore } from '@/store/documentStore';
-import { DEFAULT_EVENT_ID, factText } from '@/seed/scenario';
+import { DEFAULT_EVENT_ID, factText, incidentById, factById } from '@/seed/scenario';
 import { sendMessage, cancelTask } from '@/services/taskRunner';
 import { ensureQaLoaded } from '@/services/qaKnowledge';
 
@@ -25,8 +25,17 @@ describe('意图识别（规则模拟，非真实模型）', () => {
   it('灾情摘要', () => {
     expect(recognize('生成灾情摘要', ctx()).intent).toBe('summary');
   });
+  it('建设场景·灾情研判入口不误判为资源核对', () => {
+    const hit = recognize('分析当前险情的现场资料、次生风险、队伍人员状态时效和待核实事项', ctx());
+    expect(hit.intent).toBe('summary');
+    expect(hit.displayTitle).toBe('灾情研判');
+  });
   it('资源查询', () => {
     expect(recognize('查询周边救援资源', ctx()).intent).toBe('resource_query');
+  });
+  it('核对资源状态', () => {
+    expect(recognize('核对资源状态', ctx()).intent).toBe('resource_query');
+    expect(recognize('核对资源状态', ctx()).params.capability).toBe('update');
   });
   it('连续追问谁最快', () => {
     expect(recognize('它们谁最快能到', ctx()).intent).toBe('resource_sort_eta');
@@ -88,6 +97,24 @@ describe('任务链路', () => {
     expect(task.textAnswer).toContain('关联灾情');
   });
 
+  it.each([
+    '分析当前险情的现场资料、次生风险、队伍人员状态时效和待核实事项',
+    '核对资源状态',
+    '查询周边救援资源',
+    '生成救援方案',
+  ])('空白对话发送「%s」只提示关联灾情，不产出业务材料', async (text) => {
+    useDemoStore.getState().setPace('fast');
+    useDemoStore.getState().switchEvent('evt-blank-no-bind');
+    const sessionId = sessionIdFor('evt-blank-no-bind');
+    const taskId = await sendMessage(sessionId, { text });
+    await expect.poll(() => useSessionStore.getState().tasks[taskId]?.status).toBe('waiting_input');
+    const task = useSessionStore.getState().tasks[taskId];
+    expect(task.error).toBeNull();
+    expect(task.artifacts).toHaveLength(0);
+    expect(task.textAnswer).toContain('关联灾情');
+    expect(task.textAnswer).not.toContain('资源状态待核实');
+  });
+
   it('发送消息产生 user 消息并创建任务', async () => {
     const sessionId = sessionIdFor();
     sendMessage(sessionId, { text: '生成灾情摘要' });
@@ -100,7 +127,7 @@ describe('任务链路', () => {
     expect(tasks[0].intent).toBe('summary');
   });
 
-  it('摘要任务引用已补齐的模拟影响范围和伤亡情况', async () => {
+  it('摘要任务引用当前事件的影响范围和伤亡事实并保留待核标记', async () => {
     useDemoStore.getState().setPace('fast');
     const sessionId = sessionIdFor();
     sendMessage(sessionId, { text: '生成灾情摘要' });
@@ -111,9 +138,11 @@ describe('任务链路', () => {
     if (summary && summary.payload.kind === 'summary') {
       const casualtyRow = summary.payload.rows.find((r) => r.label.includes('伤亡'));
       expect(casualtyRow?.factId).toBeTruthy();
-      expect(factText(casualtyRow!.factId!)).toContain('2人轻伤');
-      expect(summary.payload.pendingKeys).not.toContain(casualtyRow!.factId);
-      expect(factText('fact-incident-001-impactScope')).toContain('约120名群众');
+      const refs = incidentById.get(DEFAULT_EVENT_ID)!.factRefs;
+      expect(casualtyRow!.factId).toBe(refs.casualty);
+      expect(factText(refs.casualty)).not.toBe('');
+      expect(summary.payload.pendingKeys.includes(refs.casualty)).toBe(factById.get(refs.casualty)?.verification === 'pending');
+      expect(summary.payload.rows.find(row => row.label === '影响范围')?.factId).toBe(refs.impactScope);
     }
   }, 10000);
 

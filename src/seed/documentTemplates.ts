@@ -1,0 +1,508 @@
+import { V2_REPORT_STRUCTURE } from '@/pages/v2/reportStructure';
+/**
+ * 一期过程公文 / 处置方案材料对齐的文书章节骨架与三类实战灾种填充。
+ * 章节名固定；正文随 DisasterProfile 变化。不写入历史案例人数/联系人。
+ * 仅 type-only 引用 profile，避免与 disasterScenarios / eventTimeline 循环依赖。
+ */
+import { slashResourcesToPipeTable } from '@/services/pipeTable';
+import {
+  evalCapabilitySupplement,
+  planCapabilitySupplement,
+  resourceCapabilitySupplement,
+} from '@/services/tenderReportSupplements';
+import type { DisasterProfile } from './disasterScenarios';
+
+function tenderCtx(p: DisasterProfile) {
+  return {
+    eventName: p.name,
+    disasterType: p.category,
+    location: p.location,
+    risks: p.risks,
+    planTitle: p.planTitle,
+  };
+}
+
+export type DocumentSection = [string, string];
+
+function disasterMonitoringText(p: DisasterProfile): string {
+  return p.monitoring
+    .map((m) => `${m.label}（${m.unit}）：${m.times.map((time, i) => `${time} ${m.values[i]}`).join(' → ')}；${m.source}`)
+    .join('\n');
+}
+
+function disasterResourcesText(p: DisasterProfile): string {
+  return p.resources.map((r) => `${r.name} / ${r.amount} / ${r.capability} / ${r.status}`).join('\n');
+}
+
+/** 与 disasterWorkspaceEvents.timeline 同源结构，避免模板层再引 eventTimeline；管道表供红头预览。 */
+function formatProfileTimeline(p: DisasterProfile): string {
+  const first = p.monitoring[0];
+  const rows: string[][] = [
+    ['1', '08:30', '信息接报', p.description, '已完成'],
+    ...(first
+      ? first.times.map((time, i) => [
+        String(i + 2),
+        time,
+        first.label,
+        `${first.values[i]} ${first.unit}（模拟）；${first.source}`,
+        '已完成',
+      ])
+      : []),
+    [
+      String((first?.times.length ?? 0) + 2),
+      '当前',
+      p.stage,
+      `${p.objective} ${p.completed}/${p.target}${p.unit}（模拟）；${p.gaps}`,
+      '进行中',
+    ],
+  ];
+  const table = [
+    ['序号', '时间节点', '环节', '记录详情', '状态'].join(' | '),
+    ...rows.map((row) => row.join(' | ')),
+  ].join('\n');
+  return [
+    '过程时间轴（模拟）',
+    table,
+    '时间轴为模拟过程记录；监测读数、到场回执与正式结论须由值班与专业岗位核对。',
+  ].join('\n');
+}
+
+/** 文书 code：含智能体样稿与一期模板章。 */
+export type DisasterDocCode =
+  | 'SITUATION_REPORT'
+  | 'RESOURCE_REPORT'
+  | 'RESCUE_PLAN'
+  | 'EMERGENCY_BRIEF'
+  | 'DUTY_DAILY'
+  | 'WORK_SUMMARY'
+  | 'WORK_SUMMARY_REFLECT'
+  | 'RESCUE_EVAL'
+  | 'KNOWLEDGE';
+
+export const RESOURCE_REPORT_TITLES = [
+  '一、抢险基本信息',
+  '二、安能队伍情况',
+  '三、其他央企队伍情况',
+  '四、安能装备情况',
+  '五、其他央企装备情况',
+  '六、重点防护目标情况',
+  '七、范围与数据核验',
+] as const;
+
+export const RESCUE_PLAN_TITLES = V2_REPORT_STRUCTURE.plan.titles;
+
+export const SITUATION_REPORT_TITLES = [
+  '一、灾情概况',
+  '二、安全态势与发展关注',
+  '三、队伍与人员状态时效',
+  '四、安全场所与医疗资源核查',
+] as const;
+
+export const EMERGENCY_BRIEF_TITLES = [
+  '一、灾（险）情概述',
+  '二、投入力量及组织指挥',
+  '三、处置行动及战果',
+  '四、重点、难点及采取的措施',
+  '五、其他重要情况',
+] as const;
+
+export const DUTY_DAILY_TITLES = [
+  '一、人员在位情况',
+  '二、应急救援情况',
+  '三、舆情上访情况',
+  '四、交接事项',
+] as const;
+
+export const WORK_SUMMARY_TEMPLATE_TITLES = [
+  '一、基本情况',
+  '二、主要经验做法',
+  '三、深刻启示',
+  '四、下一步工作打算',
+] as const;
+
+export const WORK_SUMMARY_REFLECT_TITLES = [
+  '一、实际处置过程',
+  '二、处置方案',
+  '三、存在不足',
+  '四、下一步改进计划',
+] as const;
+
+export const RESCUE_EVAL_TITLES = [
+  '一、当前处置情况',
+  '二、阶段性救援成效',
+  '三、评估结论',
+  '四、剩余风险与改进建议',
+] as const;
+
+const PLACEHOLDER = '（由智能体按当前关联事件生成；正式结论以岗位核对为准）';
+
+function teamResources(p: DisasterProfile) {
+  return p.resources.filter((r) => r.kind === 'team');
+}
+
+function equipmentResources(p: DisasterProfile) {
+  return p.resources.filter((r) => r.kind === 'equipment' || r.kind === 'warehouse');
+}
+
+function hospitalResources(p: DisasterProfile) {
+  return p.resources.filter((r) => r.kind === 'hospital');
+}
+
+function formatList(items: { name: string; amount: string; capability: string; status: string }[], empty: string): string {
+  if (!items.length) return empty;
+  return items.map((r) => `${r.name} / ${r.amount} / ${r.capability} / ${r.status}`).join('\n');
+}
+
+function planBody(p: DisasterProfile): string {
+  return p.planSections.map(([h, b]) => `${h}：${b}`).join('\n');
+}
+
+function measureSlot(p: DisasterProfile, index: number, fallback: string): string {
+  const item = p.planSections[index];
+  return item ? `${item[0]}：${item[1]}` : fallback;
+}
+
+/** 按章节标题关键词取 planSections，避免顺序变化后战法串味。 */
+function planSectionByKeyword(p: DisasterProfile, keywords: string[], fallback: string): string {
+  const hit = p.planSections.find(([h]) => keywords.some((k) => h.includes(k)));
+  return hit ? `${hit[0]}：${hit[1]}` : fallback;
+}
+
+function keyMonitoringLine(p: DisasterProfile, limit = 5): string {
+  return p.monitoring
+    .slice(0, limit)
+    .map((m) => {
+      const latest = m.values.at(-1);
+      const time = m.times.at(-1) ?? '';
+      return `${m.label}：${latest ?? '缺测'}${m.unit}（${time}）`;
+    })
+    .join('\n');
+}
+
+function overviewLine(p: DisasterProfile): string {
+  return [
+    p.name,
+    `灾种：${p.category}`,
+    `地点：${p.location}`,
+    p.description,
+    `影响范围：${p.impactScope}`,
+    `人员情况：${p.casualty}`,
+    `阶段：${p.stage}`,
+    `模拟资料时间：${p.capturedAt}`,
+  ].join('\n');
+}
+
+/**
+ * 态势报告四章瘦身填空：灾种监测侧重放在第二节；缺项写待核/缺测，不编造。
+ * 页脚声明由物化「说明」与自动推送文案补充。
+ */
+function buildSituationReport(p: DisasterProfile): DocumentSection[] {
+  const teams = formatList(teamResources(p), '本事件尚无队伍候选记录，状态与更新时间待核。');
+  const hospitals = formatList(hospitalResources(p), '医院接诊容量、路线及属地联系人待核。');
+  const focus = keyMonitoringLine(p, 5) || '缺测';
+  const riskHint = p.riskDistribution.length
+    ? p.riskDistribution.slice(0, 3).map((r) => `${r.area}（${r.count}）`).join('；')
+    : '待核';
+  return [
+    [
+      '一、灾情概况',
+      `${overviewLine(p)}\n（模拟资料）研判口径：先成立专家组完成风险隐患评估，再展开救援。`,
+    ],
+    [
+      '二、安全态势与发展关注',
+      `主要风险：${p.risks}\n灾种关键监测（最新·模拟）：\n${focus}\n风险线索摘要：${riskHint}\n六源汇聚：按本事件模拟资料汇总，缺源保持待核，不套用其他灾种数值。\n缺口：${p.gaps}`,
+    ],
+    [
+      '三、队伍与人员状态时效',
+      `${teams}\n装备/物资候选（模拟）：\n${formatList(equipmentResources(p), '装备与物资明细待核。')}\n可出动状态以更新时间为准；过期快照不直接出动。候选≠已调派（模拟）。`,
+    ],
+    [
+      '四、安全场所与医疗资源核查',
+      `演示检索圈层约 100 公里（≠灾害边界）。\n空旷集结/学校：${p.location}外围场所开放状态与容量待核；学校不自动认定为安置场所。\n医疗：${hospitals}\n宾馆/加油站等影响目标可用性待核。\n可在对话打开「态势地图」查看分布示意（模拟·非测距）。`,
+    ],
+  ];
+}
+
+function buildResourceReport(p: DisasterProfile): DocumentSection[] {
+  const teams = formatList(
+    teamResources(p),
+    '未取得本事件有效安能队伍记录，所属工程局、梯队、人数、装备数、联系人及距事发地距离待补核。',
+  );
+  const equipment = formatList(
+    equipmentResources(p),
+    '未取得本事件安能装备明细，类型、名称、数量、所属队伍及技术状态待补。',
+  );
+  const res = resourceCapabilitySupplement(tenderCtx(p));
+  return [
+    [
+      '一、抢险基本信息',
+      `${overviewLine(p)}\n编写单位：待补；统计截止时刻：待补（到场时刻不等于统计截止时刻）；编写人：待补；审阅人：待确认。`,
+    ],
+    [
+      '二、安能队伍情况',
+      `${teams}\n明细字段：所属工程局、队伍名称、地址、所属梯队、人数、装备数、业务联系人、工作联系电话和距事发地距离；缺失字段待核。`,
+    ],
+    [
+      '三、其他央企队伍情况',
+      '未取得本事件有效其他央企队伍记录，数量、所属央企、位置、人装及可出动状态待补核。',
+    ],
+    [
+      '四、安能装备情况',
+      `${equipment}\n现有记录不代表周边库存总量。按装备类型、名称、数量、所属队伍及业务联络字段形成明细，技术状态、占用和更新时间待核。`,
+    ],
+    [
+      '五、其他央企装备情况',
+      '未取得授权资料，装备类型、名称、所属央企及数量待补，不按零值汇总。',
+    ],
+    [
+      '六、重点防护目标情况',
+      `学校、医院、宾馆、加油站及其他重点防护目标的名称、地址、数量、距离、联系人和可用性待核。学校不自动认定为安全安置场所。\n本事件缺口提示：${p.gaps}`,
+    ],
+    [
+      '七、范围与数据核验',
+      `一期样例资源查询曾采用300公里、重点目标采用10公里。本事件查询半径尚未指定，不沿用样例固定数值；查询范围不代表灾害影响边界。台账常见维护周期最长约半年，可出动状态须以状态更新时间为准。各类汇总须注明统计时间、单位和去重口径。\n\n${res.full}`,
+    ],
+  ];
+}
+
+function historyCaseRefs(p: DisasterProfile): string {
+  return [
+    `案例库·演示：同类「${p.category}」处置中，先遣组先完成风险隐患评估与展开条件核对，再投入主力作业；他案人数与联系人不写入本事件。`,
+    `案例库·演示：复杂通行条件下优先核对道路天气与投送方式（如封山时装备禁高速、人员改铁路），再固化梯队计划。`,
+  ].join('\n');
+}
+
+/** 人员编组与先遣组（侦测处置分队）行动要点，供处置方案复用。 */
+export function personnelGroupingText(resourcesText: string): string {
+  const rosterTable = slashResourcesToPipeTable(resourcesText);
+  return [
+    '人员编组建议（演示·待原系统锁定）：',
+    '1. 侦测处置分队（先遣组）：负责现场侦测、情报搜集、属地对接与展开条件核实；先完成风险隐患评估后再投入主力作业。',
+    '2. 专家技术组：负责风险隐患评估、工法参数论证与安全技术指导；主力作业前形成评估结论，关键技术参数待专家组确认。',
+    '3. 主力作业梯队：按任务目标展开专业处置作业，规模由负责人核定。',
+    '4. 综合保障组：负责运输、油料、物资、通信与后勤保障。',
+    '',
+    '先遣组工作要点：侦测处置分队（先遣组）搜集掌握情况通常采取研究上级通报、与地方有关部门对接，并应用侦测设备开展情报收集。',
+    '集结与出动准备：救援队伍指挥员应迅速发出集结号令，组织人员集结，传达任务和上级指示，明确具体行动和保障事项；救援队员依据预案和指挥员要求迅速组织设备启动、油料补充、物资装载和车辆编队，与上级公司建立应急通信指挥链条。',
+    '',
+    '抽组人员清单（候选人装，未等于已调派）：',
+    rosterTable,
+  ].join('\n');
+}
+
+function advanceDetectWorkText(): string {
+  return [
+    '先遣组侦测处置：',
+    '侦测处置分队（先遣组）搜集掌握情况通常采取研究上级通报、与地方有关部门对接，并应用侦测设备开展情报收集；核实道路通行、展开面、供电通信及安全检测条件后，再提出主力投入建议。',
+  ].join('\n');
+}
+
+function buildRescuePlan(p: DisasterProfile): DocumentSection[] {
+  const detect = planSectionByKeyword(p, ['侦测', '适用险情'], measureSlot(p, 0, '侦测依据待补。'));
+  const tactics = planSectionByKeyword(p, ['主战法', '战法'], measureSlot(p, 1, '战法与工法参数待专业岗位论证补充。'));
+  const watch = planSectionByKeyword(p, ['监测预警', '撤离'], measureSlot(p, 3, '监测预警与撤离触发待安全岗位确认。'));
+  const safety = planSectionByKeyword(p, ['安全红线', '待核'], measureSlot(p, 4, '进入条件、停工撤离触发条件、撤离路线及人员清点安排待安全岗位确认。'));
+  const command = planSectionByKeyword(p, ['指挥协同', '审签'], '现场指挥机构、技术组、安全组及保障组岗位名单待原系统确认；本草稿不成立新的指挥关系。');
+  const grouping = personnelGroupingText(disasterResourcesText(p));
+  const forceNote = '装备大类对齐侦测搜寻/通信指挥/挖装保通/排水救援中的本灾种需要；正式抽组走原系统。';
+  const planSup = planCapabilitySupplement(tenderCtx(p));
+  return [
+    [
+      '一、灾情基本情况',
+      `${overviewLine(p)}\n适用预案参考：${p.planTitle}（模拟参考，非正式签发版；吸收安能公开战法关键词，不冒充九分案正文）。\n灾种关键监测最新值（模拟）：${keyMonitoringLine(p)}\n研判口径：先成立专家组完成风险隐患评估，再展开救援；先遣组完成现场侦测与通行条件核对后投入主力。\n${detect}\n中国安能集团抢险救灾典型案例（中性摘要，不写入他案人数）：\n${historyCaseRefs(p)}\n\n${planSup.ragAndRules}`,
+    ],
+    [
+      '二、任务和救援目标',
+      `任务目标（模拟）：${p.objective}，阶段进度 ${p.completed}/${p.target}${p.unit}。`,
+    ],
+    [
+      '三、救援组织与力量编成',
+      `${command}\n${grouping}\n${forceNote}\n先遣组向现场指挥机构回传侦测与属地对接情况；主力梯队与保障组按指挥机构分工展开。`,
+    ],
+    [
+      '四、救援行动安排',
+      [
+        '（一）救援基本条件与侦测依据',
+        `道路通行、作业展开面、供电通信及安全检测条件待核。主要风险：${p.risks}。\n${advanceDetectWorkText()}\n${detect}\n监测摘要：\n${disasterMonitoringText(p)}`,
+        '（二）主战法与作业步骤（内部战法参考·演示）',
+        `${tactics}\n行动战法仅限授权人员查看，禁止下载；本草稿不替代正式战法库或九分案审批稿。`,
+        '（三）人装编组与料源',
+        `按先遣组、专家技术组、主力作业梯队、综合保障组编成。\n${grouping}\n按任务与展开条件控制规模，岗位人数由负责人核定。\n${forceNote}`,
+        '（四）安全预警与撤离',
+        `${watch}\n${safety}\n次生风险变化时同步预警推送责任岗位；撤离路线与人员清点待安全岗确认。`,
+        '（五）综合保障',
+        '运输、供电、餐食、服装、医疗及人员轮换责任岗位待核定。宣传口径待宣传岗位确认；通信保障：与上级公司建立应急通信指挥链条，中继补点、报送渠道与备用电源待通信岗位确认。',
+      ].join('\n'),
+    ],
+    [
+      '五、安全与保障措施',
+      `安全预警与撤离：${watch}\n综合保障：运输、通信、医疗、后勤、轮换安排及责任人待核。\n主要风险与困难：${p.risks}\n${p.gaps}\n${safety}\n附件：现场照片、监测曲线、人装编组清单、先遣组侦测记录、安全交底、中国安能集团抢险救灾典型案例索引（待补）。\n落款：拟稿单位待补；审签流程沿用原处置方案模块。以上为演示初稿，不构成现场作业指令。\n\n${planSup.versionAndRedline}`,
+    ],
+  ];
+}
+
+function buildEmergencyBrief(p: DisasterProfile): DocumentSection[] {
+  return [
+    ['一、灾（险）情概述', overviewLine(p)],
+    [
+      '二、投入力量及组织指挥',
+      `拟投入/候选力量（尚未形成正式调派命令）：\n${disasterResourcesText(p)}\n现场组织指挥以属地及原系统登记为准，本草稿所列力量为演示候选。`,
+    ],
+    [
+      '三、处置行动及战果',
+      `阶段目标：${p.objective}；进度 ${p.completed}/${p.target}${p.unit}（模拟）。\n处置参考：\n${planBody(p)}\n战果与完成情况以正式台账为准，未核实不得写成已完成。`,
+    ],
+    [
+      '四、重点、难点及采取的措施',
+      `重点难点：${p.risks}\n采取的措施（演示）：结合本灾种预案要点推进核查与处置准备；缺口：${p.gaps}`,
+    ],
+    [
+      '五、其他重要情况',
+      '报送对象、抄送单位、承办处室及期号待原要情模块填写；本草稿不替代审批传阅。',
+    ],
+  ];
+}
+
+function buildDutyDaily(p: DisasterProfile): DocumentSection[] {
+  return [
+    [
+      '一、人员在位情况',
+      '本班次值班人员在位情况以值守表报送数据为准；所属单位值班室在岗情况待核（模拟）。',
+    ],
+    [
+      '二、应急救援情况',
+      `关联事件：${p.name}（${p.category}）。阶段：${p.stage}。\n概况：${p.description}\n候选力量与进度（模拟）：${p.objective} ${p.completed}/${p.target}${p.unit}；${disasterResourcesText(p)}`,
+    ],
+    [
+      '三、舆情上访情况',
+      '本班次舆情与上访情况以宣传、信访部门反馈为准；未取得有效记录时不填写具体条数（模拟）。',
+    ],
+    [
+      '四、交接事项',
+      `下一班次继续跟踪：${p.gaps}；核实待报信息并更新值班记录；遇有重要情况按程序报告（模拟）。`,
+    ],
+  ];
+}
+
+function buildWorkSummaryTemplate(p: DisasterProfile): DocumentSection[] {
+  return [
+    [
+      '一、基本情况',
+      `${overviewLine(p)}\n阶段目标：${p.objective}，进度 ${p.completed}/${p.target}${p.unit}（模拟）。任务成果与投入以正式台账为准。\n\n${formatProfileTimeline(p)}`,
+    ],
+    [
+      '二、主要经验做法',
+      `（一）处置组织：围绕${p.category}任务开展核查与协同。\n（二）专业要点：\n${planBody(p)}\n（三）资源准备：${disasterResourcesText(p)}（候选未等于已调派）。`,
+    ],
+    [
+      '三、深刻启示',
+      `短板与启示：${p.gaps}；风险关注：${p.risks}。问题归因须有过程记录支持，不作问责定性。`,
+    ],
+    [
+      '四、下一步工作打算',
+      `按缺口逐项明确责任人、完成时限与验证材料：${p.gaps}；持续跟踪监测与现场回传（模拟）。`,
+    ],
+  ];
+}
+
+function buildWorkSummaryReflect(p: DisasterProfile): DocumentSection[] {
+  const evalSup = evalCapabilitySupplement(tenderCtx(p));
+  return [
+    [
+      '一、实际处置过程',
+      `${overviewLine(p)}\n监测（模拟）：\n${disasterMonitoringText(p)}\n力量候选：\n${disasterResourcesText(p)}\n\n${formatProfileTimeline(p)}`,
+    ],
+    [
+      '二、处置方案',
+      `预案参考：${p.planTitle}\n${planBody(p)}\n实际执行版本与批准变更以原系统为准。`,
+    ],
+    [
+      '三、存在不足',
+      `${p.gaps}\n风险：${p.risks}。通信、轮换、物资消耗等保障问题须有单据或影像佐证后再写入正式总结。\n\n${evalSup.materialCheck}`,
+    ],
+    [
+      '四、下一步改进计划',
+      `围绕未完成目标（${p.objective} ${p.completed}/${p.target}${p.unit}）补齐证据与岗位责任；每项改进明确负责人、期限及验证材料（模拟）。\n\n${evalSup.knowledgeLoop}`,
+    ],
+  ];
+}
+
+function buildRescueEval(p: DisasterProfile): DocumentSection[] {
+  const rate = p.target > 0 ? Math.round((p.completed / p.target) * 100) : 0;
+  const evalSup = evalCapabilitySupplement(tenderCtx(p));
+  return [
+    [
+      '一、当前处置情况',
+      `${overviewLine(p)}\n险情状态：按阶段「${p.stage}」跟踪（模拟）。人员情况：${p.casualty}。`,
+    ],
+    [
+      '二、阶段性救援成效',
+      `目标：${p.objective}；计划 ${p.target}${p.unit}，已完成 ${p.completed}${p.unit}，完成率约 ${rate}%（模拟口径）。\n监测摘要：\n${disasterMonitoringText(p)}\n\n${evalSup.deviationFull}`,
+    ],
+    [
+      '三、评估结论',
+      `模拟记录显示阶段目标正在推进，仍有未完成事项，尚不能判定救援任务全部完成。正式评价须对照生效方案版本与执行回执。\n\n${evalSup.materialCheck}`,
+    ],
+    [
+      '四、剩余风险与改进建议',
+      `剩余风险：${p.risks}\n改进建议：${p.gaps}\n\n${evalSup.knowledgeLoop}`,
+    ],
+  ];
+}
+
+function buildKnowledge(p: DisasterProfile): DocumentSection[] {
+  return [
+    ['预案', p.planTitle],
+    ...p.planSections,
+    ['复核与适用边界', `${p.gaps}。以上为产品演示参考材料，需专业复核，不构成现场作业指令。`],
+  ];
+}
+
+/** 按一期对齐骨架填充三类实战灾种文书章节。 */
+export function buildDisasterSections(profile: DisasterProfile, code: string): DocumentSection[] {
+  switch (code as DisasterDocCode | string) {
+    case 'MEETING_MINUTES':
+      return [
+        ['会议基本信息', `关联事件：${profile.name}；${profile.category}；事件资料时间：${profile.capturedAt}。会议时间、地点、主持人、记录人和参会单位待补，不以事发地点代替会议地点。`],
+        ['会议议题', `围绕${profile.objective}，核对${profile.risks}。本页为议题草稿，实际议程待确认。`],
+        ['议定事项与责任分工', `需核对：${profile.gaps}。责任岗位、完成时限、办理回执待会议原始记录确认，不自动认定已议定或已下达。`],
+        ['资料依据与待补事项', `模拟参考预案：${profile.planTitle}。原始会议记录、专家意见、有效预案版本及审核签发资料待补。`],
+      ];
+    case 'SITUATION_REPORT':
+      return buildSituationReport(profile);
+    case 'RESOURCE_REPORT':
+      return buildResourceReport(profile);
+    case 'RESCUE_PLAN':
+      return buildRescuePlan(profile);
+    case 'EMERGENCY_BRIEF':
+      return buildEmergencyBrief(profile);
+    case 'DUTY_DAILY':
+      return buildDutyDaily(profile);
+    case 'WORK_SUMMARY':
+      return buildWorkSummaryTemplate(profile);
+    case 'WORK_SUMMARY_REFLECT':
+      return buildWorkSummaryReflect(profile);
+    case 'RESCUE_EVAL':
+      return buildRescueEval(profile);
+    case 'KNOWLEDGE':
+      return buildKnowledge(profile);
+    default:
+      return buildSituationReport(profile);
+  }
+}
+
+/** 样稿库占位：仅标题齐套，正文由生成链路覆盖。 */
+export function skeletonPlaceholders(code: DisasterDocCode): DocumentSection[] {
+  const titles: Record<DisasterDocCode, readonly string[]> = {
+    SITUATION_REPORT: SITUATION_REPORT_TITLES,
+    RESOURCE_REPORT: RESOURCE_REPORT_TITLES,
+    RESCUE_PLAN: RESCUE_PLAN_TITLES,
+    EMERGENCY_BRIEF: EMERGENCY_BRIEF_TITLES,
+    DUTY_DAILY: DUTY_DAILY_TITLES,
+    WORK_SUMMARY: WORK_SUMMARY_TEMPLATE_TITLES,
+    WORK_SUMMARY_REFLECT: WORK_SUMMARY_REFLECT_TITLES,
+    RESCUE_EVAL: RESCUE_EVAL_TITLES,
+    KNOWLEDGE: ['预案', '复核与适用边界'],
+  };
+  return titles[code].map((title) => [title, PLACEHOLDER]);
+}

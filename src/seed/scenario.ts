@@ -1,8 +1,15 @@
+import { DEFAULT_FOCUS_COMBAT_EVENT_ID, disasterKnowledgeChunks, isFocusCombatEvent } from './disasterScenarios';
 import rawScenario from '@/fixtures/scenario.json';
+import {
+  vueWorkspaceFacts,
+  vueWorkspaceIncidents,
+  vueWorkspaceSources,
+} from '@/seed/vueWorkspaceEvents';
 
 /**
  * scenario.json 的最小类型镜像。种子结构以 fixtures 文件为准；
  * 这里只做一次性收窄，不做运行时校验（模拟原型，种子受版本管理）。
+ * Vue 原型建设场景事件由 vueWorkspaceEvents 并入 incidents/facts/sources，供关联灾情下拉展示。
  */
 export interface FixtureScope {
   kind: 'event' | 'organization' | 'shift' | 'demo_configuration';
@@ -252,7 +259,10 @@ export interface ScenarioFixture {
 export const scenario = rawScenario as unknown as ScenarioFixture;
 
 export const demoMeta = scenario.meta;
-export const DEFAULT_EVENT_ID = demoMeta.defaultEventId;
+/** 界面默认关联三类实战场景之一；原 demo 默认事件仅保留供内部台账/单测查找。 */
+export const DEFAULT_EVENT_ID = isFocusCombatEvent(demoMeta.defaultEventId)
+  ? demoMeta.defaultEventId
+  : DEFAULT_FOCUS_COMBAT_EVENT_ID;
 export const DEFAULT_SESSION_ID = demoMeta.defaultSessionId;
 export const DEFAULT_ACTOR_ID = demoMeta.defaultActorId;
 export const DEMO_CLOCK = demoMeta.demoClock;
@@ -260,8 +270,11 @@ export const DEMO_CLOCK = demoMeta.demoClock;
 export const actors = scenario.actors;
 export const actorById = new Map(actors.map((a) => [a.actorId, a]));
 
-export const incidents = scenario.incidents;
-export const incidentById = new Map(incidents.map((i) => [i.eventId, i]));
+const allIncidents = [...scenario.incidents, ...vueWorkspaceIncidents];
+/** 全量查找（含历史 demo 事件）；关联灾情下拉只用下方 incidents。 */
+export const incidentById = new Map(allIncidents.map((i) => [i.eventId, i]));
+/** 关联灾情可选：仅洪涝决口 / 山体滑坡 / 泥石流（含各建设阶段变体）。 */
+export const incidents = allIncidents.filter((i) => isFocusCombatEvent(i.eventId));
 
 export const shift = scenario.shift;
 export const teams = scenario.teams;
@@ -272,7 +285,7 @@ export const station = scenario.station;
 export const waterObservations = scenario.waterObservations;
 export const observationById = new Map(waterObservations.map((o) => [o.observationId, o]));
 
-export const knowledgeChunks = scenario.knowledgeChunks;
+export const knowledgeChunks = [...scenario.knowledgeChunks, ...disasterKnowledgeChunks];
 export const knowledgeById = new Map(knowledgeChunks.map((k) => [k.chunkId, k]));
 
 export const templates = scenario.templates;
@@ -287,11 +300,11 @@ export const negativeContentExamples = scenario.negativeContentExamples;
 export const expectedChecks = scenario.expectedChecks;
 
 export const factById: ReadonlyMap<string, FixtureFact> = new Map(
-  scenario.facts.map((f) => [f.factId, f]),
+  [...scenario.facts, ...vueWorkspaceFacts].map((f) => [f.factId, f]),
 );
 
 export const sourceById: ReadonlyMap<string, FixtureSource> = new Map(
-  scenario.sources.map((s) => [s.sourceRecordId, s]),
+  [...scenario.sources, ...vueWorkspaceSources].map((s) => [s.sourceRecordId, s]),
 );
 
 export function getFact(factId: string): FixtureFact | undefined {
