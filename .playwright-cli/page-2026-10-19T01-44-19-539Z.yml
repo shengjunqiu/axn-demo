@@ -1,0 +1,103 @@
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - complementary [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: 安小能 · 应急智能工作台
+        - button "新建对话" [ref=e16] [cursor=pointer]
+        - navigation "全局功能导航" [ref=e20]:
+          - button "文书库" [ref=e21] [cursor=pointer]
+          - button "智能助理" [ref=e25] [cursor=pointer]
+          - button "知识库" [ref=e30] [cursor=pointer]
+        - textbox "搜索对话或事件" [ref=e40]
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - generic [ref=e44]: 今天
+            - button "青岭村山体滑坡（模拟） 置顶对话 青岭村山体滑坡（模拟） 删除对话 青岭村山体滑坡（模拟）" [ref=e45] [cursor=pointer]:
+              - generic [ref=e46]:
+                - generic [ref=e47]: 青岭村山体滑坡（模拟）
+                - generic:
+                  - button "置顶对话 青岭村山体滑坡（模拟）"
+                  - button "删除对话 青岭村山体滑坡（模拟）"
+            - button "南湾堤段洪涝决口（模拟） 置顶对话 南湾堤段洪涝决口（模拟） 删除对话 南湾堤段洪涝决口（模拟）" [active] [ref=e48] [cursor=pointer]:
+              - generic [ref=e49]:
+                - generic [ref=e50]: 南湾堤段洪涝决口（模拟）
+                - generic [ref=e79]:
+                  - button "置顶对话 南湾堤段洪涝决口（模拟）" [ref=e80]
+                  - button "删除对话 南湾堤段洪涝决口（模拟）" [ref=e83]
+            - button "石溪沟泥石流清障（模拟） 置顶对话 石溪沟泥石流清障（模拟） 删除对话 石溪沟泥石流清障（模拟）" [ref=e51] [cursor=pointer]:
+              - generic [ref=e52]:
+                - generic [ref=e53]: 石溪沟泥石流清障（模拟）
+                - generic:
+                  - button "置顶对话 石溪沟泥石流清障（模拟）"
+                  - button "删除对话 石溪沟泥石流清障（模拟）"
+            - button "青岭村现场日报整理 置顶对话 青岭村现场日报整理 删除对话 青岭村现场日报整理" [ref=e54] [cursor=pointer]:
+              - generic [ref=e55]:
+                - generic [ref=e56]: 青岭村现场日报整理
+                - generic:
+                  - button "置顶对话 青岭村现场日报整理"
+                  - button "删除对话 青岭村现场日报整理"
+          - generic [ref=e57]:
+            - generic [ref=e58]: 昨天
+            - button "南湾堤段资源调度 置顶对话 南湾堤段资源调度 删除对话 南湾堤段资源调度" [ref=e59] [cursor=pointer]:
+              - generic [ref=e60]:
+                - generic [ref=e61]: 南湾堤段资源调度
+                - generic:
+                  - button "置顶对话 南湾堤段资源调度"
+                  - button "删除对话 南湾堤段资源调度"
+          - generic [ref=e62]:
+            - generic [ref=e63]: 更早
+            - button "石溪沟阶段要情 置顶对话 石溪沟阶段要情 删除对话 石溪沟阶段要情" [ref=e64] [cursor=pointer]:
+              - generic [ref=e65]:
+                - generic [ref=e66]: 石溪沟阶段要情
+                - generic:
+                  - button "置顶对话 石溪沟阶段要情"
+                  - button "删除对话 石溪沟阶段要情"
+        - generic [ref=e68]:
+          - generic [ref=e69]: 张
+          - generic [ref=e71]:
+            - generic [ref=e72]: 张明远
+            - generic [ref=e73]: 值班员
+          - button "用户与设置" [ref=e74] [cursor=pointer]
+    - main [ref=e78]:
+      - generic [ref=e89]:
+        - button "收起侧边栏" [ref=e92] [cursor=pointer]
+        - generic [ref=e98]:
+          - generic [ref=e99]:
+            - heading "您好，我是安小能， 您的应急智能助手" [level=1] [ref=e104]:
+              - generic [ref=e105]: 您好，我是安小能，
+              - generic [ref=e106]: 您的应急智能助手
+            - generic [ref=e107]: 您可以问我问题，也可以让我帮您写公文，或者我也可以帮您执行应急相关的任务。
+          - generic [ref=e108]:
+            - generic [ref=e109]: 为你推荐
+            - list [ref=e110]:
+              - listitem [ref=e111]:
+                - button "堤防管涌、渗漏、滑坡等险情有哪些识别征兆？对应的抢护方法是什么？" [ref=e112] [cursor=pointer]:
+                  - generic [ref=e116]: 险情识别
+              - listitem [ref=e118]:
+                - button "如何利用水位、流量等监测数据动态调整抢险方案？" [ref=e119] [cursor=pointer]:
+                  - generic [ref=e125]: 水情研判
+              - listitem [ref=e127]:
+                - button "有没有可以安全抵达灾害现场的路线？" [ref=e128] [cursor=pointer]:
+                  - generic [ref=e133]: 路线规划
+              - listitem [ref=e135]:
+                - button "溺水人员现场急救的步骤是什么？" [ref=e136] [cursor=pointer]:
+                  - generic [ref=e145]: 现场急救
+        - generic [ref=e148]:
+          - button "文书生成" [ref=e149] [cursor=pointer]
+          - button "态势感知" [ref=e155] [cursor=pointer]
+          - button "救援资源管理" [ref=e161] [cursor=pointer]
+          - button "救援方案生成" [ref=e167] [cursor=pointer]
+          - button "救援效果评估" [ref=e173] [cursor=pointer]
+        - generic [ref=e181]:
+          - button "Choose File" [ref=e182]
+          - generic [ref=e184]:
+            - button "添加资料" [ref=e186] [cursor=pointer]
+            - textbox "向安小能发送指令，Enter 发送" [ref=e190]
+            - generic [ref=e192]:
+              - button "关联灾情" [ref=e193] [cursor=pointer]:
+                - generic [ref=e197]: 南湾堤段洪涝决口（模拟）
+              - button "语音输入" [ref=e200] [cursor=pointer]:
+                - img "audio" [ref=e202]
+              - button "发送" [ref=e205] [cursor=pointer]:
+                - img "arrow-up" [ref=e207]
+  - button "阶段提问／模拟文件／监测通知" [ref=e211] [cursor=pointer]

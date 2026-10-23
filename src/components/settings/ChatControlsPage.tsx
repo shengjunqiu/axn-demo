@@ -5,7 +5,7 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, BookOpen, FileText, Map as MapIcon, Paperclip, RefreshCw, Send, X } from 'lucide-react';
-import { App, Button, Drawer, Empty, Form, Image, Input, Segmented, Upload } from 'antd';
+import { App, Button, Drawer, Empty, Form, Image, Input, Segmented, Timeline, Upload } from 'antd';
 import { NAV_PATH } from '@/components/nav/navRoutes';
 import PageHeader from '@/components/common/PageHeader';
 import { agentIcon } from '@/components/chat/agentIcons';
@@ -194,7 +194,7 @@ export default function ChatControlsPage() {
     },
     {
       id: 'progress', name: '任务运行条', group: '信息反馈',
-      description: '一行「任务名 · 步数 · 耗时 | 状态」；运行中标题有微光，点开是逐步时间线。',
+      description: '任务名与步骤信息分行展示，右侧保留状态；窄屏下操作区自动换行，点开查看执行过程。',
       preview: <div className="axn-controls-stack">
         <RunBar title="汇总灾情摘要" status={{ tone: 'busy', label: '执行中' }} defaultOpen steps={[
           { name: '读取现场接报', status: 'completed', output: '3 条记录', time: '0.6s' },
@@ -242,6 +242,16 @@ export default function ChatControlsPage() {
         </Form.Item>
         <Button htmlType="submit" type="primary" icon={<Send size={14} />} size="small">提交</Button>
       </Form>,
+    },
+    {
+      id: 'timeline', name: '时间轴', group: '内容展示',
+      description: '使用 Ant Design Timeline 按时间先后展示事件进展。时间、节点名称与简短说明分层呈现；绿色表示已完成，蓝色表示当前进展，灰色表示后续安排。',
+      preview: <Timeline className="axn-controls-timeline" items={[
+        { color: 'green', title: '08:30', content: <><strong>接报核实</strong><p>收到险情报告，核对事发位置与受影响人员。</p></> },
+        { color: 'green', title: '09:00', content: <><strong>力量出动</strong><p>先遣组携侦测装备出发，沿途核实通行条件。</p></> },
+        { color: 'blue', title: '09:40', content: <><strong>现场处置</strong><p>队伍已到场，正在排查隐患并开展救援。</p></> },
+        { color: 'gray', title: '后续安排', content: <><strong>撤收与复盘</strong><p>任务结束后核对人装物资，整理处置成效。</p></> },
+      ]} />,
     },
   ];
 

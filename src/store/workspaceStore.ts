@@ -19,7 +19,13 @@ import { useSessionStore } from './sessionStore.js';
 
 export type WorkspaceSelection =
   | { kind: 'mock'; id: string }
-  | { kind: 'draft'; id: string; edit?: boolean };
+  | { kind: 'draft'; id: string; edit?: boolean }
+  /** 业务流程补充：与公文一样嵌在右侧工作区，id 为 FlowTask 名称 */
+  | { kind: 'flow'; id: string }
+  | { kind: 'sixData'; id: string }
+  | { kind: 'operations'; id: string }
+  /** 资源与态势：与公文同一右侧槽位，id 为默认 Tab（list / map） */
+  | { kind: 'resource'; id: 'list' | 'map' };
 
 /** 对话 / 工作模式：改变首页可执行建议（问答问题 vs 智能体任务）。 */
 export type WorkMode = 'chat' | 'work';

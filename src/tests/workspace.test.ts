@@ -22,7 +22,7 @@ describe('workspaceStore 文书选择状态', () => {
     expect(store().modeOf(B)).toBe('chat');
   });
 
-  it('未选择时关闭；选择 mock / draft 后打开且互相区分', () => {
+  it('未选择时关闭；选择 mock / draft / flow 后打开且互相区分', () => {
     expect(store().isOpen(A)).toBe(false);
     expect(store().selectionOf(A)).toBeNull();
 
@@ -32,6 +32,14 @@ describe('workspaceStore 文书选择状态', () => {
 
     store().select(A, { kind: 'draft', id: 'doc-1' });
     expect(store().selectionOf(A)).toEqual({ kind: 'draft', id: 'doc-1' });
+
+    store().select(A, { kind: 'flow', id: '现场智能勘察' });
+    expect(store().selectionOf(A)).toEqual({ kind: 'flow', id: '现场智能勘察' });
+    expect(store().isOpen(A)).toBe(true);
+
+    store().select(A, { kind: 'resource', id: 'map' });
+    expect(store().selectionOf(A)).toEqual({ kind: 'resource', id: 'map' });
+    expect(store().isOpen(A)).toBe(true);
   });
 
   it('A 会话的选择不影响 B 会话', () => {
@@ -86,6 +94,23 @@ describe('workspaceStore 文书选择状态', () => {
     expect(store().isOpen(A)).toBe(true);
     store().finish(A, 'workflow:2');
     expect(store().isOpen(A)).toBe(false);
+  });
+
+  it('关闭生成中 token 不抑制完成后的 done token（右侧应自动打开文书）', () => {
+    store().autoOpen(A, 'agent-material:t1:a1:pending', { kind: 'generating' });
+    store().close(A);
+    expect(store().isOpen(A)).toBe(false);
+    store().autoOpen(A, 'agent-material:t1:a1:done:doc-1', { kind: 'mock', id: 'doc-1' });
+    expect(store().isOpen(A)).toBe(true);
+    expect(store().selectionOf(A)).toEqual({ kind: 'mock', id: 'doc-1' });
+  });
+
+  it('物化 publish token 可在任务仍显示生成中时打开正文', () => {
+    store().autoOpen(A, 'agent-material:t1:a1:pending', { kind: 'generating' });
+    store().autoOpen(A, 'agent-publish:doc-sr-1', { kind: 'mock', id: 'doc-sr-1' });
+    expect(store().isOpen(A)).toBe(true);
+    expect(store().selectionOf(A)).toEqual({ kind: 'mock', id: 'doc-sr-1' });
+    expect(store().scopes[A]?.generating).toBe(false);
   });
 
   it('后台产物不能替换正在编辑的选择', () => {

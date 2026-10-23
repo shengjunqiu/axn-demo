@@ -9,6 +9,10 @@ import { formatSize } from '@/shared/format';
  * 本界面为模拟数据演示（规则意图识别，不接真实大模型）。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { buildEventSwitchBriefing } from '@/services/eventSwitchBriefing';
+import { scheduleAutoSituationReport } from '@/services/autoSituationReport';
+import { dispatchAgentUtterance } from '@/services/agentUtterance';
+import AgentReplyBody from './AgentReplyBody';
 import { useSessionTasks } from '@/hooks/useSessionTasks';
 import {
   ArrowUp,
@@ -55,7 +59,7 @@ import './chat.css';
 const { Text } = Typography;
 
 export interface ChatPanelProps {
-  onOpenDrawer: (target: 'resource' | 'knowledge') => void;
+  onOpenDrawer?: (target: 'resource' | 'knowledge', options?: { tab?: 'list' | 'map' }) => void;
   compact?: boolean;
 }
 
@@ -75,7 +79,7 @@ const QUESTION_META: { icon: LucideIcon; tag: string }[] = [
 /** 五类智能体共用的功能选择区。文书入口保留已有测试定位。 */
 function AgentInviteChoices({ agentId, options, hint, disabled, onPick }: {
   agentId?: string;
-  options: { label: string; task: string }[];
+  options: readonly { label: string; task: string }[];
   hint: string;
   disabled: boolean;
   onPick: (task: string, label: string) => void;
@@ -94,7 +98,7 @@ function AgentInviteChoices({ agentId, options, hint, disabled, onPick }: {
   );
 }
 
-export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelProps) {
+export default function ChatPanel({ onOpenDrawer = () => {}, compact = false }: ChatPanelProps) {
   const { token } = theme.useToken();
   const { message } = AntdApp.useApp();
   const currentEventId = useDemoStore((s) => s.currentEventId);
@@ -258,6 +262,13 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
       void submitWorkSummaryImprovement(session.sessionId, waitingSummary.messageId, text);
       return;
     }
+    if (dispatchAgentUtterance({
+      sessionId: session.sessionId,
+      eventId: session.eventId,
+      text,
+      scope,
+      onOpenKnowledge: () => onOpenDrawer('knowledge'),
+    })) return;
     if (/生成.*工作总结|工作总结.*生成/.test(text)) {
       void generateWorkSummary(session.sessionId, text);
       return;
@@ -277,6 +288,13 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   const handleQuickTask = async (text: string, agentId?: string, label?: string): Promise<void> => {
     if (!session || busy) return;
     if (await requestEventBeforeTask(text, () => { void handleQuickTask(text, agentId, label); }, agentId, label)) return;
+    if (dispatchAgentUtterance({
+      sessionId: session.sessionId,
+      eventId: session.eventId,
+      text,
+      scope,
+      onOpenKnowledge: () => onOpenDrawer('knowledge'),
+    })) return;
     if (text === '生成工作总结') {
       if (session && !busy) await generateWorkSummary(session.sessionId, text);
       return;
@@ -351,6 +369,19 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
       const newSessionId = useSessionStore.getState().sessionByConversation[updated.id];
       if (agentId && newSessionId) summonAgentInConversation(newSessionId, agentId);
       message.success('已新开会话并关联事件，原会话已保留');
+    }
+    const linkedSessionId = useSessionStore.getState().sessionByConversation[updated.id];
+    if (linkedSessionId && updated.eventId && !updated.eventId.startsWith('evt-blank-')) {
+      const linkedSession = useSessionStore.getState().sessions[linkedSessionId];
+      useSessionStore.getState().appendMessage(linkedSessionId, {
+        sessionId: linkedSessionId,
+        role: 'assistant',
+        kind: 'text',
+        text: buildEventSwitchBriefing(updated.eventId, linkedSession),
+        taskId: null,
+        eventBriefingEventId: updated.eventId,
+      });
+      scheduleAutoSituationReport(linkedSessionId, updated.eventId, 'event_link', 0);
     }
     afterLink?.();
   };
@@ -540,7 +571,17 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         };
       }
       return { key: m.messageId, role: 'ai', content: m.text ?? '', avatar: AVATAR,
-        contentRender: () => <><div>{m.text}</div>{m.text && <ResponseFeedback sessionId={m.sessionId} targetId={m.messageId} />}</>,
+        contentRender: () => (
+          <AgentReplyBody
+            message={m}
+            active={session?.messages.at(-1)?.messageId === m.messageId}
+            busy={busy}
+            onReply={(value) => { void handleSend(value); }}
+            onTask={(prompt) => { void handleQuickTask(prompt); }}
+            onOpenDrawer={onOpenDrawer}
+            fallback={<><div>{m.text}</div>{m.text && <ResponseFeedback sessionId={m.sessionId} targetId={m.messageId} />}</>}
+          />
+        ),
       };
     });
   }, [session?.messages, tasks, onOpenDrawer, busy, activeConversationId, attachments]);

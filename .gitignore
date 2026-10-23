@@ -1,9 +1,13 @@
 node_modules
 dist
 artifacts
+outputs
 playwright-report
 test-results
 coverage
 .vitest
 *.tsbuildinfo
 .DS_Store
+.env
+.env.*
+!.env.example

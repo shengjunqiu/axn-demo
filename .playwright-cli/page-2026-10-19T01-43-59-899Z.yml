@@ -1,0 +1,60 @@
+- generic [ref=e4]:
+  - complementary [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: 安小能 · 应急智能工作台
+      - button "新建对话" [ref=e16] [cursor=pointer]
+      - navigation "全局功能导航" [ref=e20]:
+        - button "文书库" [ref=e21] [cursor=pointer]
+        - button "智能助理" [ref=e25] [cursor=pointer]
+        - button "知识库" [ref=e30] [cursor=pointer]
+      - textbox "搜索对话或事件" [ref=e40]
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e44]: 今天
+          - button "青岭村山体滑坡（模拟） 置顶对话 青岭村山体滑坡（模拟） 删除对话 青岭村山体滑坡（模拟）" [ref=e45] [cursor=pointer]:
+            - generic [ref=e46]:
+              - generic [ref=e47]: 青岭村山体滑坡（模拟）
+              - generic:
+                - button "置顶对话 青岭村山体滑坡（模拟）"
+                - button "删除对话 青岭村山体滑坡（模拟）"
+          - button "南湾堤段洪涝决口（模拟） 置顶对话 南湾堤段洪涝决口（模拟） 删除对话 南湾堤段洪涝决口（模拟）" [ref=e48] [cursor=pointer]:
+            - generic [ref=e49]:
+              - generic [ref=e50]: 南湾堤段洪涝决口（模拟）
+              - generic:
+                - button "置顶对话 南湾堤段洪涝决口（模拟）"
+                - button "删除对话 南湾堤段洪涝决口（模拟）"
+          - button "石溪沟泥石流清障（模拟） 置顶对话 石溪沟泥石流清障（模拟） 删除对话 石溪沟泥石流清障（模拟）" [ref=e51] [cursor=pointer]:
+            - generic [ref=e52]:
+              - generic [ref=e53]: 石溪沟泥石流清障（模拟）
+              - generic:
+                - button "置顶对话 石溪沟泥石流清障（模拟）"
+                - button "删除对话 石溪沟泥石流清障（模拟）"
+          - button "青岭村现场日报整理 置顶对话 青岭村现场日报整理 删除对话 青岭村现场日报整理" [ref=e54] [cursor=pointer]:
+            - generic [ref=e55]:
+              - generic [ref=e56]: 青岭村现场日报整理
+              - generic:
+                - button "置顶对话 青岭村现场日报整理"
+                - button "删除对话 青岭村现场日报整理"
+        - generic [ref=e57]:
+          - generic [ref=e58]: 昨天
+          - button "南湾堤段资源调度 置顶对话 南湾堤段资源调度 删除对话 南湾堤段资源调度" [ref=e59] [cursor=pointer]:
+            - generic [ref=e60]:
+              - generic [ref=e61]: 南湾堤段资源调度
+              - generic:
+                - button "置顶对话 南湾堤段资源调度"
+                - button "删除对话 南湾堤段资源调度"
+        - generic [ref=e62]:
+          - generic [ref=e63]: 更早
+          - button "石溪沟阶段要情 置顶对话 石溪沟阶段要情 删除对话 石溪沟阶段要情" [ref=e64] [cursor=pointer]:
+            - generic [ref=e65]:
+              - generic [ref=e66]: 石溪沟阶段要情
+              - generic:
+                - button "置顶对话 石溪沟阶段要情"
+                - button "删除对话 石溪沟阶段要情"
+      - generic [ref=e68]:
+        - generic [ref=e69]: 张
+        - generic [ref=e71]:
+          - generic [ref=e72]: 张明远
+          - generic [ref=e73]: 值班员
+        - button "用户与设置" [ref=e74] [cursor=pointer]
+  - main [ref=e78]

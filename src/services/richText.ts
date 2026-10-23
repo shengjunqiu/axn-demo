@@ -1,3 +1,4 @@
+import { splitPipeContent } from './pipeTable';
 /**
  * 红头文书正文的富文本工具。
  *
@@ -7,7 +8,7 @@
  * 2. DOM 侧：白名单的 HTML ↔ DOM 互转（读写正文都用它，见下）+ document.execCommand 的封装。
  *
  * 为什么不用 innerHTML：正文的 HTML 会被写回 store、也来自 store，
- * 这里用「白名单重建 DOM」代替直接注入 —— 渲染侧不认识 script/on* 属性、也不认识表格/图片，
+ * 这里用「白名单重建 DOM」代替直接注入 —— 渲染侧不认识 script/on* 属性、也不认识图片，
  * 存储侧只序列化白名单标签与属性，两侧共用同一份白名单，格式不会被悄悄改掉。
  */
 
@@ -34,15 +35,15 @@ export const RICH_EDITOR_CLASS = 'doc-rich-editor';
 const EDITOR_SELECTOR = `.${RICH_EDITOR_CLASS}`;
 
 /** 正文允许出现的标签（contentEditable + execCommand 会产生的就是这些）。 */
-const RICH_TAGS = new Set(['p', 'div', 'br', 'span', 'font', 'b', 'strong', 'i', 'em', 'u', 's', 'strike', 'sub', 'sup', 'ul', 'ol', 'li', 'h3', 'h4']);
+const RICH_TAGS = new Set(['p', 'div', 'br', 'span', 'font', 'b', 'strong', 'i', 'em', 'u', 's', 'strike', 'sub', 'sup', 'ul', 'ol', 'li', 'h3', 'h4', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col']);
 /** 连内容一起丢掉的标签（内容不是可见正文）。其余未知标签只保留其内容。 */
 const DROP_TAGS = new Set(['script', 'style', 'iframe', 'object', 'embed', 'link', 'meta', 'form', 'svg', 'img', 'video', 'audio', 'canvas', 'input', 'button', 'select', 'textarea']);
-const RICH_ATTRS = new Set(['style', 'color', 'size', 'face', 'align', 'start']);
+const RICH_ATTRS = new Set(['style', 'color', 'size', 'face', 'align', 'start', 'colspan', 'rowspan']);
 const RICH_STYLE_PROPS = new Set(['font-size', 'font-weight', 'font-style', 'font-family', 'color', 'background-color', 'text-align', 'text-decoration', 'text-decoration-line', 'text-indent', 'line-height', 'margin-left']);
 /** 样式值里出现这些一律丢弃（防止 url() 拉外部资源）。 */
 const UNSAFE_STYLE_VALUE = /url\(|expression\(|javascript:/i;
 /** 块边界折成空格，避免两段文字粘成一个词。 */
-const BLOCK_BOUNDARY = /<\/(p|div|li|h[1-6]|ul|ol)\s*>|<br\s*\/?>/gi;
+const BLOCK_BOUNDARY = /<\/(p|div|li|h[1-6]|ul|ol|tr|td|th)\s*>|<br\s*\/?>/gi;
 /** 只有形如 <p> 的东西才算富文本——老数据里的「3 < 5」不能当 HTML 塞进 DOM。 */
 const TAG_PATTERN = /<\/?[a-z][^>]*>/i;
 
@@ -84,17 +85,67 @@ function decodeEntities(value: string): string {
 export function parseRichHtml(html: string): DocumentFragment {
   const fragment = document.createDocumentFragment();
   if (!isRichHtml(html)) {
-    const lines = html.split('\n').map(line => line.trim()).filter(Boolean);
-    for (const line of lines.length > 0 ? lines : ['']) {
-      const paragraph = document.createElement('p');
-      if (line) paragraph.appendChild(document.createTextNode(line));
-      fragment.appendChild(paragraph);
-    }
+    appendPlainBlocks(fragment, html);
     return fragment;
   }
   const parsed = new DOMParser().parseFromString(html, 'text/html');
   for (const child of Array.from(parsed.body.childNodes)) fragment.appendChild(adoptRichNode(child));
+  restorePipeTables(fragment);
   return fragment;
+}
+
+/** 用 DOM 构造表格，单元格内容始终按文字处理。 */
+function appendPlainBlocks(holder: Node, text: string): void {
+  const blocks = splitPipeContent(text);
+  if (!blocks.length) holder.appendChild(document.createElement('p'));
+  for (const block of blocks) {
+    if (block.kind === 'text') {
+      for (const line of block.text.split('\n').filter(line => line.trim())) {
+        const paragraph = document.createElement('p');
+        paragraph.textContent = line;
+        holder.appendChild(paragraph);
+      }
+      continue;
+    }
+    const table = document.createElement('table');
+    const head = table.createTHead().insertRow();
+    for (const value of block.headers) {
+      const cell = document.createElement('th');
+      cell.textContent = value;
+      head.appendChild(cell);
+    }
+    const body = table.createTBody();
+    for (const values of block.rows) {
+      const row = body.insertRow();
+      for (const value of values) row.insertCell().textContent = value;
+    }
+    holder.appendChild(table);
+  }
+}
+
+/** 兼容旧编辑器已保存为多个段落的管道表。 */
+function restorePipeTables(fragment: DocumentFragment): void {
+  const nodes = Array.from(fragment.childNodes);
+  for (let i = 0; i < nodes.length; i += 1) {
+    const run: HTMLElement[] = [];
+    let j = i;
+    while (j < nodes.length) {
+      const node = nodes[j];
+      if (node.nodeType === Node.TEXT_NODE && !node.textContent?.trim()) { j += 1; continue; }
+      if (!(node instanceof HTMLElement) || !['P', 'DIV'].includes(node.tagName)
+        || !(/[|]|\s\/\s/.test(node.textContent ?? '')) || node.querySelector('table')) break;
+      run.push(node);
+      j += 1;
+    }
+    const text = run.map(node => node.textContent).join('\n');
+    if (run.length && splitPipeContent(text).some(block => block.kind === 'table')) {
+      const replacement = document.createDocumentFragment();
+      appendPlainBlocks(replacement, text);
+      fragment.insertBefore(replacement, run[0]);
+      run.forEach(node => node.remove());
+    }
+    if (j > i) i = j - 1;
+  }
 }
 
 /** 白名单克隆一个节点：返回元素、文档片段（原标签不在白名单，只要内容）或空片段（标签要丢）。 */
@@ -119,6 +170,7 @@ function adoptRichNode(node: Node): Node {
 function richAttributeValue(name: string, value: string): string | null {
   const key = name.toLowerCase();
   if (key.startsWith('on') || !RICH_ATTRS.has(key)) return null;
+  if (key === 'colspan' || key === 'rowspan') return /^[1-9]\d{0,2}$/.test(value) ? value : null;
   if (key !== 'style') return value;
   const kept = value.split(';').map(declaration => {
     const separator = declaration.indexOf(':');

@@ -1,0 +1,130 @@
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - complementary [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: 安小能 · 应急智能工作台
+        - button "新建对话" [ref=e16] [cursor=pointer]
+        - navigation "全局功能导航" [ref=e20]:
+          - button "文书库" [ref=e21] [cursor=pointer]
+          - button "智能助理" [ref=e25] [cursor=pointer]
+          - button "知识库" [ref=e30] [cursor=pointer]
+        - textbox "搜索对话或事件" [ref=e40]
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - generic [ref=e44]: 今天
+            - button "青岭村山体滑坡（模拟） 置顶对话 青岭村山体滑坡（模拟） 删除对话 青岭村山体滑坡（模拟）" [ref=e45] [cursor=pointer]:
+              - generic [ref=e46]:
+                - generic [ref=e47]: 青岭村山体滑坡（模拟）
+                - generic:
+                  - button "置顶对话 青岭村山体滑坡（模拟）"
+                  - button "删除对话 青岭村山体滑坡（模拟）"
+            - button "南湾堤段洪涝决口（模拟） 置顶对话 南湾堤段洪涝决口（模拟） 删除对话 南湾堤段洪涝决口（模拟）" [ref=e48] [cursor=pointer]:
+              - generic [ref=e49]:
+                - generic [ref=e50]: 南湾堤段洪涝决口（模拟）
+                - generic:
+                  - button "置顶对话 南湾堤段洪涝决口（模拟）"
+                  - button "删除对话 南湾堤段洪涝决口（模拟）"
+            - button "石溪沟泥石流清障（模拟） 置顶对话 石溪沟泥石流清障（模拟） 删除对话 石溪沟泥石流清障（模拟）" [ref=e51] [cursor=pointer]:
+              - generic [ref=e52]:
+                - generic [ref=e53]: 石溪沟泥石流清障（模拟）
+                - generic:
+                  - button "置顶对话 石溪沟泥石流清障（模拟）"
+                  - button "删除对话 石溪沟泥石流清障（模拟）"
+            - button "青岭村现场日报整理 置顶对话 青岭村现场日报整理 删除对话 青岭村现场日报整理" [ref=e54] [cursor=pointer]:
+              - generic [ref=e55]:
+                - generic [ref=e56]: 青岭村现场日报整理
+                - generic:
+                  - button "置顶对话 青岭村现场日报整理"
+                  - button "删除对话 青岭村现场日报整理"
+          - generic [ref=e57]:
+            - generic [ref=e58]: 昨天
+            - button "南湾堤段资源调度 置顶对话 南湾堤段资源调度 删除对话 南湾堤段资源调度" [ref=e59] [cursor=pointer]:
+              - generic [ref=e60]:
+                - generic [ref=e61]: 南湾堤段资源调度
+                - generic:
+                  - button "置顶对话 南湾堤段资源调度"
+                  - button "删除对话 南湾堤段资源调度"
+          - generic [ref=e62]:
+            - generic [ref=e63]: 更早
+            - button "石溪沟阶段要情 置顶对话 石溪沟阶段要情 删除对话 石溪沟阶段要情" [ref=e64] [cursor=pointer]:
+              - generic [ref=e65]:
+                - generic [ref=e66]: 石溪沟阶段要情
+                - generic:
+                  - button "置顶对话 石溪沟阶段要情"
+                  - button "删除对话 石溪沟阶段要情"
+        - generic [ref=e68]:
+          - generic [ref=e69]: 张
+          - generic [ref=e71]:
+            - generic [ref=e72]: 张明远
+            - generic [ref=e73]: 值班员
+          - button "用户与设置" [ref=e74] [cursor=pointer]
+    - main [ref=e78]:
+      - generic [ref=e87]:
+        - generic [ref=e89]:
+          - generic [ref=e91]:
+            - button "收起侧边栏" [ref=e92] [cursor=pointer]
+            - strong [ref=e217]: 南湾堤段洪涝决口（模拟）
+          - generic [ref=e220]:
+            - generic [ref=e221]: 生成态势报告
+            - generic [ref=e231]:
+              - generic [ref=e232]:
+                - generic [ref=e233]: 态势感知智能体
+                - generic [ref=e234]: ·研判灾情、核对队伍人员状态时效，形成含安全区域与医疗资源的态势报告
+              - generic [ref=e235]: 正在汇集现场监测资料，核对队伍/人员状态更新时间，并整理安全区域、可出动队伍与医院等资源信息
+              - generic [ref=e236]:
+                - generic [ref=e237]:
+                  - generic [ref=e238]:
+                    - button "生成态势报告 ·正在执行 · 1/2 步 · 模拟数据" [expanded] [ref=e239] [cursor=pointer]:
+                      - generic [ref=e242]: 生成态势报告
+                      - generic [ref=e243]: ·正在执行 · 1/2 步 · 模拟数据
+                    - generic [ref=e244]:
+                      - generic [ref=e245]: 执行中
+                      - button "取 消" [ref=e247] [cursor=pointer]
+                  - list [ref=e249]:
+                    - listitem [ref=e250]:
+                      - generic [ref=e254]: 读取事件上下文
+                      - generic [ref=e255]: 南湾堤段洪涝决口（模拟）
+                    - listitem [ref=e256]:
+                      - generic [ref=e259]: 多源数据汇聚
+                      - generic [ref=e260]: 执行中…
+                - group [ref=e261]:
+                  - generic "查看本次执行与能力分工" [ref=e262] [cursor=pointer]
+          - generic [ref=e148]:
+            - button "文书生成" [disabled] [ref=e149]
+            - button "态势感知" [disabled] [ref=e155]
+            - button "救援资源管理" [disabled] [ref=e161]
+            - button "救援方案生成" [disabled] [ref=e167]
+            - button "救援效果评估" [disabled] [ref=e173]
+          - generic [ref=e181]:
+            - button "Choose File" [ref=e182]
+            - generic [ref=e184]:
+              - button "添加资料" [disabled] [ref=e186]
+              - textbox "输入指令…" [active] [ref=e263]
+              - generic [ref=e192]:
+                - button "关联灾情" [ref=e193] [cursor=pointer]:
+                  - generic [ref=e197]: 南湾堤段洪涝决口（模拟）
+                - button "停止生成" [ref=e264] [cursor=pointer]:
+                  - img "Stop loading" [ref=e266]
+        - separator "调整对话与文书宽度" [ref=e270]
+        - generic [ref=e274]:
+          - generic [ref=e277]:
+            - heading "正在生成文书" [level=2] [ref=e278]
+            - generic [ref=e279]: 模拟
+            - generic [ref=e280]:
+              - button "文书库" [ref=e281] [cursor=pointer]
+              - button "关闭文书" [ref=e285] [cursor=pointer]
+          - status [ref=e290]:
+            - heading "正在生成文书" [level=4] [ref=e298]
+            - text: 正在整理文书资料
+            - generic [ref=e300]:
+              - heading [level=3] [ref=e301]
+              - list [ref=e302]:
+                - listitem [ref=e303]
+                - listitem [ref=e304]
+                - listitem [ref=e305]
+                - listitem [ref=e306]
+                - listitem [ref=e307]
+                - listitem [ref=e308]
+                - listitem [ref=e309]
+                - listitem [ref=e310]
+  - button "阶段提问／模拟文件／监测通知" [ref=e211] [cursor=pointer]

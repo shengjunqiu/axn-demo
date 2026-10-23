@@ -17,8 +17,8 @@ import { useDocumentStore } from '@/store/documentStore';
 import { sendMessage } from '@/services/taskRunner';
 import { createEventDocument } from '@/services/documentFactory';
 
-const A = 'evt-demo-001';
-const B = 'evt-demo-002';
+const A = 'evt-sim-landslide';
+const B = 'evt-sim-breach';
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -53,14 +53,14 @@ describe('Conversation 基础行为（需求 2.3/2.5/九）', () => {
     expect(state.activeConversationId).toBeTruthy();
   });
 
-  it('6. 搜索"南堤" → 只显示匹配会话；7. 清空搜索 → 全部恢复', () => {
+  it('6. 搜索"南湾" → 只显示匹配会话；7. 清空搜索 → 全部恢复', () => {
     const all = Object.values(useConversationStore.getState().conversations);
-    const matched = all.filter((c) => matchConversation(c, '南堤'));
+    const matched = all.filter((c) => matchConversation(c, '南湾'));
     expect(matched.length).toBeGreaterThan(0);
     expect(matched.length).toBeLessThan(all.length);
-    expect(matched.every((c) => c.title.includes('南堤'))).toBe(true);
-    // 事件名/编码也应可命中（漳河镇会话通过 eventId 命中）
-    expect(all.filter((c) => matchConversation(c, 'evt-demo-002')).length).toBeGreaterThan(0);
+    expect(matched.every((c) => c.title.includes('南湾'))).toBe(true);
+    // 事件名/编码也应可命中
+    expect(all.filter((c) => matchConversation(c, 'evt-sim-breach')).length).toBeGreaterThan(0);
     // 清空恢复
     expect(all.filter((c) => matchConversation(c, '')).length).toBe(all.length);
   });
@@ -115,12 +115,12 @@ describe('Conversation 基础行为（需求 2.3/2.5/九）', () => {
   it('空白对话：分配专属虚拟事件，session 为全新空会话且不影响其他会话', async () => {
     useConversationStore.getState().resetAll();
     const demo = useDemoStore.getState();
-    const nandiEvent = demo.currentEventId; // 种子激活为 evt-demo-001
+    const seedEvent = demo.currentEventId; // 种子激活为三类实战默认事件
     const created = useConversationStore.getState().createConversation({ title: '空白', type: 'general' });
     expect(created.eventId).toMatch(/^evt-blank-/);
-    // 切回南堤会话：业务事件与会话恢复
-    useConversationStore.getState().selectConversation('conv-seed-nandi');
-    expect(useDemoStore.getState().currentEventId).toBe(nandiEvent);
+    // 切回山体滑坡种子会话：业务事件与会话恢复
+    useConversationStore.getState().selectConversation('conv-seed-landslide');
+    expect(useDemoStore.getState().currentEventId).toBe(seedEvent);
     // 再切回空白对话：虚拟事件 + 独立空 session
     useConversationStore.getState().selectConversation(created.id);
     expect(useDemoStore.getState().currentEventId).toBe(created.eventId);
@@ -128,26 +128,26 @@ describe('Conversation 基础行为（需求 2.3/2.5/九）', () => {
     const sid = sessionStore.currentSessionId;
     expect(sessionStore.sessions[sid].eventId).toBe(created.eventId);
     expect(sessionStore.sessions[sid].messages).toHaveLength(0);
-    // 南堤事件的 session 消息不受影响
-    const nandiSid = sessionStore.sessionByEvent[nandiEvent];
-    expect(sessionStore.sessions[nandiSid].messages.length).toBeGreaterThanOrEqual(0);
+    // 种子事件的 session 消息不受影响
+    const seedSid = sessionStore.sessionByEvent[seedEvent];
+    expect(sessionStore.sessions[seedSid].messages.length).toBeGreaterThanOrEqual(0);
   });
 
   it('新建对话关联灾情：绑定事件并可共享 session 消息', () => {
     const conversation = useConversationStore.getState().createConversation({
-      title: '关联漳河水情的会话',
+      title: '关联南湾决口的会话',
       type: 'general',
-      eventId: 'evt-demo-002',
+      eventId: B,
       status: 'active',
     });
-    expect(conversation.eventId).toBe('evt-demo-002');
+    expect(conversation.eventId).toBe(B);
     useConversationStore.getState().selectConversation(conversation.id);
-    useSessionStore.getState().ensureSessionForEvent('evt-demo-002');
+    useSessionStore.getState().ensureSessionForEvent(B);
     const demo = useDemoStore.getState();
-    demo.switchEvent('evt-demo-002');
-    useSessionStore.getState().ensureSessionForEvent('evt-demo-002');
+    demo.switchEvent(B);
+    useSessionStore.getState().ensureSessionForEvent(B);
     // 会话切换同步业务上下文到关联事件（共享事件 session）
-    expect(useDemoStore.getState().currentEventId).toBe('evt-demo-002');
+    expect(useDemoStore.getState().currentEventId).toBe(B);
   });
 
   it('首次绑定保留会话，重复选择当前事件不新建会话', () => {
@@ -214,12 +214,13 @@ describe('Conversation 基础行为（需求 2.3/2.5/九）', () => {
 describe('会话切换与状态隔离（需求五/十）', () => {
   function setupAWithData() {
     const conversationA = useConversationStore.getState().createConversation({
-      title: '会话A（清河堤防）',
+      title: '会话A（青岭滑坡）',
       type: 'emergency',
       eventId: A,
     });
     const sidA = useSessionStore.getState().sessionByConversation[conversationA.id];
-    useSessionStore.getState().addCandidates(sidA, ['team-001', 'team-002']);
+    // 三类实战场景使用演示叠加资源 id，不再用旧台账 team-001
+    useSessionStore.getState().addCandidates(sidA, [`${A}-resource-1`, `${A}-resource-2`]);
     useDemoStore.getState().addManualFact({
       field: 'reportingUnit',
       value: '应急办公室',
@@ -260,7 +261,7 @@ describe('会话切换与状态隔离（需求五/十）', () => {
     useConversationStore.getState().selectConversation(conversationA.id);
     const restored = currentSession();
     expect(restored.eventId).toBe(A);
-    expect(restored.candidateResourceIds).toEqual(['team-001', 'team-002']);
+    expect(restored.candidateResourceIds).toEqual([`${A}-resource-1`, `${A}-resource-2`]);
     expect(restored.messages.length).toBe(messagesCount);
     expect(useDocumentStore.getState().drafts[documentId]).toBeTruthy();
     expect(useConversationStore.getState().activeConversationId).toBe(conversationA.id);
@@ -290,7 +291,7 @@ describe('会话切换与状态隔离（需求五/十）', () => {
 
   it('11. 关联同一灾情的两个会话：消息互不可见（关联灾情不出旧对话）', async () => {
     const convA = useConversationStore.getState().createConversation({
-      title: '甲会话（关联南堤）',
+      title: '甲会话（关联青岭滑坡）',
       type: 'emergency',
       eventId: A,
     });
@@ -301,7 +302,7 @@ describe('会话切换与状态隔离（需求五/十）', () => {
 
     // 同一事件的另一个会话：全新空消息，不见甲会话的对话记录
     const convB = useConversationStore.getState().createConversation({
-      title: '乙会话（关联同一南堤）',
+      title: '乙会话（关联同一青岭滑坡）',
       type: 'emergency',
       eventId: A,
     });

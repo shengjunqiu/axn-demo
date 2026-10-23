@@ -1,3 +1,5 @@
+import { startWeeklyDynamics } from '@/services/weeklyDynamicsWorkflow';
+import CustomerRequestPanel, { type CustomerAction } from '@/components/chat/CustomerRequestPanel';
 import { useDocumentNavigation } from './useDocumentNavigation';
 /**
  * 文书内容中枢（UI 改版）：同一份文书内容以两个显式视图呈现。
@@ -20,17 +22,19 @@ import { EMPTY_LIBRARY, useMockDocumentStore } from '@/store/mockDocumentStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { refreshDraftSnapshot } from '@/services/documentFactory';
+import { documentGeneratedReply, glanceFromSections } from '@/services/documentGeneratedReply';
 import { generateWorkSummary } from '@/services/workSummaryWorkflow';
-import { startWeeklyDynamics } from '@/services/weeklyDynamicsWorkflow';
 import { shiftEventIds, formatFactValue } from '@/services/factLookup';
 import { templateByCode } from '@/seed/scenario';
 import { DOCUMENT_CATEGORIES } from '@/seed/mockDocuments';
+import { isStandaloneDocumentCode } from '@/services/resultPresentation';
+import { isHiddenPrototypeAction } from '@/seed/prototypeVisibility';
 import type { DocumentDraft, ValidationReport } from '@/domain/types';
 import MockDocumentDetail from '@/components/doc/MockDocumentDetail';
 import DocumentDetailToolbar from '@/components/doc/DocumentDetailToolbar';
 import DocumentEditor from '@/components/doc/DocumentEditor';
-import { flattenRuns } from '@/services/contentRuns';
 import PageHeader from '@/components/common/PageHeader';
+import { flattenRuns } from '@/services/contentRuns';
 import {
   ChevronRight,
   FileText,
@@ -87,6 +91,7 @@ function HintButton({ hint, ...buttonProps }: React.ComponentProps<typeof Button
 
 export default function DocCenterPanel({ view, onClose = () => window.dispatchEvent(new Event('axn:close-document')), onOpenLibrary }: { view: DocView; onClose?: () => void; onOpenLibrary?: () => void }) {
   const { message } = AntdApp.useApp();
+  const [customerAction, setCustomerAction] = useState<CustomerAction | null>(null);
   const draftsMap = useDocumentStore((s) => s.drafts);
   const revisionsMap = useDocumentStore((s) => s.revisions);
   const activeReportMap = useDocumentStore((s) => s.activeReportByDocument);
@@ -118,7 +123,8 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
   const [libraryQuery, setLibraryQuery] = useState('');
 
   const library = useMockDocumentStore((s) => s.libraries[libraryScope] ?? EMPTY_LIBRARY);
-  const { documents: mockDocuments, generatingCode } = library;
+  const { generatingCode } = library;
+  const mockDocuments = library.documents.filter(d => !isHiddenPrototypeAction(`${d.code} ${d.title}`));
   const activeCategory = DOCUMENT_CATEGORIES.find(category => category.code === libraryCategory);
   const visibleDocuments = mockDocuments.filter(doc => (libraryCategory === 'all' || doc.code === libraryCategory) && `${doc.title} ${doc.number}`.includes(libraryQuery.trim()));
   const selectedMock = selection?.kind === 'mock' ? mockDocuments.find((d) => d.id === selection.id) ?? null : null;
@@ -135,17 +141,25 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
 
   const generateMock = useCallback(
     (code: string) => {
+      if (isHiddenPrototypeAction(code)) return;
+      const customerCodes: Record<string, CustomerAction> = { DUTY_DAILY: '生成值班日报', MEETING_MINUTES: '生成会议纪要', DAILY_WORK_SUMMARY: '生成日常工作总结', RESCUE_PLAN: '生成救援方案' };
+      if (customerCodes[code]) { setCustomerAction(customerCodes[code]); return; }
       navigate(NAV_PATH.assistant);
+      if (code === 'WEEKLY_DYNAMICS' && sessionId) { startWeeklyDynamics(sessionId, '生成应急救援周工作动态'); return; }
       if (code === 'WORK_SUMMARY' && sessionId) {
         void generateWorkSummary(sessionId);
         return;
       }
-      // 周工作动态同样不在文书库里直接出件：先去对话里要参考文档与附件（weeklyDynamicsWorkflow）。
-      if (code === 'WEEKLY_DYNAMICS' && sessionId) {
-        startWeeklyDynamics(sessionId);
-        return;
-      }
-      void useMockDocumentStore.getState().generate(libraryScope, code);
+      void useMockDocumentStore.getState().generate(libraryScope, code).then((document) => {
+        if (!document || !sessionId || !useSessionStore.getState().sessions[sessionId]) return;
+        useSessionStore.getState().appendMessage(sessionId, {
+          sessionId,
+          role: 'assistant',
+          kind: 'text',
+          taskId: null,
+          text: documentGeneratedReply(document.title, glanceFromSections(document.sections)),
+        });
+      });
     },
     [libraryScope, navigate, sessionId],
   );
@@ -153,6 +167,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
   const drafts = useMemo(
     () => Object.values(draftsMap)
       .filter((draft) => !HIDDEN_DEMO_DRAFT_IDS.has(draft.documentId))
+      .filter((draft) => !isHiddenPrototypeAction(`${draft.templateCode} ${draft.title}`))
       .filter((draft) => (draft.scopeKind === 'event'
         ? draft.eventId === currentEventId
         : !!draft.shiftId && shiftEventIds(draft.shiftId).includes(currentEventId)))
@@ -164,7 +179,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
 
   // 切换事件/会话时关闭抽屉，但不清空业务数据（工作区可见性由 workspaceStore 按作用域维护）。
   useEffect(() => {
-    setEditorDocId(null); setVersionDocId(null); setSourceOpen(false); setSourceDocumentId(null); setSourceFactId(null);
+    setCustomerAction(null); setEditorDocId(null); setVersionDocId(null); setSourceOpen(false); setSourceDocumentId(null); setSourceFactId(null);
   }, [currentEventId, sessionId]);
 
   const selectedDraft = selection?.kind === 'draft' ? drafts.find((d) => d.documentId === selection.id) : undefined;
@@ -411,12 +426,8 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
       className={`doc-center doc-center--${view}`}
       data-testid={view === 'library' ? 'document-library' : 'document-workspace'}
     >
-      {view === 'library' && (
-        <PageHeader
-          title="文书库"
-          sub={`规范成文，让每一份文书清晰有据 · 共 ${drafts.length + mockDocuments.length} 份`}
-        />
-      )}
+      {customerAction && sessionId && <CustomerRequestPanel key={`${sessionId}:${customerAction}`} action={customerAction} sessionId={sessionId} eventId={currentEventId} onClose={() => setCustomerAction(null)} />}
+      {view === 'library' && <PageHeader title="文书库" sub="规范成文，让每一份文书清晰有据" extra={<Tag className="doc-demo-badge">模拟</Tag>} />}
 
       {view === 'workspace' ? (
         generating ? (
@@ -429,7 +440,7 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
             </Typography.Title>
             <Typography.Text type="secondary">
               {waitingForImprovement
-                ? '工作总结要素已收集 5/6 · 请在对话中填写下一步改进措施，提交后继续生成文书'
+                ? '抢险总结要素已收集 5/6 · 请在对话中填写下一步改进措施，提交后继续生成文书'
                 : pendingDocument ? pendingDocument.prompt
                 : generatingCode
                   ? `生成${DOCUMENT_CATEGORIES.find((category) => category.code === generatingCode)?.name} · 正在编排红头文书`
@@ -481,14 +492,14 @@ export default function DocCenterPanel({ view, onClose = () => window.dispatchEv
           <Tabs className="doc-library-tabs" activeKey={libraryCategory} onChange={setLibraryCategory}
             aria-label="文书分类" items={[
               { key: 'all', label: `全部文书 ${mockDocuments.length + drafts.length}` },
-              ...DOCUMENT_CATEGORIES.map(category => ({ key: category.code, label: `${category.name} ${mockDocuments.filter(doc => doc.code === category.code).length + drafts.filter(draft => draft.templateCode === category.code).length}` })),
+              ...DOCUMENT_CATEGORIES.filter(category => !isHiddenPrototypeAction(category.code) && isStandaloneDocumentCode(category.code)).map(category => ({ key: category.code, label: `${category.name} ${mockDocuments.filter(doc => doc.code === category.code).length + drafts.filter(draft => draft.templateCode === category.code).length}` })),
               ...(drafts.length ? [{ key: 'drafts', label: `业务草稿 ${drafts.length}` }] : []),
             ]} />
           <div className="doc-library-toolbar">
             <span className="doc-library-result-count">{activeCategory?.name ?? (libraryCategory === 'drafts' ? '业务草稿' : '全部文书')} · {visibleDocuments.length + visibleDrafts.length} 份</span>
             <Input.Search placeholder="搜索文书名称或文号" allowClear value={libraryQuery} onChange={event => setLibraryQuery(event.target.value)} />
             {activeCategory ? <Button type="primary" icon={<Plus size={15} />} aria-label={`生成${activeCategory.name}`} onClick={() => generateMock(activeCategory.code)}>生成{activeCategory.name}</Button>
-              : <Dropdown trigger={['click']} menu={{ items: DOCUMENT_CATEGORIES.map(category => ({ key: category.code, label: `生成${category.name}` })), onClick: ({ key }) => generateMock(key) }}>
+              : <Dropdown trigger={['click']} menu={{ items: DOCUMENT_CATEGORIES.filter(category => !isHiddenPrototypeAction(category.code) && isStandaloneDocumentCode(category.code)).map(category => ({ key: category.code, label: `生成${category.name}` })), onClick: ({ key }) => generateMock(key) }}>
                 <Button type="primary" icon={<Plus size={15} />}>新建文书</Button>
               </Dropdown>}
           </div>

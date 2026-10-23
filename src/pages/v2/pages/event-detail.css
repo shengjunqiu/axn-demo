@@ -1,0 +1,60 @@
+.v2-app .v2-event-detail { display: grid; grid-template-columns: minmax(0, 1fr) 25%; height: 100%; min-height: 0; background: #f7f7f7; color: #555; font-size: 14px; }
+.v2-app .v2-event-detail-main { min-width: 0; display: flex; flex-direction: column; padding-bottom: 34px; }
+.v2-app .v2-event-detail-bar { display: flex; align-items: center; gap: 12px; flex-shrink: 0; min-height: 46px; background: #e7f0f7; border-bottom: 1px solid #d3ddeb; color: #5c6b7e; font-size: 14px; }
+.v2-app .v2-event-detail-bar button { align-self: stretch; display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; border: 0; border-right: 1px solid #d0e0f1; border-radius: 0; color: #2099ff; background: #e1f1ff; }
+.v2-app .v2-event-detail-bar strong { font-weight: 600; }
+.v2-app .v2-event-detail-paper { flex: 1; min-height: 0; overflow: auto; padding: 22px 20px; background: #fff; }
+.v2-app .v2-event-detail-owner { display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px dashed #eee; }
+.v2-app .v2-event-detail-facts { padding-top: 0; }
+.v2-app .v2-event-detail-facts p { line-height: 1.65; margin: 16px 0; }
+.v2-app .v2-event-detail-facts label { color: #3e588c; }
+.v2-app .v2-event-detail-map { float: right; width: 33%; margin: 16px 4px 20px 24px; aspect-ratio: 442 / 188; object-fit: cover; }
+.v2-app .v2-event-detail-attachment { display: flex; align-items: flex-start; margin: 16px 0; }
+.v2-app .v2-event-detail-attachment button { display: flex; flex-direction: column; width: 98px; padding: 0; border: 0; background: none; color: #666; text-align: left; }
+.v2-app .v2-event-detail-attachment button > span { width: 98px; height: 62px; border: 1px solid #39d6ff; display: grid; place-items: center; color: #646cff; }
+.v2-app .v2-event-detail-attachment small { display: block; font-size: 14px; padding-top: 4px; }
+.v2-app .v2-event-detail-casualties { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.v2-app .v2-event-detail-casualties > span { white-space: nowrap; }
+.v2-app .v2-event-detail-casualties b { font-size: 20px; font-weight: 400; }
+.v2-app .count-0 { color: #ff2222; }.v2-app .count-1 { color: #ff852e; }.v2-app .count-2 { color: #e8a500; }.v2-app .count-3 { color: #eb19be; }
+.v2-app .v2-event-detail-casualties button { display: inline-flex; align-items: center; gap: 3px; font-size: 14px; padding: 4px 6px; border-radius: 2px; }
+.v2-app p.v2-event-detail-description { clear: both; padding-bottom: 16px; border-bottom: 1px solid #eef0f4; }
+.v2-app .v2-event-process { min-width: 0; overflow: auto; background: #fff; border-left: 12px solid #f7f7f7; padding: 16px 20px; }
+.v2-app .v2-event-process h2 { position: relative; height: 39px; margin: 0 0 10px; display: flex; align-items: center; justify-content: center; background: linear-gradient(90deg,#c6e0ff,#83a7ff); color: #36598c; font-size: 14px; font-weight: 400; }
+.v2-app .v2-event-process h2 img { position: absolute; height: 35px; right: 20px; top: 2px; }
+.v2-app .v2-event-process ol { margin: 0 0 0 14px; padding: 0 0 0 18px; list-style: none; border-left: 1px solid #86ccff; }
+.v2-app .v2-event-process li { position: relative; border-bottom: 1px solid #eef0f4; padding-bottom: 5px; margin-bottom: 18px; line-height: 1.7; color: #647087; }
+.v2-app .v2-event-process li::before { content: ''; position: absolute; left: -24px; top: 10px; width: 9px; height: 9px; border-radius: 50%; background: #249eff; border: 3px solid #def1ff; outline: 1px solid #c5e6ff; }
+.v2-app .process-record-heading { display: flex; align-items: center; gap: 8px; background: linear-gradient(90deg,#e2edff,transparent); white-space: nowrap; font-size: 13px; }
+.v2-app .process-record-heading > span { color: #168eff; border: 1px solid #8cbfff; background: #d9eaff; padding: 0 2px; font-size: 14px; }
+.v2-app .process-record-heading strong { font-weight: 600; }
+.v2-app .v2-event-process li > p { margin: 0 0 8px; padding-left: 8px; }
+.v2-app .v2-event-process li > div:not(.process-record-heading) { display: flex; align-items: center; gap: 7px; color: #8298c0; padding-left: 8px; }
+.v2-app .v2-event-process li > div > svg { color: #b4c6fa; }
+.v2-event-casualty-form { display: grid; gap: 16px; margin: 20px 0; }.v2-event-casualty-form label { display: flex; align-items: center; justify-content: space-between; }
+@media(max-width: 1000px) { .v2-app .v2-event-detail { grid-template-columns: minmax(0,1fr) 30%; }.v2-app .v2-event-detail-map { width: 40%; }.v2-app .v2-event-process { padding: 16px 12px; }.v2-app .process-record-heading { flex-wrap: wrap; gap: 4px; } }
+/* 原系统详情页使用紧凑外框，保持列表页原有布局。 */
+.v2-app.event-detail-active { --sidebar: 164px; --header: 74px; }
+.v2-app.event-detail-active .system-layout { padding: 26px 6px 0 0; gap: 22px; height: calc(100vh - 86px); }
+.v2-app.event-detail-active .system-header { padding: 0 18px; border-bottom-width: 3px; }
+.v2-app.event-detail-active .brand { font-size: 20px; letter-spacing: 3px; gap: 8px; }
+.v2-app.event-detail-active .brand-mark { font-size: 30px; width: 28px; }
+.v2-app.event-detail-active .header-tools { font-size: 14px; gap: 10px; }
+.v2-app.event-detail-active .avatar { width: 36px; height: 36px; line-height: 28px; font-size: 23px; }
+.v2-app.event-detail-active .sidebar { padding: 0; border-radius: 0 16px 16px 0; }
+.v2-app.event-detail-active .nav-group { margin: 0 0 8px; }
+.v2-app.event-detail-active .nav-top { font-size: 16px; padding: 18px 10px; gap: 8px; }
+.v2-app.event-detail-active .nav-top.active { background: transparent; color: #3a547e; box-shadow: none; }
+.v2-app.event-detail-active .nav-top::after { left: 12px; width: 108px; }
+.v2-app.event-detail-active .nav-icon { width: 17px; height: 17px; font-size: 12px; line-height: 17px; border-radius: 3px; }
+.v2-app.event-detail-active > footer { height: 12px; font-size: 12px; overflow: hidden; }
+.v2-app .v2-event-detail { grid-template-columns: minmax(0,1fr) 25%; }
+.v2-app .v2-event-detail-attachment button > span > img { width: 94px; height: 57px; object-fit: contain; }
+.v2-app .v2-event-process h2 img { width: 70px; right: 18px; }
+.v2-app .v2-event-process h2 { padding-right: 0; }
+.v2-app .v2-event-process h2 { isolation: isolate; }
+.v2-app .v2-event-process h2 img { z-index: -1; }
+.v2-app .v2-event-detail-owner { padding: 12px 0; }
+.v2-app .v2-event-detail-map { margin-top: 0; }
+.v2-app .v2-event-detail-casualties { margin: 10px 0; gap: 5px; }
+.v2-app p.v2-event-detail-description { margin-top: 12px; }
