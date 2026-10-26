@@ -1,3 +1,5 @@
+import type { ResourceLedgerRow } from '@/services/resourceAudit';
+import type { MultiSourceSnapshot } from './multiSource';
 /**
  * 安小能领域类型 —— 单一事实来源（主控维护，冻结契约）。
  * 所有业务时间使用带 +08:00 的 ISO 字符串；用户实际操作时间另存 performedAt。
@@ -181,7 +183,48 @@ export interface PendingClarification {
   taskId: string;
 }
 
+/** 聊天附件摘要（模拟 Word / 本机登记；不持久化二进制）。 */
+export interface ChatAttachment {
+  id: string;
+  name: string;
+  type?: string;
+  /** 模拟正文或可读文本截断；持久化时宜控制长度 */
+  content?: string;
+  eventId?: string | null;
+  eventName?: string;
+  simulated: boolean;
+  kind: string;
+  status: string;
+}
+
+export type AttachmentWorkflowKind = 'wrongEvent' | 'missing' | 'ambiguous' | 'mismatch';
+
+/** 附件用途确认（对齐 Vue assessInput → workflow 按钮）。 */
+export interface AttachmentWorkflow {
+  kind: AttachmentWorkflowKind;
+  attachment: ChatAttachment;
+  prompt: string;
+  stage: string;
+  eventId: string;
+  resolved: boolean;
+}
+
+/** 会话资料区条目（本机补充或已纳入的模拟附件元数据）。 */
+export interface SessionMaterial {
+  id: string;
+  name: string;
+  content: string;
+  status: string;
+  kind: '本次补充' | '模拟 Word 附件' | string;
+  selected: boolean;
+}
+
 export interface ChatMessage {
+  multiSourceDetails?: MultiSourceSnapshot;
+  reviewSummary?: { conclusion: string; rows: { label: string; value: string }[] };
+  summaryOffer?: { kind: 'report' | 'knowledge' | 'analysis' | 'map' | 'sixData'; request?: string; documentId?: string; title?: string };
+
+  regionalDisasters?: MultiSourceSnapshot;
   /** 生成后的独立文书检查气泡，进度按会话和文书存储。 */
   reviewDocumentId?: string;
   messageId: string;
@@ -194,27 +237,59 @@ export interface ChatMessage {
   agentId?: string;
   agentName?: string;
   agentRole?: string;
-  /** kind='agent' 专用：自我介绍式召唤（文书生成）给出的候选任务，点击即发起对应 task；
-      hint 是选项下面补的一句提示（怎么直接提要求 / 传文件）。 */
+  /** 文书生成邀请：候选任务（点选即发起对应 task）与下方提示文案。 */
   choices?: { label: string; task: string }[];
   hint?: string;
+  /** 物资核验消息正文：保存本次台账快照和核验时点。 */
+  rescuePlans?: { documentId: string; title: string; sections: readonly (readonly [string, string])[]; date: string; number: string }[];
+  resourceAudit?: { rows: ResourceLedgerRow[]; checkedAt: string };
+  /** 用户消息携带的附件摘要（展示用）。 */
+  attachment?: ChatAttachment | null;
+  attachments?: { name: string; size: number }[];
+  /** 助手消息：附件用途确认 workflow。 */
+  workflow?: AttachmentWorkflow | null;
   documentWorkflow?: {
+    compactReview?: boolean;
     /** waiting_upload：素材依赖型文书（周工作动态）在收要素前先等用户上传参考文档/附件。 */
     stage: 'collecting' | 'waiting_upload' | 'waiting_input' | 'calling' | 'generating' | 'completed' | 'interrupted';
     elements: { label: string; value: string }[];
     collection?: { question: string; answer: string }[];
     collectedCount?: number;
     reportSections?: [string, string][];
+    /** inline 为结构化结果，仅按用户操作导出附件，不自动打开文书。 */
+    presentation?: 'inline' | 'document';
+    documentCode?: string;
+    documentTitle?: string;
     documentId?: string;
     /** 生成前需要用户上传的参考文档与附件清单：门在收到上传件之后才放行（周工作动态用）。 */
     requiredAttachments?: string[];
     /** 本轮实际收到的上传件，演示环境只留文件名与大小（不落盘、不读取内容）。 */
     attachments?: { name: string; size: number }[];
   };
-  /** 用户上传的附件（演示环境仅保留文件名与大小：不落盘、不读取内容、不参与意图识别） */
-  attachments?: { name: string; size: number }[];
+  /** 关联灾情切换提示：携带事件 ID，用于「查看时间轴」等结构化动作。 */
+  eventBriefingEventId?: string | null;
+  /** 态势研判与预警推送直接在会话中操作，不占右侧工作区。 */
+  inlineSituation?: { kind: 'forecast' | 'warning'; eventId: string };
+  /** 态势报告自动推送：可打开文书与态势地图。 */
+  situationReportAuto?: {
+    eventId: string;
+    documentId?: string;
+    reason: 'event_link' | 'multi_source' | 'data_changed' | 'manual';
+    openMap?: boolean;
+  } | null;
   createdAt: string;
   performedAt: string;
+}
+
+/** 三场景交接包（演示）：研判 → 投送 → 实施，不改原系统状态。 */
+export interface ScenarioHandoffBundle {
+  fromScenario: 'situation' | 'forceDelivery' | 'rescueOps';
+  toScenario: 'situation' | 'forceDelivery' | 'rescueOps';
+  eventId: string;
+  versionLabel: string;
+  summary: string;
+  bullets: string[];
+  verified: 'draft' | 'user_confirmed';
 }
 
 export interface Session {
@@ -229,6 +304,28 @@ export interface Session {
   selectedProposalVersion: string | null;
   pendingClarification: PendingClarification | null;
   activeDocumentId: string | null;
+  /** 会话内演示阶段覆盖；空则回落事件种子阶段 */
+  eventStageOverride?: '待研判' | '力量投送中' | '救援中' | '待复盘' | '已归档' | null;
+  /** 已完成的流程动作键（归一后） */
+  completedFlowActions?: string[];
+  /** 最近一次场景交接上下文 */
+  handoffBundle?: ScenarioHandoffBundle | null;
+  /** 会话资料区：本机补充 / 纳入的模拟附件（无二进制） */
+  materials?: SessionMaterial[];
+  /**
+   * 预警推送 / 资源预警通知会话态（本地模拟）。
+   * key：situation | resource
+   */
+  warningPushByKind?: Partial<Record<'situation' | 'resource', {
+    kind: 'situation' | 'resource';
+    targets: string[];
+    warning: string;
+    approved: boolean;
+    receipts: { id: string; target: string; status: '失败' | '已送达' | '已响应' }[];
+    updatedAt: string;
+  }>>;
+  /** 评估生成的预案编修依据摘要，供方案修订对比预填 */
+  planRevisionHints?: string | null;
   createdAt: string;
 }
 
@@ -279,6 +376,9 @@ export interface TaskStep {
 }
 
 export interface SummaryArtifact {
+  /** 独立汇聚任务只呈现六源与授权域汇总，不生成灾情摘要或文书。 */
+  displayMode?: 'multi_source' | 'disaster_summary';
+  multiSource?: MultiSourceSnapshot;
   kind: 'summary';
   eventId: string;
   rows: {
@@ -335,6 +435,24 @@ export interface ProposalArtifact {
   dataTime: string;
 }
 
+/** 建设场景分节结果（对齐 Vue 四智能体 conversationCapabilities 结果卡）。 */
+export interface ScenarioSectionsArtifact {
+  kind: 'scenario_sections';
+  capability: string;
+  agentId: string;
+  title: string;
+  summary: string;
+  sections: { title: string; text: string }[];
+  table?: { headers: string[]; rows: string[][] };
+  /** 多表展示（如态势报告：安全区域 / 可出动队伍 / 医院）。 */
+  tables?: { title: string; headers: string[]; rows: string[][] }[];
+  notice: string;
+  dataTime: string;
+  /** 已物化到右侧红头文书时填写，供「查看文书」与 WorkspaceSync 打开。 */
+  documentId?: string;
+  documentCode?: string;
+}
+
 export interface DocumentLinkArtifact {
   kind: 'document';
   documentId: string;
@@ -368,6 +486,7 @@ export type TaskArtifactPayload =
   | KnowledgeArtifact
   | QaKnowledgeArtifact
   | ProposalArtifact
+  | ScenarioSectionsArtifact
   | DocumentLinkArtifact
   | ClarificationPayload
   | ErrorArtifact;

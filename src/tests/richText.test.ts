@@ -43,7 +43,7 @@ describe('parseRichHtml：白名单重建', () => {
     expect(host.textContent).toBe('甲乙');
     expect(host.querySelector('script')).toBeNull();
     expect(host.querySelector('img')).toBeNull();
-    expect(host.querySelector('table')).toBeNull();
+    expect(host.querySelector('table td')?.textContent).toBe('乙');
     expect(host.querySelector('p')?.hasAttribute('onclick')).toBe(false);
   });
 
@@ -106,4 +106,29 @@ describe('mendNestedLists：修掉 Chromium 的非法列表嵌套', () => {
     expect(mendNestedLists(host)).toBeNull();
     expect(host.querySelector('ul')).not.toBeNull();
   });
+});
+
+
+describe('文书表格渲染与保存', () => {
+  it.each([
+    '说明\n来源 | 状态\n气象 | 待核\n水文 | 已汇聚\n尾注',
+    '<p>说明</p><p>来源 | 状态</p><p>气象 | 待核</p><p>水文 | 已汇聚</p><p>尾注</p>',
+  ])('识别新文书与旧段落中的表格并保持编辑往返', value => {
+    const host = render(value);
+    expect(host.querySelectorAll('table')).toHaveLength(1);
+    expect(host.querySelectorAll('th')).toHaveLength(2);
+    expect(host.querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(host.querySelector('td')?.textContent).toBe('气象');
+    const restored = render(serializeRichDom(host));
+    expect(restored.querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(restored.textContent).toContain('尾注');
+  });
+});
+
+
+it('旧文书的斜杠资源段落恢复为表格，复合数量不串列', () => {
+  const host = render('<p>三、队伍与人员状态时效</p><p>工程分队 / 36人 / 临水工程 / 候选待确认</p><p>装备/物资候选：</p><p>集结库 / 380t / 2000只 / 物料保障 / 候选待确认</p><p>状态以更新时间为准。</p>');
+  expect(host.querySelectorAll('table')).toHaveLength(2);
+  expect(host.querySelectorAll('table')[1].querySelectorAll('td')[1].textContent).toBe('380t / 2000只');
+  expect(render(serializeRichDom(host)).querySelectorAll('table')).toHaveLength(2);
 });

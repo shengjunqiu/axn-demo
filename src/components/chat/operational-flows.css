@@ -1,0 +1,12 @@
+.axn-flow-workspace { min-width: 0; width: 100%; box-sizing: border-box; }
+.axn-flow-workspace-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 24px; background: #fff; border-bottom: 1px solid var(--axn-border, #e4e9f0); }
+.axn-flow-workspace-title { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.axn-flow-workspace-title > .ant-typography:first-child { font-size: 16px; line-height: 1.5; }
+.axn-flow-workspace-sub { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.axn-flow-workspace-head > button { flex-shrink: 0; }
+.axn-flow-workspace-body { padding: 20px 24px 28px; min-width: 0; }
+.axn-flow-workspace-body > .ant-tabs { min-width: 0; }
+@media (max-width: 768px) {
+  .axn-flow-workspace-head { padding: 16px; gap: 12px; }
+  .axn-flow-workspace-body { padding: 16px; }
+}

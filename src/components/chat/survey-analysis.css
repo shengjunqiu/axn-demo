@@ -1,0 +1,12 @@
+.axn-survey-reply { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.axn-survey-reply .axn-qa-section > .axn-agent-result-lead { margin: 0 0 12px; }
+.axn-survey-check-value { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; line-height: 1.8; }
+.axn-survey-check-value > span { min-width: 0; }
+.axn-survey-check-head { color: var(--axn-muted); }
+.axn-survey-check-head strong { font-weight: 500; }
+.axn-survey-check-value small { display: none; }
+@media (max-width: 640px) {
+  .axn-survey-check-value { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .axn-survey-check-head { display: none; }
+  .axn-survey-check-value small { display: block; color: var(--axn-muted); font-size: var(--fs-caption); }
+}

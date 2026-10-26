@@ -1,12 +1,15 @@
+import { useSessionStore } from './sessionStore';
 import { create } from 'zustand';
 import { withReviewDemoIssues } from '@/services/documentReviewScenario';
 import type { ChatMessage } from '@/domain/types';
+import { resolveDocumentSections, resolveDocumentTitle } from '@/seed/resolveDocumentSections';
 import { DOCUMENT_CATEGORIES, MOCK_DOCUMENTS, sameMockDocument, type MockDocument } from '@/seed/mockDocuments';
 import { diffDocuments, summarizeDiff } from '@/services/docDiff';
 import { clearPersist, loadPersist, schedulePersist } from './persistence.js';
 import { useDocumentReviewStore } from './documentReviewStore';
 
 type GenerationOptions = {
+  title?: string;
   collect?: () => Promise<void | false>;
   /** 逐条上报「已收齐第几条要素」，驱动气泡里的收集动画（用户 m01044）。
    *  没有自定义 collect 的文书（值班日报/应急要情）由 generate 按 elements 逐条吐。 */
@@ -102,6 +105,12 @@ interface MockDocumentState {
   setWorking: (scope: string, document: MockDocument) => void;
   clearWorking: (scope: string, documentId: string) => void;
   generate: (scope: string, code: string, options?: GenerationOptions) => Promise<MockDocument | null>;
+  /** 四智能体材料：写入文书库并选中，供右侧工作区与「查看文书」复用。 */
+  publishAgentMaterial: (scope: string, input: {
+    code: string;
+    title: string;
+    sections: MockDocument['sections'];
+  }) => MockDocument | null;
 }
 
 /** 分类按钮与对话快捷操作共用；每个会话单独保存模拟文书与生成状态。 */
@@ -185,6 +194,7 @@ export const useMockDocumentStore = create<MockDocumentState>((set, get) => ({
       ...(state.libraries[scope] ?? EMPTY_LIBRARY), selected: null, generatingCode: code,
     } } }));
     const stillGenerating = () => get().libraries[scope]?.generatingCode === code;
+    try {
     if (options) {
       if (options.collect) {
         const collected = await options.collect();
@@ -214,11 +224,12 @@ export const useMockDocumentStore = create<MockDocumentState>((set, get) => ({
     const now = new Date();
     // 正文尾部附图与附件表体都按文种挂（不随上传件变）：从同文种的样稿上取。
     const sample = MOCK_DOCUMENTS.find(item => item.code === code);
+    const eventId = useSessionStore.getState().sessions[scope]?.eventId ?? '';
     const document: MockDocument = withReviewDemoIssues({
       id: `generated-${code}-${now.getTime()}`, code,
-      title: `${category.topics[0]}（新生成）`,
+      title: options?.title ?? resolveDocumentTitle(eventId, category.name, category.topics[0]),
       date: now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }),
-      number: `${category.prefix}〔${now.getFullYear()}〕模拟草稿`, sections: options?.sections ?? category.sections,
+      number: `${category.prefix}〔${now.getFullYear()}〕模拟草稿`, sections: options?.sections ?? (code === 'WEEKLY_DYNAMICS' ? category.sections : resolveDocumentSections(eventId, code)),
       figures: sample?.figures,
       tables: sample?.tables,
     });
@@ -229,6 +240,37 @@ export const useMockDocumentStore = create<MockDocumentState>((set, get) => ({
       versions: { ...(state.libraries[scope] ?? EMPTY_LIBRARY).versions, [document.id]: [baselineVersion(document)] },
     } } }));
     useDocumentReviewStore.getState().start(scope, document);
+    return document;
+    } finally {
+      // collect、阶段回调或正文生成失败时，也必须释放生成锁。
+      if (get().libraries[scope]?.generatingCode === code) {
+        set(state => ({ libraries: { ...state.libraries, [scope]: { ...state.libraries[scope], generatingCode: null } } }));
+      }
+    }
+  },
+  publishAgentMaterial: (scope, input) => {
+    const category = DOCUMENT_CATEGORIES.find((item) => item.code === input.code);
+    if (!category) return null;
+    const now = new Date();
+    const document: MockDocument = {
+      id: `agent-${input.code}-${crypto.randomUUID()}`,
+      code: input.code,
+      title: input.title,
+      date: now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }),
+      number: `${category.prefix}〔${now.getFullYear()}〕模拟草稿`,
+      sections: input.sections,
+    };
+    set((state) => ({
+      libraries: {
+        ...state.libraries,
+        [scope]: {
+          ...(state.libraries[scope] ?? EMPTY_LIBRARY),
+          documents: [document, ...(state.libraries[scope] ?? EMPTY_LIBRARY).documents],
+          selected: document,
+          generatingCode: null,
+        },
+      },
+    }));
     return document;
   },
 }));

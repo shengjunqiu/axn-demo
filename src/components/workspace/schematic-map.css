@@ -1,0 +1,32 @@
+.axn-schematic.axn-schematic--gis { padding: 0; margin: var(--space-3) 0 0; overflow: hidden; background: var(--axn-surface); box-shadow: var(--shadow-xs); }
+.axn-gis-canvas { position: relative; height: clamp(380px, 58vh, 640px); overflow: hidden; background: var(--axn-text); }
+.axn-schematic--gis .axn-gis-overlay { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.axn-gis-heading, .axn-gis-layers, .axn-gis-zoom { position: absolute; z-index: 2; background: color-mix(in srgb, var(--axn-surface) 96%, transparent); border: 1px solid var(--axn-border); border-radius: var(--radius-md); box-shadow: var(--shadow-md); }
+.axn-gis-heading { top: var(--space-4); left: var(--space-4); display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); max-width: min(460px, calc(100% - 64px)); pointer-events: none; }
+.axn-gis-heading > div { min-width: 0; }
+.axn-gis-heading strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--axn-text); font-size: var(--fs-body); font-weight: 600; }
+.axn-gis-heading div > span { display: block; margin-top: var(--space-1); font-size: var(--fs-caption); color: var(--axn-muted); }
+.axn-gis-heading b { color: var(--axn-warning-text); font-weight: 400; }
+.axn-gis-heading-icon { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: var(--radius-sm); color: var(--axn-primary); background: var(--axn-primary-bg); }
+.axn-gis-canvas svg.lucide { display: block; width: 17px; height: 17px; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
+.axn-gis-layers { right: var(--space-4); top: var(--space-4); padding: var(--space-2); display: flex; flex-direction: column; gap: var(--space-1); min-width: 104px; }
+.axn-gis-layers > span { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); color: var(--axn-muted); font-size: var(--fs-caption); }
+.axn-gis-layers button { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--axn-muted); font: inherit; font-size: var(--fs-caption); cursor: pointer; text-align: left; }
+.axn-gis-layers button::before { content: ''; width: 7px; height: 7px; border: 1px solid var(--axn-border); border-radius: 50%; }
+.axn-gis-layers button[aria-pressed="true"] { background: var(--axn-primary-bg); color: var(--axn-primary-text); }
+.axn-gis-layers button[aria-pressed="true"]::before { background: var(--axn-primary); border-color: var(--axn-primary); }
+.axn-gis-zoom { right: var(--space-4); bottom: var(--space-4); display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+.axn-gis-zoom button { width: 34px; height: 34px; display: grid; place-items: center; border: 0; background: transparent; color: var(--axn-text); cursor: pointer; }
+.axn-gis-zoom button:hover:not(:disabled), .axn-gis-layers button:hover { background: var(--axn-primary-bg); color: var(--axn-primary); }
+.axn-gis-zoom button:disabled { opacity: .35; cursor: default; }
+.axn-gis-zoom span { font-size: var(--fs-caption); color: var(--axn-muted); font-variant-numeric: tabular-nums; }
+.axn-gis-canvas button:focus-visible { outline: 2px solid var(--axn-primary); outline-offset: -2px; }
+.axn-gis-image-note { position: absolute; bottom: var(--space-4); left: var(--space-4); z-index: 2; padding: var(--space-1-5) var(--space-2); background: var(--axn-surface); border-radius: var(--radius-sm); color: var(--axn-muted); font-size: var(--fs-caption); pointer-events: none; }
+.axn-gis-canvas[data-resources="false"] .axn-gis-resource, .axn-gis-canvas[data-events="false"] .axn-gis-event { display: none; }
+.axn-schematic--gis .axn-legend { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--axn-border); }
+@media (max-width: 640px) {
+  .axn-gis-canvas { height: 420px; }
+  .axn-gis-heading { right: var(--space-4); max-width: none; }
+  .axn-gis-layers { top: 100px; }
+  .axn-gis-image-note { max-width: calc(100% - 90px); }
+}

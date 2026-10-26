@@ -20,6 +20,50 @@
   height: 100%;
 }
 
+.axn-resource-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--space-4);
+}
+
+/*
+ * Ant Design 6 Tabs DOM：body-holder / body / content（原 content-holder / content / tabpane）。
+ * 勿对全部 .ant-tabs-content 设 display:flex，否则会盖过 .ant-tabs-content-hidden 的 display:none。
+ */
+.axn-resource-tabs .ant-tabs-body-holder,
+.axn-resource-tabs .ant-tabs-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.axn-resource-tabs .ant-tabs-content:not(.ant-tabs-content-hidden) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.axn-resource-tabs .ant-tabs-content-hidden {
+  display: none !important;
+}
+
+.axn-resource-tab-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: var(--space-3);
+}
+
+.axn-resource-map-hint {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: var(--fs-meta);
+}
+
 .axn-knowledge-panel {
   display: flex;
   flex-direction: column;
@@ -84,20 +128,22 @@
   background: var(--axn-soft);
   padding: var(--space-2);
   margin: var(--space-3) var(--space-4) 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
-/* 态势图高度约束：不抢占表格区（否则表格被挤压为 0 高、候选区遮挡表格） */
+/* 地图 Tab 独占展示，可略高；列表 Tab 不渲染此块，故不挤占表格 */
 .axn-schematic svg {
   display: block;
   width: 100%;
-  height: min(300px, 32vh);
-  background: var(--axn-canvas);
-  border: 1px solid var(--axn-border);
-  border-radius: var(--radius-md);
+  height: min(420px, 48vh);
+  background: #eef4f9;
+  border: 1px solid color-mix(in srgb, var(--axn-border) 80%, #9db4c9);
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
-/* 图元分组统一为可点击 */
-.axn-schematic svg g {
+/* 图元分组统一为可点击（标签组除外） */
+.axn-schematic svg g:not(.axn-schematic-label) {
   cursor: pointer;
 }
 

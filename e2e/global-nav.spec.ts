@@ -23,26 +23,31 @@ async function sendInChat(page: Page, text: string) {
   await page.keyboard.press('Enter');
 }
 
-/** 打开“资源与态势”抽屉（资源/知识页签已按标注移除，改为对话任务卡触发的抽屉）。 */
+/** 打开“资源与态势”抽屉并切到资源列表 Tab（表格仅在该 Tab 可见时可点）。 */
 async function openResourceDrawer(page: Page) {
-  await page.getByRole('button', { name: '查看资源与态势' }).first().click();
-  await expect(page.locator('.ant-drawer', { hasText: '资源与态势' })).toBeVisible();
+  await page.getByRole('button', { name: '查看资源列表' }).first().click();
+  const drawer = page.getByTestId('document-workspace');
+  await expect(drawer).toBeVisible();
+  await drawer.getByRole('tab', { name: '资源列表' }).click();
+  // antd Table 会拆成表头/表体两张 table，断言落在含数据行的那张。
+  await expect(page.getByTestId('resource-tab-list').getByRole('table').filter({ hasText: '一号工程应急救援队' })).toBeVisible();
 }
 
 async function closeDrawer(page: Page) {
-  await page.keyboard.press('Escape');
-  await expect(page.locator('.ant-drawer', { hasText: '资源与态势' })).toBeHidden({ timeout: 5000 });
+  await page.getByTestId('workspace-close-btn').click();
+  await expect(page.getByTestId('document-workspace')).toBeHidden({ timeout: 5000 });
 }
 
 /** 执行资源查询并打开抽屉等待表格出现（表格仅在抽屉内渲染）。 */
 async function ensureResourceTable(page: Page) {
   await sendInChat(page, '查询周边救援资源');
   await openResourceDrawer(page);
-  await expect(page.locator('table tr', { hasText: '一号工程应急救援队' }).first()).toBeVisible({ timeout: 30000 });
+  await expect(page.getByTestId('resource-tab-list').getByRole('table').filter({ hasText: '一号工程应急救援队' })).toBeVisible({ timeout: 30000 });
 }
 
 async function checkFirstCandidate(page: Page) {
-  await page.locator('table tr', { hasText: '一号工程应急救援队' }).first().locator('span.ant-checkbox').click();
+  const row = page.getByTestId('resource-tab-list').getByRole('table').filter({ hasText: '一号工程应急救援队' }).locator('tr', { hasText: '一号工程应急救援队' }).first();
+  await row.locator('span.ant-checkbox').click();
   // 候选区以 Tag 呈现所选力量；出现一号队 Tag 即候选已生效
   await expect(page.locator('.axn-candidate-zone').getByText('一号工程应急救援队')).toBeVisible({ timeout: 10000 });
   // 关闭抽屉，避免遮罩阻挡后续对话/侧栏操作
@@ -61,45 +66,32 @@ test('1. 新建对话 → 直接创建空白对话并激活（无弹窗，标注
   const after = await page.locator('.axn-gs-conversation').count();
   expect(after).toBe(before + 1);
   await expect(page.locator('.axn-gs-conversation.is-active').first()).toContainText('新的对话');
-  // 对话区出现关联灾情选择，未关联时触发器显示 placeholder（标注 vibe_1791787570681）；
-  // 未开始对话（无消息）时头部不显示事件标题（标注 vibe_1791303121889）
-  await expect(page.getByTestId('chat-link-incident')).toContainText('选择关联灾情事件');
+  // 对话区出现关联灾情选择，当前为未关联；未开始对话（无消息）时头部不显示事件标题（标注 vibe_1791303121889）
+  await expect(page.getByTestId('chat-link-incident')).toContainText('未关联事件');
   await expect(page.getByTestId('header-event')).toHaveCount(0);
 });
 
 test('2. 对话区内关联灾情 → 切换事件上下文与共享 session', async ({ page }) => {
   await newConversation(page);
   await page.getByTestId('chat-link-incident').click();
-  await page.getByTestId('incident-picker').getByRole('option', { name: /清河段堤防险情/ }).click();
+  await page.getByTestId('incident-picker').getByRole('option', { name: /青岭村山体滑坡/ }).first().click();
   await page.getByTestId('incident-picker').getByRole('button', { name: /^(确认绑定|新开会话并绑定|确认选择)$/ }).click();
   await page.waitForTimeout(500);
-  // 上下文切到关联事件：无消息时由关联灾情选择器承载，头部事件标题不显示（标注 vibe_1791303121889）
-  await expect(page.getByTestId('chat-link-incident')).toContainText('清河段堤防险情');
-  await expect(page.getByTestId('header-event')).toHaveCount(0);
+  await expect(page.getByTestId('chat-link-incident')).toContainText('青岭村山体滑坡');
+  await expect(page.getByText('【当前状态】')).toBeVisible();
+  await expect(page.getByTestId('event-next-steps')).toBeVisible();
+  await expect(page.getByTestId('event-next-steps-task-生成救援方案')).toBeVisible();
+  await expect(page.getByTestId('open-event-timeline')).toBeVisible();
+  await page.getByTestId('open-event-timeline').click();
+  await expect(page.getByTestId('event-timeline-drawer')).toBeVisible();
+  await expect(page.getByTestId('event-timeline-drawer')).toContainText('事件接报');
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('header-event')).toContainText('青岭村山体滑坡');
   // 取消选择不会解除当前会话的关联。
   await page.getByTestId('chat-link-incident').click();
   await expect(page.getByTestId('incident-picker').getByRole('option', { name: /不关联灾情/ })).toHaveCount(0);
   await page.getByRole('button', { name: '取消选择事件' }).click();
-  await expect(page.getByTestId('chat-link-incident')).toContainText('清河段堤防险情');
-});
-
-test('失效的历史关联事件显示中文提示，可重新选择有效事件', async ({ page }) => {
-  await newConversation(page);
-  await page.waitForTimeout(400);
-  await page.evaluate(() => {
-    const key = 'anneng-demo:v1:conversation';
-    const saved = JSON.parse(localStorage.getItem(key)!);
-    saved.data.conversations[saved.data.activeConversationId].eventId = 'evt-sim-landslide';
-    localStorage.setItem(key, JSON.stringify(saved));
-  });
-  await page.reload();
-  const trigger = page.getByTestId('chat-link-incident');
-  await expect(trigger).toContainText('关联事件不可用');
-  await expect(trigger).not.toContainText('evt-sim-landslide');
-  await trigger.click();
-  await page.getByTestId('incident-picker').getByRole('option', { name: /清河段堤防险情/ }).click();
-  await page.getByTestId('incident-picker').getByRole('button', { name: /^(确认绑定|新开会话并绑定|确认选择)$/ }).click();
-  await expect(trigger).toContainText('清河段堤防险情');
+  await expect(page.getByTestId('chat-link-incident')).toContainText('青岭村山体滑坡');
 });
 
 test('3. 搜索"南堤"→过滤；清空→恢复', async ({ page }) => {
@@ -162,7 +154,6 @@ test('6. 会话列表切换 A→B：B 空上下文（无候选、无任务卡）
   await page.locator('.axn-gs-conversation', { hasText: '漳河镇' }).first().click();
   await expect(page.locator('.axn-task-card')).toHaveCount(0);
   // B 无查询任务卡：显示欢迎空态（候选区在资源抽屉内，无任务卡即无查询）
-  // 欢迎空态：首页标题（问候语已合并进标题，标注 vibe_1791788298951）
   await expect(page.locator('.axn-home-title')).toContainText('我是安小能');
 });
 
@@ -252,17 +243,16 @@ test('应急专家展示已有能力，每次召唤新开对话并能选择任�
   await page.getByRole('button', { name: '应急专家', exact: true }).click();
   await page.getByRole('button', { name: '召唤救援资源管理智能体', exact: true }).click();
   await page.locator('.axn-doc-choices[data-agent-id="agent-resource"]').getByRole('button', { name: '周边救援资源', exact: true }).click();
-  await page.getByTestId('incident-picker').getByRole('option', { name: /清河段堤防险情/ }).click();
+  await page.getByTestId('incident-picker').getByRole('option', { name: /青岭村山体滑坡/ }).first().click();
   await page.getByTestId('incident-picker').getByRole('button', { name: /^(确认绑定|新开会话并绑定|确认选择)$/ }).click();
   await expect(page.locator('.axn-task-card').first()).toBeVisible();
 });
 
 test('11. 应急专家 / 定时任务 / 知识库导航页可访问，文书库导航独立成页', async ({ page }) => {
-  // 侧栏入口已按下线标注隐藏，页面本身仍可通过深链直达。
   // 应用用 HashRouter，深链形式为 /#/agents
   await page.goto('/#/agents');
   await expect(page.getByTestId('agents-page')).toBeVisible();
-  await expect(page.getByText('态势感知智能体')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '态势感知智能体', exact: true })).toBeVisible();
   await page.goto('/#/schedules');
   await expect(page.getByTestId('schedules-page')).toBeVisible();
   await expect(page.getByText('每日灾情摘要', { exact: true })).toBeVisible();

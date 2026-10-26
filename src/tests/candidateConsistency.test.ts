@@ -191,7 +191,8 @@ describe('D05 candidate → proposal → document', () => {
     const p = Object.values(useSessionStore.getState().proposals)[0];
     expect(p.candidateIds).toEqual(['team-001']);
     expect(p.sections.find((s) => s.id === 'resources')?.bindingResourceIds).toEqual(['team-001']);
-    expect(p.knowledgeRefs).toEqual([...knowledgeById.keys()]);
+    // 新增灾种的预案仅适用其自身事件，不能全部塞入原有事件。
+    expect(p.knowledgeRefs).toEqual([...knowledgeById.keys()].filter(id => !id.startsWith('kb-evt-sim-')));
     expect(p.knowledgeRefs.length).toBeGreaterThan(0);
   });
 

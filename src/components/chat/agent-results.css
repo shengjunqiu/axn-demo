@@ -1,0 +1,21 @@
+.axn-agent-result, .axn-structured-reply, .axn-resource-audit { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; font-size: var(--fs-reading); line-height: var(--lh-reading); overflow-wrap: anywhere; }
+.axn-structured-reply p, .axn-agent-result-lead { margin: 0; white-space: pre-wrap; }
+.axn-structured-records { display: flex; flex-direction: column; gap: var(--space-3); }
+.axn-agent-result-meta { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; color: var(--axn-muted); font-size: var(--fs-caption); }
+.axn-result-details { min-width: 0; border-top: 1px solid var(--axn-border); padding-top: var(--space-2); }
+.axn-result-details > summary { cursor: pointer; font-size: var(--fs-body); font-weight: 600; padding: var(--space-2) 0; color: var(--axn-text); }
+.axn-result-details > summary:focus-visible { outline: 2px solid var(--axn-primary); outline-offset: 2px; }
+.axn-result-details > .axn-artifact + .axn-artifact { margin-top: var(--space-3); }
+.axn-agent-result .axn-qa-section p { white-space: pre-wrap; }
+.axn-resource-audit .axn-qa-section { margin-top: var(--space-3); }
+.axn-agent-result .axn-artifact-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.axn-agent-result .axn-document-collect-done, .axn-structured-reply .axn-document-collect-done { grid-template-columns: 32px minmax(0, 1fr) auto; }
+@media (max-width: 640px) {
+  .axn-agent-result .axn-document-collect-done, .axn-structured-reply .axn-document-collect-done { grid-template-columns: 28px minmax(0, 1fr); }
+  .axn-agent-result .axn-document-collect-done > :last-child, .axn-structured-reply .axn-document-collect-done > :last-child { grid-column: 2; }
+}
+.axn-agent-result-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-3); }
+.axn-section-body { line-height: var(--lh-reading); }
+.axn-result-records > .axn-artifact { margin: var(--space-2) 0; }
+.axn-agent-result input, .axn-agent-result textarea { max-width: 100%; box-sizing: border-box; }
+.axn-agent-result .axn-artifact-value { min-width: 0; }

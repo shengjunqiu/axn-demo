@@ -4,7 +4,7 @@ import { MOCK_DOCUMENTS } from '@/seed/mockDocuments';
 import { DOCUMENT_CHECK_INTERVAL, DOCUMENT_CHECK_ITEMS, useDocumentReviewStore } from '@/store/documentReviewStore';
 import { useMockDocumentStore } from '@/store/mockDocumentStore';
 
-const doc = MOCK_DOCUMENTS[0];
+const doc = MOCK_DOCUMENTS.find(document => document.code === 'EMERGENCY_BRIEF')!;
 const CHECK_DURATION = DOCUMENT_CHECK_INTERVAL * DOCUMENT_CHECK_ITEMS.length;
 const reviewOf = (scope = 'session-a') => useDocumentReviewStore.getState().reviews[scope]?.[doc.id];
 

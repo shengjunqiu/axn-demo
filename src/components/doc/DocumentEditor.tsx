@@ -569,7 +569,7 @@ function EditorSurface({ draft, locked, signedVersion, onCloseRequest, onDirtyCh
       )}
       <div style={{ marginBottom: 8 }}>
         <Space wrap size={[8, 4]}>
-          <Tag color="geekblue">{draft.templateCode === 'EMERGENCY_BRIEF' ? '应急要情' : '值班日报'}</Tag>
+          <Tag color="geekblue">{draft.templateCode === 'EMERGENCY_BRIEF' ? '应急抢险要情' : '值班日报'}</Tag>
           <ValidationStatusTag status={draft.validation.status} />
           {draft.freshness === 'stale' && (
             <Tooltip title="来源快照已过期（数据已更新），保存版本前建议关注校核提示 R-009">
@@ -683,7 +683,7 @@ export default function DocumentEditor({ documentId, open, onClose, onDirtyChang
   return (
     <Drawer
       title={draft ? `编辑文书 · ${draft.title}` : '编辑文书'}
-      width={880}
+      size={880}
       open={open}
       onClose={requestClose}
       destroyOnHidden

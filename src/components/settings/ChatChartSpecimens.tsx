@@ -30,25 +30,29 @@ export function MetricCards() {
   </ChartFrame>;
 }
 
-export function TrendChart() {
+export function TrendChart({ series, title = '到场人员趋势', unit = '人', note }: { series?: Datum[]; title?: string; unit?: string; note?: string } = {}) {
   const [period, setPeriod] = useState('今日');
   const gradientId = useId();
-  const data: Datum[] = period === '今日'
+  const data: Datum[] = series ?? (period === '今日'
     ? [12, 24, 36, 48, 60, 72].map((value, i) => ({ label: `${8 + i * 2}:00`, value }))
-    : [24, 36, 30, 48, 54, 60, 72].map((value, i) => ({ label: `9/${22 + i}`, value }));
-  const points = data.map((item, i) => ({ ...item, x: 32 + i * 304 / (data.length - 1), y: 164 - item.value * 1.6 }));
+    : [24, 36, 30, 48, 54, 60, 72].map((value, i) => ({ label: `9/${22 + i}`, value })));
+  const min = Math.min(0, ...data.map(item => item.value));
+  const max = Math.max(min + 1, ...data.map(item => item.value));
+  const ceiling = series ? max : 85;
+  const y = (value: number) => 164 - (value - min) / (ceiling - min) * 136;
+  const points = data.map((item, i) => ({ ...item, x: 32 + i * 304 / Math.max(1, data.length - 1), y: y(item.value) }));
   const path = points.map((p, i) => `${i ? 'L' : 'M'}${p.x},${p.y}`).join(' ');
-  return <ChartFrame title="到场人员趋势" note={period === '今日' ? '今日 08:00—18:00' : '9 月 22 日—28 日'}
-    extra={<Segmented size="small" options={['今日', '近7日']} value={period} onChange={setPeriod} aria-label="趋势时间范围" />}>
-    <span className="axn-chart-unit">单位：人</span>
-    <svg className="axn-chart-plot" viewBox="0 0 360 200" role="img" aria-label={`${period}到场人员趋势，最新 72 人`}>
+  return <ChartFrame title={title} note={note ?? (period === '今日' ? '今日 08:00—18:00' : '9 月 22 日—28 日')}
+    extra={!series && <Segmented size="small" options={['今日', '近7日']} value={period} onChange={setPeriod} aria-label="趋势时间范围" />}>
+    <span className="axn-chart-unit">单位：{unit}</span>
+    <svg className="axn-chart-plot" viewBox="0 0 360 200" role="img" aria-label={title}>
       <defs><linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--axn-primary)" stopOpacity=".15" /><stop offset="100%" stopColor="var(--axn-primary)" stopOpacity="0" /></linearGradient></defs>
-      {[0, 25, 50, 75].map(value => <g key={value}><line className="axn-chart-gridline" x1="32" x2="336" y1={164 - value * 1.6} y2={164 - value * 1.6} /><text x="24" y={168 - value * 1.6} textAnchor="end">{value}</text></g>)}
+      {[0, 1, 2, 3, 4].map(i => <g key={i}><line className="axn-chart-gridline" x1="32" x2="336" y1={164 - i * 34} y2={164 - i * 34} /><text x="24" y={168 - i * 34} textAnchor="end">{Number((min + (ceiling - min) * i / 4).toFixed(1))}</text></g>)}
       <path d={`${path} L336,164 L32,164 Z`} fill={`url(#${gradientId})`} />
       <path d={path} fill="none" stroke="var(--axn-primary)" strokeWidth="2.5" strokeLinejoin="round" />
       {points.map(p => <g key={p.label}>
         <text x={p.x} y="187" textAnchor="middle">{p.label}</text>
-        <Tooltip trigger={['hover', 'focus']} title={`${p.label} · ${p.value} 人`}><g className="axn-chart-target" tabIndex={0} aria-label={`${p.label}，${p.value} 人`}>
+        <Tooltip trigger={['hover', 'focus']} title={`${p.label} · ${p.value} ${unit}`}><g className="axn-chart-target" tabIndex={0} aria-label={`${p.label}，${p.value} ${unit}`}>
           <circle cx={p.x} cy={p.y} r="13" fill="transparent" />
           <circle cx={p.x} cy={p.y} r="4" fill="var(--axn-surface)" stroke="var(--axn-primary)" strokeWidth="2" />
         </g></Tooltip>

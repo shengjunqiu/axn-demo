@@ -263,7 +263,7 @@ function composeBriefContent(eventId: string, sessionId: string): DocumentConten
   void demo;
 
   return {
-    title: `应急要情：${title}`,
+    title: `应急抢险要情：${title}`,
     templateCode: 'EMERGENCY_BRIEF',
     templateVersion: templateByCode.get('EMERGENCY_BRIEF')?.templateVersion ?? '1.0.0-demo',
     sections,
@@ -410,7 +410,7 @@ export function createEventDocument(sessionId: string): CreateDocumentResult {
       ...collectFactIdsPure(content),
     ],
     derivedKeys: briefDerivedKeys(),
-    label: '应急要情生成快照',
+    label: '应急抢险要情生成快照',
   });
   const demo = useDemoStore.getState();
   const actor = demo.getActor();
@@ -448,7 +448,7 @@ export function createEventDocument(sessionId: string): CreateDocumentResult {
     version: '工作副本',
     performedAt: new Date().toISOString(),
     demoClockAt: demo.demoClock,
-    detail: `模板 应急要情 · 快照 ${snapshot.snapshotId}`,
+    detail: `模板 应急抢险要情 · 快照 ${snapshot.snapshotId}`,
   });
   void DEMO_CLOCK;
   return { ok: true, documentId, missingFields: [], state: 'draft_created' };

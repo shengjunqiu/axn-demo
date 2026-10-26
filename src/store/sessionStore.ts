@@ -1,16 +1,21 @@
 import { create } from 'zustand';
 import { resourceAllowed, resolveFact } from '@/services/factLookup';
+import { vueDemoResourceById } from '@/seed/vueDemoResources';
 import { teamById } from '@/seed/scenario';
 import { invalidateAllRuns, isActiveRun } from '@/services/taskRuns';
+import { normalizeCompletedAction } from '@/services/agentFlow';
 import type {
   AgentTask,
+  AttachmentWorkflow,
   ChatMessage,
   PendingClarification,
   Proposal,
   Session,
+  SessionMaterial,
   TaskEvent,
   TaskStatus,
 } from '@/domain/types';
+import type { WarningPushKind, WarningPushState } from '@/services/warningPush';
 import { DEFAULT_EVENT_ID, DEFAULT_SESSION_ID, factById, incidentById } from '@/seed/scenario';
 import { useDemoStore } from './demoStore.js';
 import { useDocumentStore } from './documentStore.js';
@@ -87,6 +92,7 @@ function rehydrate(): SessionPersist {
   }
   const sessions: Record<string, Session> = {};
   for (const [sessionId, session] of Object.entries(raw.sessions)) {
+    if (!session.materials) session.materials = [];
     const n = interruptedBySession.get(sessionId) ?? 0;
     sessions[sessionId] =
       n > 0
@@ -121,7 +127,7 @@ function rehydrate(): SessionPersist {
 
 /** 会话→session 映射种子：消息按会话隔离（关联灾情不共享历史消息）；主种子会话继承模拟消息。 */
 const SEED_SESSION_BY_CONVERSATION: Record<string, string> = {
-  'conv-seed-nandi': DEFAULT_SESSION_ID,
+  'conv-seed-landslide': DEFAULT_SESSION_ID,
 };
 
 const sessionPersisted = rehydrate();
@@ -151,6 +157,12 @@ function emptySession(sessionId: string, eventId: string): Session {
     selectedProposalVersion: null,
     pendingClarification: null,
     activeDocumentId: null,
+    eventStageOverride: null,
+    completedFlowActions: [],
+    handoffBundle: null,
+    materials: [],
+    warningPushByKind: {},
+    planRevisionHints: null,
     createdAt: new Date().toISOString(),
   };
 }
@@ -176,6 +188,10 @@ interface SessionState {
   switchSession: (sessionId: string) => void;
   appendMessage: (sessionId: string, msg: Omit<ChatMessage, 'messageId' | 'createdAt' | 'performedAt'>) => ChatMessage;
   updateDocumentWorkflow: (sessionId: string, messageId: string, workflow: NonNullable<ChatMessage['documentWorkflow']>) => void;
+  updateAttachmentWorkflow: (sessionId: string, messageId: string, workflow: AttachmentWorkflow) => void;
+  addSessionMaterials: (sessionId: string, materials: SessionMaterial[]) => void;
+  toggleSessionMaterial: (sessionId: string, materialId: string, selected: boolean) => void;
+  removeSessionMaterial: (sessionId: string, materialId: string) => void;
   createTask: (input: { sessionId: string; eventId: string; userMessageId: string; intent: string; displayTitle: string; attempt: number }) => AgentTask;
   applyTaskEvent: (taskId: string, ev: TaskEvent, attemptId: string) => void;
   beginAttempt: (taskId: string) => AgentTask | undefined;
@@ -190,6 +206,12 @@ interface SessionState {
   selectProposal: (sessionId: string, proposalId: string | null) => void;
   getProposal: (proposalId: string) => ProposalRecord | undefined;
   setActiveDocument: (sessionId: string, documentId: string | null) => void;
+  /** 任务/文书成功后推进三场景演示阶段并写入交接包 */
+  recordFlowProgress: (sessionId: string, completedAction: string) => void;
+  /** 写入预警推送 / 资源预警通知会话态（关闭工作区后仍保留） */
+  setWarningPush: (sessionId: string, kind: WarningPushKind, state: WarningPushState) => void;
+  /** 写入预案编修依据摘要（供方案修订对比预填） */
+  setPlanRevisionHints: (sessionId: string, hints: string | null) => void;
   clearSessionRuntime: (sessionId: string) => void;
   resetAll: () => void;
 }
@@ -293,6 +315,64 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
     return { sessions: { ...state.sessions, [sessionId]: {
       ...session, messages: session.messages.map(message => message.messageId === messageId ? { ...message, documentWorkflow: workflow } : message),
     } } };
+  }),
+
+  updateAttachmentWorkflow: (sessionId, messageId, workflow) => set(state => {
+    const session = state.sessions[sessionId];
+    if (!session) return state;
+    return {
+      sessions: {
+        ...state.sessions,
+        [sessionId]: {
+          ...session,
+          messages: session.messages.map(message =>
+            message.messageId === messageId ? { ...message, workflow } : message,
+          ),
+        },
+      },
+    };
+  }),
+
+  addSessionMaterials: (sessionId, materials) => set(state => {
+    const session = state.sessions[sessionId];
+    if (!session || !materials.length) return state;
+    const existing = session.materials ?? [];
+    const seen = new Set(existing.map(m => m.id));
+    const next = [...existing];
+    for (const item of materials) {
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      next.push(item);
+    }
+    return { sessions: { ...state.sessions, [sessionId]: { ...session, materials: next } } };
+  }),
+
+  toggleSessionMaterial: (sessionId, materialId, selected) => set(state => {
+    const session = state.sessions[sessionId];
+    if (!session?.materials) return state;
+    return {
+      sessions: {
+        ...state.sessions,
+        [sessionId]: {
+          ...session,
+          materials: session.materials.map(m => (m.id === materialId ? { ...m, selected } : m)),
+        },
+      },
+    };
+  }),
+
+  removeSessionMaterial: (sessionId, materialId) => set(state => {
+    const session = state.sessions[sessionId];
+    if (!session?.materials) return state;
+    return {
+      sessions: {
+        ...state.sessions,
+        [sessionId]: {
+          ...session,
+          materials: session.materials.filter(m => m.id !== materialId || m.kind !== '本次补充'),
+        },
+      },
+    };
   }),
 
   createTask: ({ sessionId, eventId, userMessageId, intent, displayTitle, attempt }) => {
@@ -442,6 +522,11 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
       }
       return { tasks: { ...s.tasks, [taskId]: next }, sessions };
     });
+    // 成功完成后推进三场景演示阶段（在 set 外调用，避免嵌套 set 竞态）
+    const after = get().tasks[taskId];
+    if (ev.type === 'completed' && after && (after.status === 'succeeded' || after.status === 'partial')) {
+      get().recordFlowProgress(after.sessionId, after.displayTitle);
+    }
   },
 
   setTaskStatus: (taskId, status) => {
@@ -489,10 +574,16 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
       if (!session) return s;
       const merged = [...session.candidateResourceIds];
       for (const id of resourceIds) {
+        if (merged.includes(id)) continue;
         const team = teamById.get(id);
         if (team && resourceAllowed(id, session.eventId)
-          && resolveFact(team.factRefs.status, { kind: 'event', eventId: session.eventId })?.value === 'available'
-          && !merged.includes(id)) merged.push(id);
+          && resolveFact(team.factRefs.status, { kind: 'event', eventId: session.eventId })?.value === 'available') {
+          merged.push(id);
+          continue;
+        }
+        // 建设场景演示叠加资源：仅允许标记为 selectable 的项进入候选（仍 ≠ 已调派）。
+        const demo = vueDemoResourceById.get(id);
+        if (demo && demo.eventId === session.eventId && demo.selectable) merged.push(id);
       }
       if (merged.length === session.candidateResourceIds.length) return s;
       return { sessions: { ...s.sessions, [sessionId]: { ...session, candidateResourceIds: merged, selectedProposalId: null, selectedProposalVersion: null } } };
@@ -582,6 +673,59 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
     });
   },
 
+  recordFlowProgress: (sessionId, completedAction) => {
+    set((s) => {
+      const session = s.sessions[sessionId];
+      if (!session || !incidentById.get(session.eventId)) return s;
+      const key = normalizeCompletedAction(completedAction);
+      if (!key) return s;
+      const completed = [...(session.completedFlowActions ?? [])];
+      if (!completed.includes(key)) completed.push(key);
+      return {
+        sessions: {
+          ...s.sessions,
+          [sessionId]: {
+            ...session,
+            completedFlowActions: completed,
+            // 功能完成记录不改变事件的业务阶段。
+          },
+        },
+      };
+    });
+  },
+
+  setWarningPush: (sessionId, kind, state) => {
+    set((s) => {
+      const session = s.sessions[sessionId];
+      if (!session) return s;
+      return {
+        sessions: {
+          ...s.sessions,
+          [sessionId]: {
+            ...session,
+            warningPushByKind: {
+              ...(session.warningPushByKind ?? {}),
+              [kind]: { ...state, kind, updatedAt: new Date().toISOString() },
+            },
+          },
+        },
+      };
+    });
+  },
+
+  setPlanRevisionHints: (sessionId, hints) => {
+    set((s) => {
+      const session = s.sessions[sessionId];
+      if (!session) return s;
+      return {
+        sessions: {
+          ...s.sessions,
+          [sessionId]: { ...session, planRevisionHints: hints },
+        },
+      };
+    });
+  },
+
   clearSessionRuntime: (sessionId) => {
     set((s) => {
       const session = s.sessions[sessionId];
@@ -599,6 +743,11 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
             selectedProposalVersion: null,
             pendingClarification: null,
             activeDocumentId: null,
+            eventStageOverride: null,
+            completedFlowActions: [],
+            handoffBundle: null,
+            warningPushByKind: {},
+            planRevisionHints: null,
           },
         },
       };

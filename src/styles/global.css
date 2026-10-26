@@ -6,26 +6,6 @@ body,
   margin: 0;
 }
 
-/* 安卓横屏会自动放大文字（text inflation），字号与版式随之失真；100% 关掉这一行为。 */
-html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-  /* 整屏是应用外壳、滚动都在内部容器：禁止页面级下拉刷新与滚动回弹链，
-     避免演示中途误触刷新丢掉状态（Chrome 从 html 取此值；容器内部的滚动链另由
-     .chat-scroll / .axn-gs-history 的 overscroll-behavior 各自收口）。 */
-  overscroll-behavior-y: contain;
-}
-
-/* 移动端地址栏收起 / 展开会改变 100vh 的含义，dvh 跟随可视高度，
-   避免整屏比可视区高一截（底部被裁或留白）。 */
-@supports (height: 100dvh) {
-  html,
-  body,
-  #root {
-    height: 100dvh;
-  }
-}
-
 body {
   /* 分两层：Inter 负责拉丁字形（x-height 更大、字距更紧，为屏幕小字号设计），
    * 后面的系统字体负责中文 —— Inter 不含任何 CJK 字形，中文必然逐字回退。
@@ -39,8 +19,6 @@ body {
    * Inter 缺失时（离线、加载失败）整条栈退化为原系统字体，无副作用。 */
   font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
-  /* 触屏：去掉点按瞬间的灰色高亮方块（Android / 旧 WebKit） */
-  -webkit-tap-highlight-color: transparent;
   font-optical-sizing: auto;
   line-height: var(--lh-body);
 }
@@ -385,15 +363,9 @@ svg.lucide {
 @media (max-width: 767px) {
   .axn-shell-sidebar {
     position: fixed;
-    /* 刘海屏安全区：viewport-fit=cover 后 env() 才有值（状态栏 / home indicator / 横屏圆角） */
-    top: env(safe-area-inset-top, 0px);
-    bottom: env(safe-area-inset-bottom, 0px);
+    top: 0;
+    bottom: 0;
     left: 0;
-    padding-left: env(safe-area-inset-left, 0px);
-    /* 极窄屏（如折叠屏外屏 280px）兜底：260px 会占掉 93% 屏宽，
-       遮罩只剩 20px 无法点中。抽屉内有关闭按钮（App.tsx 传 onClose）后，
-       82vw 也不会把人困在抽屉里。 */
-    max-width: 82vw;
     z-index: 60;
     flex: 0 0 auto;
     width: var(--shell-sidebar-width);
@@ -425,49 +397,24 @@ svg.lucide {
 
   .axn-shell-navtoggle {
     position: fixed;
-    /* 44×44 是 iOS / Android 约定俗成的最小触摸目标（原 32×32 偏小）。
-       top / left 取 2px：热区正好落在 48px 高的各页首行之内，不会越到下一行；再叠加安全区偏移。 */
-    top: calc(var(--space-0-5) + env(safe-area-inset-top, 0px));
-    left: calc(var(--space-0-5) + env(safe-area-inset-left, 0px));
+    top: 8px;
+    left: 8px;
     z-index: 70;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     padding: 0;
-    /* 无边框 / 无底色 / 无阴影：视觉上就只是「一个汉堡图标」，首行不再被一个白方块抢分量。
-       44×44 尺寸保留 —— 它现在是一个不可见的触摸热区，而非看得见的按钮。 */
-    border: 0;
-    /* 无边框后 hover / active 的淡蓝底靠圆角成形，否则会是一块直角矩形 */
+    border: 1px solid var(--axn-border);
     border-radius: var(--radius-md);
-    background: transparent;
+    background: var(--axn-surface);
     color: var(--axn-muted);
-    /* 20px（= --icon-lg，同 .axn-np-icon-med）：44px 热区里原 14px 的图标只占 32%，
-       显得空；20px 约占 45%，接近 24-in-48 的通行比例。
-       antd 的 .anticon 用 1em，所以只设字号即可。 */
-    font-size: var(--icon-lg);
+    box-shadow: var(--shadow-sm);
     cursor: pointer;
-    transition:
-      color var(--transition-fast),
-      background-color var(--transition-fast),
-      transform var(--dur-instant) var(--ease-out);
+    transition: color var(--transition-fast), border-color var(--transition-fast);
   }
-  /* 按住反馈：@media (hover: none) 下全局关了 -webkit-tap-highlight-color（见 body），
-     不自补状态的话，手机上点这个按钮是零反馈的。 */
-  .axn-shell-navtoggle:active {
-    color: var(--axn-primary);
-    background: var(--axn-primary-bg);
-    transform: scale(.94);
-  }
-  /* hover 只在真正能悬停的设备上给：触屏点一下会把 :hover 粘住，
-     按钮会一直停在主色描边 + 淡蓝底上，看起来像没松开。 */
-  @media (hover: hover) {
-    .axn-shell-navtoggle:hover {
-      color: var(--axn-primary);
-      background: var(--axn-primary-bg);
-    }
-  }
+  .axn-shell-navtoggle:hover { color: var(--axn-primary); border-color: var(--axn-primary); }
   .axn-shell-navtoggle:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
   /* 抽屉展开时收起汉堡按钮：它 z-index(70) 高于侧栏(60)，不收会压在抽屉品牌区之上。
      用 visibility 而非 display:none，保留节点让关闭后能把焦点还给它。 */
@@ -529,8 +476,6 @@ svg.lucide {
 .chat-scroll {
   flex: 1;
   overflow-y: auto;
-  /* 滚到底后不再把滚动链传给外层（否则会带动背景滚动 / 触发下拉刷新） */
-  overscroll-behavior: contain;
   padding: var(--space-4) var(--space-4) var(--space-2);
 }
 
@@ -660,6 +605,14 @@ svg.lucide {
   white-space: pre-wrap;
   word-break: break-word;
   font-size: var(--fs-caption);
+}
+
+/*
+ * Ant Design 6：隐藏页签面板类名为 .ant-tabs-content-hidden。
+ * 业务侧若对 .ant-tabs-content 设 display:flex 会盖掉默认隐藏，此处统一兜底。
+ */
+.ant-tabs-content-hidden {
+  display: none !important;
 }
 
 /* 长文本与滚动约束 */

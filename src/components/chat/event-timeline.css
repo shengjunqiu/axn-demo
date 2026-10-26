@@ -1,0 +1,4 @@
+.axn-event-timeline { width: 100%; padding: 12px 4px; }
+.axn-event-timeline-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.axn-event-timeline-title strong { font-weight: 600; }
+.axn-event-timeline p { margin: 5px 0 0; color: var(--axn-muted); line-height: 1.75; overflow-wrap: anywhere; }

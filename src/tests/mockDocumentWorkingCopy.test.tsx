@@ -148,3 +148,12 @@ describe('sameMockDocument', () => {
     expect(sameMockDocument(base, { ...base, sections: base.sections.map((s, i) => (i === 0 ? ([s[0], '改了正文'] as const) : s)) })).toBe(false);
   });
 });
+
+describe('模拟文书提交到原系统', () => {
+  // 文书工具栏「提交到原系统 / 打开综合管理平台」临时隐藏（SHOW_ORIGINAL_SYSTEM_TOOLBAR=false）
+  it('工具栏暂不展示提交到原系统入口', () => {
+    mount(vi.fn());
+    expect(screen.queryByTestId('submit-to-original-btn')).toBeNull();
+    expect(screen.queryByTestId('original-system-link')).toBeNull();
+  });
+});

@@ -1,0 +1,21 @@
+import { beforeEach, expect, it } from 'vitest';
+import { startMultiSourceConversation } from '@/services/multiSourceConversation';
+import { useSessionStore } from '@/store/sessionStore';
+import { useWorkspaceStore } from '@/store/workspaceStore';
+import { replySources } from '@/services/replySources';
+beforeEach(() => useSessionStore.getState().resetAll());
+it('六源先给摘要与确认询问，不生成任务或打开右侧详情', () => {
+  const sid = useSessionStore.getState().ensureSessionForEvent('evt-sim-landslide');
+  const before = useWorkspaceStore.getState().selectionOf(sid);
+  startMultiSourceConversation(sid, '多源数据汇聚');
+  const message = useSessionStore.getState().sessions[sid].messages.at(-1)!;
+  expect(message.summaryOffer).toEqual({ kind: 'sixData', request: 'evt-sim-landslide' });
+  expect(message.reviewSummary?.rows).toHaveLength(6);
+  expect(message.reviewSummary?.rows.map(row => row.label)).toEqual(['舆情', '气象', '水文', '地质', '现场影像', '接报记录']);
+  expect(message.reviewSummary?.rows.every(row => row.value.length > 0)).toBe(true);
+  expect(message.multiSourceDetails?.event.sources).toHaveLength(6);
+  expect(message.text).toContain('需要我为您展开');
+  expect(message.taskId).toBeNull();
+  expect(useWorkspaceStore.getState().selectionOf(sid)).toEqual(before);
+  expect(replySources(message).length).toBeGreaterThan(1);
+});

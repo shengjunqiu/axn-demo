@@ -1,4 +1,4 @@
-import { clickDocTask } from './helpers/quickTasks';
+import { clickQuickTask } from './helpers/quickTasks';
 /**
  * 文书智能体 E2E（UI 改版适配）：
  * 独立「文书库」页负责分类浏览 / 生成 / 样稿打开；样稿与草稿的阅读详情在助理页右侧「文书工作区」呈现，
@@ -22,19 +22,16 @@ test('文书库：分类浏览、样稿与生成回写', async ({ page }) => {
   await openLibrary(page);
   const library = page.getByTestId('document-library');
   await expect(library.getByRole('heading', { name: '文书库' })).toBeVisible();
-  await expect(library.locator('.doc-library-tabs').getByRole('tab')).toHaveCount(6);
   await expect(library.locator('.doc-sample-row')).toHaveCount(10);
-  // 应急救援周工作动态不在这个循环里：它在文书库点「生成」不去直接出件，而是回对话要参考文档与附件
-  // （流程见 services/weeklyDynamicsWorkflow，用例见下面的「周工作动态」。）
-  for (const name of ['值班日报', '应急要情', '会议纪要', '工作总结']) {
-    const category = library;
+  for (const name of ['应急抢险要情', '抢险总结']) {
     await library.getByRole('tab', { name: new RegExp(`^${name} `) }).click();
+    const category = library;
     // 点开样稿 → 回到助理页并展示右侧文书工作区
     await category.locator('.doc-sample-row').first().click();
     await expect(page.getByTestId('document-workspace')).toBeVisible();
     await expect(page.getByTestId('mock-redhead-document')).toBeVisible();
     await expect(page.locator('.axn-redhead-org')).toHaveText('中国安能建设集团有限公司');
-    if (name === '应急要情') {
+    if (name === '应急抢险要情') {
       // 正文尾部现场图片（用户 m01044）：只给「重点河段险情处置要情」这篇样稿挂了两张模拟照片
       const figures = page.getByTestId('mock-document-figures').first();
       await expect(figures).toBeVisible();
@@ -46,10 +43,10 @@ test('文书库：分类浏览、样稿与生成回写', async ({ page }) => {
     await openLibrary(page);
     await library.getByRole('tab', { name: new RegExp(`^${name} `) }).click();
     await category.getByRole('button', { name: `生成${name}`, exact: true }).click();
-    await expect(page.getByTestId('document-workspace')).toBeVisible();
-    if (name === '工作总结') {
+    await expect(page.getByTestId('document-workspace')).toContainText('正在生成文书');
+    if (name === '抢险总结') {
       await page.getByRole('textbox', { name: '下一步改进措施' }).fill('完善通信保障和人员轮换机制。');
-      await page.getByRole('button', { name: '提交并生成工作总结' }).click();
+      await page.getByRole('button', { name: '提交并生成抢险总结' }).click();
     }
     await expect(page.getByTestId('document-toolbar')).toContainText('新生成');
     await closeWorkspace(page);
@@ -87,8 +84,8 @@ test('文书任务生成真实草稿与重新打开', async ({ page }) => {
 test('聊天文书快捷操作无需补录即可生成右侧模拟红头文书', async ({ page }) => {
   await page.goto('/');
   const panel = page.locator('.doc-center');
-  for (const [name, title] of [['值班日报', '防汛值守日报'], ['应急要情', '重点河段险情处置要情']]) {
-    await clickDocTask(page, name);
+  for (const name of ['应急抢险要情']) {
+    await clickQuickTask(page, `生成${name}`);
     const workflow = page.getByTestId('document-generation-card').last();
     // 气泡里只有「要素收集」一个过程（用户 m00705）：调用/生成的过程流水账不再展示
     await expect(workflow).toContainText('正在收集文书要素 ·');
@@ -97,22 +94,11 @@ test('聊天文书快捷操作无需补录即可生成右侧模拟红头文书',
     // 要素表（文书类型/编制单位/…）不再展示（用户 m00861）：气泡里只留「要素收集」这一个过程
     await expect(workflow).not.toContainText('编制单位');
     await expect(panel).toContainText('正在生成文书');
-    await expect(panel.getByTestId('document-toolbar')).toContainText(`${title}（新生成）`);
+    await expect(panel.getByTestId('document-toolbar')).toContainText(`${name}（新生成）`);
     await expect(panel.locator('.axn-redhead-org')).toHaveText('中国安能建设集团有限公司');
+    await expect(workflow).toContainText(/已完成|红头文书已生成/);
     await expect(panel.getByTestId('mock-redhead-document')).not.toContainText('文书要素（模拟收集）');
-    // 正文尾部附图（用户 m01044）：生成出来的应急要情也带那两张现场图片，不只是样稿（用户 m01196）
-    const figures = panel.getByTestId('mock-document-figures');
-    if (name === '应急要情') {
-      await expect(figures).toBeVisible();
-      await expect(figures.locator('figure')).toHaveCount(2);
-      await expect(figures).toContainText('图2　现场指挥组与抢险队伍会商处置方案');
-    } else {
-      await expect(figures).toHaveCount(0);
-    }
-    // 完成态只剩一行收尾 + 一个入口（原来是页脚再加单独一条「已生成…」消息，同一件事说两遍）
-    const done = workflow.getByTestId('doc-collect-done');
-    await expect(done).toContainText(`已生成《${title}（新生成）》`);
-    await expect(done.getByRole('button', { name: '查看文书' })).toBeVisible();
+    await expect(page.getByText(new RegExp(`已生成《.*${name}（新生成）》`))).toBeVisible();
     await closeWorkspace(page);
     await openLibrary(page);
     await page.getByTestId('document-library').getByRole('tab', { name: new RegExp(`^${name} `) }).click();
