@@ -31,6 +31,7 @@ import GlobalSidebar from '@/components/nav/GlobalSidebar';
 import WorkspaceSync from '@/components/workspace/WorkspaceSync';
 import SplitResizer from '@/components/workspace/SplitResizer';
 import SelectionAssist from '@/components/doc/SelectionAssist';
+import { useIsCompact } from '@/hooks/useMediaQuery';
 
 // URL 路径 → NavPage 映射表与「URL → store」单向同步都放在 navRoutes.ts，
 // 路由表与代码内跳转共用同一套路径。
@@ -47,25 +48,6 @@ const ChatBubbleExamplesPage = lazy(() => import('@/components/settings/ChatBubb
 
 /** 工作区抽屉目标（资源/知识面板由对话任务卡触发的抽屉承载）。 */
 export type WorkspaceTab = 'resource' | 'knowledge';
-
-/**
- * 响应式媒体查询 hook：监听窗口宽度并返回是否命中 `query`。
- * 折叠 inline style 会压掉 media query（inline 优先级更高），所以窄屏判断必须走 JS。
- * 使用 `change` 事件订阅并在卸载时移除监听。
- */
-function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia(query).matches : false,
-  );
-  useEffect(() => {
-    const mql = window.matchMedia(query);
-    const onChange = (e: MediaQueryListEvent) => setMatches(e.matches);
-    setMatches(mql.matches);
-    mql.addEventListener('change', onChange);
-    return () => mql.removeEventListener('change', onChange);
-  }, [query]);
-  return matches;
-}
 
 export default function AppRoot() {
   const storageWarning = useDemoStore((s) => s.storageWarning);
@@ -101,7 +83,7 @@ export default function AppRoot() {
 
   // 窄屏（≤767px）下侧栏切换为抽屉式：需 JS 参与（遮罩 / 开关），无法纯 CSS 完成。
   // 阈值必须与 global.css 的 @media (max-width: 767px) 一致，否则 JS 状态与 CSS 定位脱节。
-  const isCompact = useMediaQuery('(max-width: 767px)');
+  const isCompact = useIsCompact();
   const [navOpen, setNavOpen] = useState(false);
   const location = useLocation();
   const navToggleRef = useRef<HTMLButtonElement>(null);
