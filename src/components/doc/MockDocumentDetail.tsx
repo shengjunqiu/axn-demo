@@ -245,7 +245,7 @@ export default function MockDocumentDetail({ scope, document, onClose, onOpenLib
         <div className="axn-redhead-rule" />
         <input className="doc-edit-title doc-inline-edit" aria-label="文书标题" value={working.title} onChange={event => applyWorking({ ...working, title: event.target.value })} />
         <div className="axn-redhead-body">{working.sections.map(([heading, body], index) => heading === HIDDEN_SECTION ? null : <section key={index} data-review-section={index}>
-          <input className="doc-edit-heading doc-inline-edit" aria-label={`第${index + 1}节标题`} value={heading} onChange={event => sectionChange(index, 0, event.target.value)} /><RichTextEditor ariaLabel={`第${index + 1}节正文`} autoFocus={index === 0} value={body} onChange={next => sectionChange(index, 1, next)} />
+          <input className="doc-edit-heading doc-inline-edit" aria-label={`第${index + 1}节标题`} value={heading} onChange={event => sectionChange(index, 0, event.target.value)} /><RichTextEditor ariaLabel={`第${index + 1}节正文`} autoFocus={index === 0} placeholder="（此处填写）" value={body} onChange={next => sectionChange(index, 1, next)} />
         </section>)}</div>
         {/* 正文尾部附图（只有挂了 figures 的样稿才有；用户 m01044 的两张现场照片） */}
         {working.figures?.length ? <div className="axn-redhead-figures" data-testid="mock-document-figures">

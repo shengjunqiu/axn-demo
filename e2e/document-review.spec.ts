@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { clickDocTask } from './helpers/quickTasks';
+import { clickDocTask, submitBriefForm } from './helpers/quickTasks';
 
 test('生成后数据、内容和格式审核：发现问题、修正重检、刷新保留结果', async ({ page }) => {
   await page.goto('/');
   await clickDocTask(page, '应急要情');
+  await submitBriefForm(page);
   const card = page.getByTestId('document-review-card').last();
   await expect(card).toBeVisible({ timeout: 20000 });
   await expect(card).toContainText('数据校验检查中');

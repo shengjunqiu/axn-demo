@@ -542,3 +542,34 @@
 .axn-incident-selected { color: var(--axn-muted); font-size: var(--fs-meta); overflow-wrap: anywhere; }
 .axn-incident-selected > strong { color: var(--axn-text); font-weight: var(--fw-strong); }
 .axn-incident-confirm-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+
+/* 应急要情表头表单：会话流里的气泡卡片（用户 m00167），单列表单。 */
+/* 表单上方的一句交底（用户 m00201）：标题/正文由智能体自己组织，用户只补表头字段。 */
+.axn-brief-form-lead { margin: 0 0 var(--space-2); font-size: var(--fs-reading); line-height: var(--lh-reading); color: var(--axn-text); overflow-wrap: anywhere; }
+.axn-brief-form { display: flex; flex-direction: column; gap: var(--space-2-5); padding: var(--space-3); border: 1px solid var(--axn-border); border-radius: var(--radius-md); background: var(--axn-surface); }
+.axn-brief-form-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); }
+.axn-brief-form-head > strong { font-size: var(--fs-body); font-weight: var(--fw-strong); color: var(--axn-text); }
+.axn-brief-form-hint { font-size: var(--fs-meta); color: var(--axn-faint); }
+.axn-brief-form .ant-form-item { margin-bottom: var(--space-2-5); }
+.axn-brief-form .ant-form-item:last-of-type { margin-bottom: 0; }
+.axn-brief-form .ant-form-item-label { padding-bottom: var(--space-1); }
+.axn-brief-form .ant-form-item-label > label { height: auto; font-size: var(--fs-meta); color: var(--axn-muted); }
+/* 附图（用户 m00215 / m00275）：与上面每个输入框同一个「字段」节奏 —— 小标签一行 + 一行方形图块；
+   添加按钮就是末位一块虚线图块，不再用默认按钮 + 小缩略图那种“两层控件”的拼盘。 */
+.axn-brief-form-images { display: flex; flex-direction: column; gap: var(--space-1-5); }
+.axn-brief-form-images-label { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); font-size: var(--fs-meta); color: var(--axn-muted); }
+.axn-brief-form-images-label > em { font-style: normal; color: var(--axn-faint); }
+.axn-brief-form-thumbs { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.axn-brief-form-thumb { position: relative; width: 64px; height: 64px; border: 1px solid var(--axn-border); border-radius: var(--radius-md); background: var(--axn-soft); overflow: hidden; }
+.axn-brief-form-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* 移除键默认隐去，悬停/聚焦才出（触屏没有 hover，常显） */
+.axn-brief-form-thumb-remove { position: absolute; inset-block-start: 3px; inset-inline-end: 3px; display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 1px solid var(--axn-border); border-radius: 50%; color: var(--axn-text); background: var(--axn-surface); box-shadow: var(--shadow-sm); cursor: pointer; opacity: 0; transition: opacity var(--transition-fast), color var(--transition-fast); }
+.axn-brief-form-thumb:hover .axn-brief-form-thumb-remove,
+.axn-brief-form-thumb-remove:focus-visible { opacity: 1; }
+.axn-brief-form-thumb-remove:hover { color: var(--axn-error-text); }
+@media (hover: none) { .axn-brief-form-thumb-remove { opacity: 1; } }
+.axn-brief-form-add { display: inline-flex; }
+.axn-brief-form-add-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 64px; height: 64px; padding: 0; border: 1px dashed color-mix(in srgb, var(--axn-border) 100%, var(--axn-text) 18%); border-radius: var(--radius-md); background: transparent; color: var(--axn-muted); font-size: var(--fs-caption); cursor: pointer; transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast); }
+.axn-brief-form-add-tile:hover:not(:disabled) { border-color: var(--axn-primary); background: var(--axn-primary-50); color: var(--axn-primary-text); }
+.axn-brief-form-add-tile:disabled { cursor: not-allowed; opacity: .55; }
+.axn-brief-form-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }

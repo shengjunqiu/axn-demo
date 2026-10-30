@@ -6,8 +6,9 @@
 import { useEffect, useRef } from 'react';
 import { parseRichHtml, serializeRichDom } from '@/services/richText';
 
-export default function RichTextEditor({ value, onChange, ariaLabel, autoFocus }: {
+export default function RichTextEditor({ value, onChange, ariaLabel, autoFocus, placeholder }: {
   value: string; onChange: (value: string) => void; ariaLabel: string; autoFocus?: boolean;
+  /** 正文为空时用 ::after 画的一行浅灰提示（提示不进正文、不参与序列化） */ placeholder?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   // 记住最近一次报出去的值：store 回流同一个字符串时不能再重建 DOM，否则光标会跳到开头。
@@ -27,7 +28,7 @@ export default function RichTextEditor({ value, onChange, ariaLabel, autoFocus }
     emitted.current = html;
     onChange(html);
   };
-  return <div ref={ref} className="doc-rich doc-rich-editor doc-inline-edit" data-testid="rich-text-editor" contentEditable suppressContentEditableWarning
+  return <div ref={ref} className="doc-rich doc-rich-editor doc-inline-edit" data-testid="rich-text-editor" data-placeholder={placeholder} contentEditable suppressContentEditableWarning
     role="textbox" aria-multiline="true" aria-label={ariaLabel} onInput={emit}
     onPaste={event => {
       // 粘贴一律落成纯文本：外部 HTML 带进来的字体/颜色会污染公文排版。

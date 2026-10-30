@@ -571,6 +571,18 @@
 .doc-paper-editing .doc-edit-heading { margin: var(--space-4) 0 var(--space-1); font-size: 21px; font-weight: 600; font-family: var(--font-doc-heading); }
 /* 正文的富文本编辑器：不再给外框，段落排版复用 .axn-redhead-body p / .doc-rich */
 .doc-paper-editing .doc-rich-editor { min-height: 112px; font-size: 21px; line-height: 1.78; }
+/* 空白章节（用户 m00308）：后三章生成时只铺标题，正文留白等人填。
+   正文为空（一个空 <p> 或彻底无子节点）时用 ::after 画一行浅灰提示：它不是 DOM，
+   不参与 richText 序列化，也不进字数统计；一旦输入就不再匹配。 */
+.doc-paper-editing .doc-rich-editor { position: relative; }
+.doc-paper-editing .doc-rich-editor:is(:empty, :has(> p:only-child:empty))::after {
+  content: attr(data-placeholder);
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 2em;
+  color: var(--axn-faint);
+  pointer-events: none;
+}
 
 /* 版面内的可编辑文字一律不画输入框：纸面本身就是编辑器。
    悬停/聚焦只给一层柔和底色提示可编辑位置；box-shadow 是外扩的，所以不占布局、不推动文字。 */

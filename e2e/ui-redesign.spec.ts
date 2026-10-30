@@ -1,4 +1,4 @@
-import { clickDocTask } from './helpers/quickTasks';
+import { clickDocTask, submitBriefForm } from './helpers/quickTasks';
 /**
  * UI 改版 E2E：参考图外壳（260px 侧栏 + 宽敞主区）、首页知识库引导问题、
  * 文书库与文书工作区（打开/关闭/重开/独立库）、待补充工作总结刷新恢复、
@@ -104,6 +104,7 @@ test('文书库打开 → 工作区显示 → 关闭回宽对话 → 同份重�
 test('生成文书自动打开工作区；关闭后同一完成不再自动弹出；产物可显式打开', async ({ page }) => {
   await page.goto('/');
   await clickDocTask(page, '应急要情');
+  await submitBriefForm(page);
   await expect(page.getByTestId('document-workspace')).toBeVisible({ timeout: 20000 });
   await page.getByTestId('workspace-close-btn').click();
   await expect(page.getByTestId('document-workspace')).toHaveCount(0);
@@ -134,6 +135,7 @@ test('待补充的工作总结在刷新后恢复到文书工作区', async ({ pa
 test('迟到的 A 会话完成不会在 B 会话打开文书', async ({ page }) => {
   await page.goto('/');
   await clickDocTask(page, '应急要情');
+  await submitBriefForm(page);
   await expect(page.getByTestId('document-workspace')).toBeVisible({ timeout: 20000 });
   await page.getByTestId('workspace-close-btn').click();
   await expect(page.getByTestId('document-workspace')).toHaveCount(0);
@@ -237,6 +239,8 @@ test('从聊天预览切换文书：确认后切换，工作副本不丢弃', as
   for (const [index, name] of ['值班日报', '应急要情'].entries()) {
     if (index === 0) await clickDocTask(page, name);
     else await page.getByTestId('doc-agent-choices').getByRole('button', { name, exact: true }).click();
+    // 应急要情先填表头（用户 m00001），填完才生成
+    if (name === '应急要情') await submitBriefForm(page);
     await expect(page.getByTestId('document-generation-card').last().getByTestId('doc-collect-done')).toBeVisible( { timeout: 20000 });
   }
   const title = page.getByRole('textbox', { name: '文书标题', exact: true });

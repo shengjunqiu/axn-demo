@@ -36,6 +36,7 @@ import { useActiveScope, useWorkspaceStore } from '@/store/workspaceStore';
 import { sendMessage, cancelTask } from '@/services/taskRunner';
 import { AGENT_INVITATIONS } from '@/seed/agentInvitations';
 import ResponseFeedback from './ResponseFeedback';
+import EmergencyBriefForm, { type BriefFigure, type BriefFormValues } from './EmergencyBriefForm';
 import { summonAgentInConversation } from '@/services/agentConversation';
 import { AGENT_ICONS } from './agentIcons';
 import { WELCOME_QUESTIONS } from '@/seed/welcomeQuestions';
@@ -113,6 +114,8 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   const [pendingEventAction, setPendingEventAction] = useState<{ conversationId: string; label: string; run: () => void } | null>(null);
   const [skillPickerOpen, setSkillPickerOpen] = useState(false);
   const [incidentPickerOpen, setIncidentPickerOpen] = useState(false);
+  /** 应急要情的表头表单：点「生成应急要情」先弹出，填完直接出件（不再演逐项收集）。 */
+  const [briefFormOpen, setBriefFormOpen] = useState(false);
   useEffect(() => { setIncidentPickerOpen(false); setPendingEventAction(null); }, [activeConversationId]);
   const [skillQuery, setSkillQuery] = useState<string | null>(null);
   const skillCommandStart = useRef<number | null>(null);
@@ -289,23 +292,39 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
     const code = text === '生成值班日报' ? 'DUTY_DAILY' : text === '生成应急要情' ? 'EMERGENCY_BRIEF' : null;
     if (!code) { handleSend(text); return; }
     if (!session || busy) return;
-    const sessionId = session.sessionId;
-    useSessionStore.getState().appendMessage(sessionId, { sessionId, role: 'user', kind: 'text', text, taskId: null });
+    // 应急要情：先弹表单让值班员填期号/审阅人/报送/承办/值班员/电话，填完直接出件，不再模拟逐项收集。
+    if (code === 'EMERGENCY_BRIEF') { setBriefFormOpen(true); return; }
     const elements = [
-      { label: '文书类型', value: code === 'DUTY_DAILY' ? '值班日报' : '应急要情' },
+      { label: '文书类型', value: '值班日报' },
       { label: '编制单位', value: '应急指挥中心' },
       { label: '报送对象', value: '相关应急工作部门' },
-      { label: code === 'DUTY_DAILY' ? '值班时段' : '关联事项', value: code === 'DUTY_DAILY' ? '当日 08:00—20:00' : eventTitle },
-      { label: code === 'DUTY_DAILY' ? '交接要求' : '内容要求', value: code === 'DUTY_DAILY' ? '持续跟踪重点风险、核实待报信息并做好交接' : '汇总基本情况、先期处置和下一步工作；未核实信息保留待核实标记' },
+      { label: '值班时段', value: '当日 08:00—20:00' },
+      { label: '交接要求', value: '持续跟踪重点风险、核实待报信息并做好交接' },
       { label: '文书格式', value: '红头格式，包含标题、正文与落款' },
     ];
+    useSessionStore.getState().appendMessage(session.sessionId, { sessionId: session.sessionId, role: 'user', kind: 'text', text, taskId: null });
+    await runDocumentGeneration({ sessionId: session.sessionId, code, elements, role: text });
+  };
+
+  /** 建气泡 → 生成 → 落完成态。collect=false 表示要素已经由表单拿到，气泡从「调用」起步、不演收集动画。 */
+  const runDocumentGeneration = async ({ sessionId, code, elements, role, collect = true, patch, action = '根据已收集的文书要素生成红头文书' }: {
+    sessionId: string;
+    code: string;
+    elements: { label: string; value: string }[];
+    role: string;
+    collect?: boolean;
+    patch?: { number?: string; paper?: Readonly<Record<string, string>>; figures?: readonly BriefFigure[] };
+    action?: string;
+  }): Promise<void> => {
     const invocation = useSessionStore.getState().appendMessage(sessionId, {
-      sessionId, role: 'assistant', kind: 'agent', text: '根据已收集的文书要素生成红头文书', taskId: null,
-      agentId: 'agent-doc', agentName: '文书生成智能体', agentRole: text,
-      documentWorkflow: { stage: 'collecting', elements },
+      sessionId, role: 'assistant', kind: 'agent', text: action, taskId: null,
+      agentId: 'agent-doc', agentName: '文书生成智能体', agentRole: role,
+      documentWorkflow: { stage: collect ? 'collecting' : 'calling', elements },
     });
     const document = await useMockDocumentStore.getState().generate(sessionId, code, {
-      elements,
+      elements, patch,
+      // 表单已经拿到要素：给一个空 collect 就跳过 generate 里逐条吐要素的死等。
+      ...(collect ? {} : { collect: async () => undefined }),
       // 逐条上报进度，气泡里的收集进度条才有东西走（用户 m01044）。
       onCollected: count => useSessionStore.getState().updateDocumentWorkflow(sessionId, invocation.messageId, { stage: 'collecting', elements, collectedCount: count }),
       onStage: stage => useSessionStore.getState().updateDocumentWorkflow(sessionId, invocation.messageId, { stage, elements }),
@@ -315,6 +334,32 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
     });
     // 不再追加「已生成《…》，已在右侧文书工作区打开」这条消息：气泡自己就是这条消息，
     // 同一件事说两遍（用户 m00705「气泡里只展示一个要素收集的过程，其他不要了」）。
+  };
+
+  /** 应急要情表单提交：六个表头直接写进纸面（期号/审阅/报送/承办/值班员/电话），附图接在正文之后。 */
+  const submitBriefForm = (values: BriefFormValues, figures: BriefFigure[]) => {
+    setBriefFormOpen(false);
+    if (!session || busy) return;
+    const paper = {
+      sign: `审\u3000阅：${values.reviewer}`,
+      brief1: `报送：${values.reportingUnit}。`,
+      brief3: `承办：${values.organizer}\u2003\u2003编辑：${values.dutyOfficer}\u2003电话：${values.dutyPhone}`,
+    };
+    void runDocumentGeneration({
+      sessionId: session.sessionId, code: 'EMERGENCY_BRIEF', role: '生成应急要情', collect: false,
+      action: '根据表单填写的表头信息生成红头文书',
+      patch: { number: values.issue, paper, figures },
+      elements: [
+        { label: '文书类型', value: '应急要情' },
+        { label: '期号', value: values.issue },
+        { label: '审阅人', value: values.reviewer },
+        { label: '报送单位', value: values.reportingUnit },
+        { label: '承办单位', value: values.organizer },
+        { label: '值班员', value: values.dutyOfficer },
+        { label: '值班电话', value: values.dutyPhone },
+        ...(figures.length ? [{ label: '附图', value: `${figures.length} 张` }] : []),
+      ],
+    });
   };
 
   const handleAgentInvite = (agentId: string) => {
@@ -442,7 +487,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   const items: BubbleItemType[] = useMemo(() => {
     const messages = session?.messages ?? [];
     const summonedTasks = new Set(messages.filter(message => message.kind === 'agent' && message.taskId && tasks[message.taskId]).map(message => message.taskId));
-    return messages.filter(message => !(message.kind === 'task' && summonedTasks.has(message.taskId))).map((m) => {
+    const list: BubbleItemType[] = messages.filter(message => !(message.kind === 'task' && summonedTasks.has(message.taskId))).map((m) => {
       if (m.reviewDocumentId) {
         return {
           key: m.messageId, role: 'task', content: '文书检查', avatar: null,
@@ -543,7 +588,26 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         contentRender: () => <><div>{m.text}</div>{m.text && <ResponseFeedback sessionId={m.sessionId} targetId={m.messageId} />}</>,
       };
     });
-  }, [session?.messages, tasks, onOpenDrawer, busy, activeConversationId, attachments]);
+    // 应急要情的表头表单就是会话流里的一个气泡（用户 m00167）：填完整条流往下接生成气泡。
+    if (briefFormOpen) {
+      list.push({
+        key: 'brief-form', role: 'task', content: '生成应急要情', avatar: AVATAR,
+        styles: {
+          root: { flex: '1 1 auto', width: 'auto', minWidth: 0, alignSelf: 'stretch', paddingInlineEnd: 0 },
+          body: { flex: '1 1 auto', width: '100%', minWidth: 0, maxWidth: '100%' },
+          content: { width: '100%' },
+        },
+        contentRender: () => (
+          <>
+            {/* 表单上方先交底：标题/正文由智能体自己组织，用户只补表头字段，也可上传图片（用户 m00201） */}
+            <p className="axn-brief-form-lead">好的，现在我需要向您补充一些必要信息。标题名和正文由我根据事件资料内部组织，以下字段需要您提供，您也可以上传图片，我会将您上传的图片附加到文档里。</p>
+            <EmergencyBriefForm onSubmit={submitBriefForm} onCancel={() => setBriefFormOpen(false)} disabled={!session || busy} />
+          </>
+        ),
+      });
+    }
+    return list;
+  }, [session?.messages, tasks, onOpenDrawer, busy, activeConversationId, attachments, briefFormOpen, submitBriefForm]);
 
   const hasMessages = items.length > 0;
 

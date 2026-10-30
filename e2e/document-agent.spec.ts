@@ -1,4 +1,4 @@
-import { clickDocTask } from './helpers/quickTasks';
+import { clickDocTask, submitBriefForm } from './helpers/quickTasks';
 /**
  * 文书智能体 E2E（UI 改版适配）：
  * 独立「文书库」页负责分类浏览 / 生成 / 样稿打开；样稿与草稿的阅读详情在助理页右侧「文书工作区」呈现，
@@ -89,11 +89,23 @@ test('聊天文书快捷操作无需补录即可生成右侧模拟红头文书',
   const panel = page.locator('.doc-center');
   for (const [name, title] of [['值班日报', '防汛值守日报'], ['应急要情', '重点河段险情处置要情']]) {
     await clickDocTask(page, name);
+    // 应急要情先铺表头表单（用户 m00167）：填完直接出件，不再演一遍要素收集。附图选择器也要验一下（用户 m00215）。
+    if (name === '应急要情') {
+      await submitBriefForm(page, { 'brief-form-issue': '应急报〔2026〕099号', 'brief-form-reporting-unit': '漳河镇防汛值班室' }, [
+        // 1x1 PNG：只验证「选的图确实进了文书」，不看像素
+        { name: '现场处置照片.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64') },
+      ]);
+    }
     const workflow = page.getByTestId('document-generation-card').last();
-    // 气泡里只有「要素收集」一个过程（用户 m00705）：调用/生成的过程流水账不再展示
-    await expect(workflow).toContainText('正在收集文书要素 ·');
-    // 收集动画（用户 m01044）：进度条按要素条数走（6 条）
-    await expect(workflow.getByTestId('doc-collect-progress')).toHaveAttribute('aria-valuemax', '6');
+    if (name === '值班日报') {
+      // 气泡里只有「要素收集」一个过程（用户 m00705）：调用/生成的过程流水账不再展示
+      await expect(workflow).toContainText('正在收集文书要素 ·');
+      // 收集动画（用户 m01044）：进度条按要素条数走（6 条）
+      await expect(workflow.getByTestId('doc-collect-progress')).toHaveAttribute('aria-valuemax', '6');
+    } else {
+      // 表单已经拿到要素：气泡从「调用」起步，没有收集进度
+      await expect(workflow.getByTestId('doc-collect-progress')).toHaveCount(0);
+    }
     // 要素表（文书类型/编制单位/…）不再展示（用户 m00861）：气泡里只留「要素收集」这一个过程
     await expect(workflow).not.toContainText('编制单位');
     await expect(panel).toContainText('正在生成文书');
@@ -104,8 +116,21 @@ test('聊天文书快捷操作无需补录即可生成右侧模拟红头文书',
     const figures = panel.getByTestId('mock-document-figures');
     if (name === '应急要情') {
       await expect(figures).toBeVisible();
-      await expect(figures.locator('figure')).toHaveCount(2);
+      // 样稿自带两张 + 表单上传的一张
+      await expect(figures.locator('figure')).toHaveCount(3);
       await expect(figures).toContainText('图2　现场指挥组与抢险队伍会商处置方案');
+      await expect(figures).toContainText('现场处置照片');
+      // 表单填的期号/报送单位确实落到纸面上（否则这个表单就只是摆设）
+      await expect(panel.getByTestId('mock-redhead-document')).toContainText('应急报〔2026〕099号');
+      await expect(panel.getByTestId('mock-redhead-document')).toContainText('报送：漳河镇防汛值班室。');
+      // 章节结构（用户 m00308）：概述/力量/战果 三章生成时带内容，后三章放空留给填写人
+      const paper = panel.getByTestId('mock-redhead-document');
+      for (const [index, heading] of ['四、重点、难点及采取的措施', '五、其他重要情况', '六、下步工作计划'].entries()) {
+        await expect(paper.getByLabel(`第${index + 4}节标题`)).toHaveValue(heading);
+      }
+      const bodies = paper.getByTestId('rich-text-editor');
+      for (const index of [0, 1, 2]) await expect(bodies.nth(index)).not.toHaveText('');
+      for (const index of [3, 4, 5]) await expect(bodies.nth(index)).toHaveText('');
     } else {
       await expect(figures).toHaveCount(0);
     }

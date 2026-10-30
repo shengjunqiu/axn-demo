@@ -12,6 +12,9 @@ type GenerationOptions = {
    *  没有自定义 collect 的文书（值班日报/应急要情）由 generate 按 elements 逐条吐。 */
   onCollected?: (count: number) => void;
   sections?: MockDocument['sections'];
+  /** 生成前由表单直接给定的纸面文字（应急要情：期号 + 报送/承办/值班员那些行）。
+   *  与「缺字段 → 对话补录」那条路不同：这里的值一定齐，不会产出「待补录」占位。 */
+  patch?: { number?: string; paper?: Readonly<Record<string, string>>; /** 用户通过表单上传的附图，接在样稿自带的图后面（用户 m00215） */ figures?: readonly { src: string; caption: string }[] };
   elements: NonNullable<ChatMessage['documentWorkflow']>['elements'];
   onStage: (stage: 'calling' | 'generating') => void;
 };
@@ -218,8 +221,10 @@ export const useMockDocumentStore = create<MockDocumentState>((set, get) => ({
       id: `generated-${code}-${now.getTime()}`, code,
       title: `${category.topics[0]}（新生成）`,
       date: now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }),
-      number: `${category.prefix}〔${now.getFullYear()}〕模拟草稿`, sections: options?.sections ?? category.sections,
-      figures: sample?.figures,
+      number: options?.patch?.number ?? `${category.prefix}〔${now.getFullYear()}〕模拟草稿`, sections: options?.sections ?? category.sections,
+      paper: options?.patch?.paper,
+      // 正文尾部附图按文种从样稿取，表单上传的图接在后面（用户 m00215）。
+      figures: options?.patch?.figures?.length ? [...(sample?.figures ?? []), ...options.patch.figures] : sample?.figures,
       tables: sample?.tables,
     });
     set(state => ({ libraries: { ...state.libraries, [scope]: {

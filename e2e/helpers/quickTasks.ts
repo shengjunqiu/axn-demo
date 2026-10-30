@@ -17,3 +17,18 @@ export async function clickQuickTask(page: Page, label: string, task?: string) {
 export async function clickDocTask(page: Page, name: string) {
   await clickQuickTask(page, '文书生成智能体', name);
 }
+
+/** 应急要情生成前先在会话流里铺一张表头表单（用户 m00167）：期号/审阅人/报送/承办/值班员/值班电话。
+ *  默认值已预填，直接确认即出件；传 overrides 可改其中几项（键是输入框的 data-testid）；
+ *  传 images 会先通过附图选择器上传（用户 m00215）。 */
+export async function submitBriefForm(page: Page, overrides: Record<string, string> = {}, images: { name: string; mimeType: string; buffer: Buffer }[] = []) {
+  const form = page.getByTestId('brief-form');
+  await expect(form).toBeVisible();
+  for (const [testId, value] of Object.entries(overrides)) await form.getByTestId(testId).fill(value);
+  if (images.length) {
+    await form.getByTestId('brief-form-images').locator('input[type=file]').setInputFiles(images);
+    await expect(form.locator('.axn-brief-form-thumb')).toHaveCount(images.length);
+  }
+  await form.getByTestId('brief-form-submit').click();
+  await expect(form).toHaveCount(0);
+}
