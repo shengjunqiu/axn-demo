@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { diffDocuments, diffText, summarizeDiff } from '@/services/docDiff';
 import { MOCK_DOCUMENTS as mockDocuments } from '@/seed/mockDocuments';
-import { useMockDocumentStore, versionsOf } from '@/store/mockDocumentStore';
+import { useMockDocumentStore, versionsOf, mockVersionHistory } from '@/store/mockDocumentStore';
 
 const join = (ops: { t: number; s: string }[], t: number) => ops.filter(o => o.t === t || o.t === 0).map(o => o.s).join('');
 
@@ -42,54 +42,64 @@ describe('公文版本', () => {
   beforeEach(() => useMockDocumentStore.getState().reset());
   const author = { kind: 'user' as const, name: '张明远', role: '值班员' };
 
+  it('模拟历史包含三个不同快照，最新版保留当前正文', () => {
+    const doc = mockDocuments[0];
+    const history = mockVersionHistory(doc);
+    expect(history.map(v => v.no)).toEqual([1, 2, 3]);
+    expect(history[2].snapshot).toBe(doc);
+    expect(history[0].snapshot.sections).not.toEqual(history[1].snapshot.sections);
+    expect(history[1].snapshot.sections).not.toEqual(doc.sections);
+    expect(history[2].stats?.hunks).toBeGreaterThan(0);
+  });
+
   it('自动保存合并同一轮编辑，手动保存后另起一版', () => {
     const store = useMockDocumentStore.getState();
     const doc = mockDocuments[0];
     store.update('library', { ...doc, title: '自动稿一' }, { author, source: 'autosave' });
     store.update('library', { ...doc, title: '自动稿二' }, { author, source: 'autosave' });
     let history = versionsOf(useMockDocumentStore.getState().libraries.library, doc);
-    expect(history.map(v => v.no)).toEqual([1, 2]);
+    expect(history.map(v => v.no)).toEqual([1, 2, 3, 4]);
     expect(history[0].snapshot.title).toBe(doc.title);
-    expect(history[1].snapshot.title).toBe('自动稿二');
+    expect(history[3].snapshot.title).toBe('自动稿二');
 
     store.update('library', { ...doc, title: '自动稿二' }, { author });
     store.update('library', { ...doc, title: '下一轮自动稿' }, { author, source: 'autosave' });
     history = versionsOf(useMockDocumentStore.getState().libraries.library, doc);
-    expect(history.map(v => v.no)).toEqual([1, 2, 3]);
-    expect(history[1]).toMatchObject({ source: 'edit', snapshot: { title: '自动稿二' } });
+    expect(history.map(v => v.no)).toEqual([1, 2, 3, 4, 5]);
+    expect(history[3]).toMatchObject({ source: 'edit', snapshot: { title: '自动稿二' } });
   });
 
   it('自动保存不覆盖定稿版本', () => {
     const store = useMockDocumentStore.getState();
     const doc = mockDocuments[0];
     store.update('library', { ...doc, title: '定稿内容' }, { author, source: 'autosave' });
-    store.toggleFinal('library', doc.id, 2);
+    store.toggleFinal('library', doc.id, 4);
     store.update('library', { ...doc, title: '后续修改' }, { author, source: 'autosave' });
     const history = versionsOf(useMockDocumentStore.getState().libraries.library, doc);
-    expect(history).toHaveLength(3);
-    expect(history[1]).toMatchObject({ final: true, snapshot: { title: '定稿内容' } });
+    expect(history).toHaveLength(5);
+    expect(history[3]).toMatchObject({ final: true, snapshot: { title: '定稿内容' } });
   });
 
   it('每次保存生成新版本，恢复不删除历史', () => {
     const store = useMockDocumentStore.getState();
     const doc = mockDocuments[0];
-    expect(versionsOf(useMockDocumentStore.getState().libraries.library, doc)).toHaveLength(1);
+    expect(versionsOf(useMockDocumentStore.getState().libraries.library, doc)).toHaveLength(3);
 
     store.update('library', { ...doc, title: '改后标题' }, { author });
     store.update('library', { ...doc, title: '再改标题' }, { author, note: '按领导意见' });
     let versions = versionsOf(useMockDocumentStore.getState().libraries.library, doc);
-    expect(versions.map(v => v.no)).toEqual([1, 2, 3]);
-    expect(versions[2].note).toBe('按领导意见');
-    expect(versions[2].stats?.summary).toMatch(/标题/);
+    expect(versions.map(v => v.no)).toEqual([1, 2, 3, 4, 5]);
+    expect(versions[4].note).toBe('按领导意见');
+    expect(versions[4].stats?.summary).toMatch(/标题/);
 
     // 内容没变不生成版本
     store.update('library', { ...doc, title: '再改标题' }, { author });
-    expect(versionsOf(useMockDocumentStore.getState().libraries.library, doc)).toHaveLength(3);
+    expect(versionsOf(useMockDocumentStore.getState().libraries.library, doc)).toHaveLength(5);
 
     store.restoreVersion('library', doc.id, 1, author);
     versions = versionsOf(useMockDocumentStore.getState().libraries.library, doc);
-    expect(versions).toHaveLength(4);
-    expect(versions[3]).toMatchObject({ no: 4, source: 'restore', restoredFrom: 1 });
-    expect(versions[3].snapshot.title).toBe(doc.title);
+    expect(versions).toHaveLength(6);
+    expect(versions[5]).toMatchObject({ no: 6, source: 'restore', restoredFrom: 1 });
+    expect(versions[5].snapshot.title).toBe(doc.title);
   });
 });

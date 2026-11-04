@@ -17,6 +17,45 @@ async function closeWorkspace(page: Page) {
   await expect(page.getByTestId('document-workspace')).toHaveCount(0);
 }
 
+test('版本弹窗最多选择两个版本，选满两个才可对比', async ({ page }) => {
+  await openLibrary(page);
+  await page.locator('.doc-sample-row').first().click();
+  await page.getByTestId('doc-version-toggle').click();
+  const dialog = page.getByRole('dialog', { name: '版本记录' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByTestId('doc-version-panel').locator('li')).toHaveCount(3);
+  await expect(dialog.locator('time')).toHaveCount(3);
+  const compare = dialog.getByRole('button', { name: '版本对比', exact: true });
+  const v1 = dialog.getByRole('checkbox', { name: '选择 V1', exact: true });
+  const v2 = dialog.getByRole('checkbox', { name: '选择 V2', exact: true });
+  const v3 = dialog.getByRole('checkbox', { name: '选择 V3', exact: true });
+  await expect(compare).toBeDisabled();
+  await v1.check();
+  await expect(compare).toBeDisabled();
+  await v2.check();
+  await expect(compare).toBeEnabled();
+  await expect(v3).toBeDisabled();
+  await dialog.screenshot({ path: 'artifacts/ui-polish/version-dialog-desktop.png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(compare).toBeInViewport();
+  await dialog.screenshot({ path: 'artifacts/ui-polish/version-dialog-mobile.png' });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(dialog.getByRole('checkbox', { checked: true })).toHaveCount(2);
+  await compare.click();
+  await expect(dialog).toBeVisible();
+  await v1.uncheck();
+  await expect(compare).toBeDisabled();
+  await expect(v3).toBeEnabled();
+  await v3.check();
+  await expect(compare).toBeEnabled();
+  await expect(v1).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await page.getByTestId('doc-version-toggle').click();
+  await expect(dialog.getByRole('checkbox', { checked: true })).toHaveCount(0);
+  await expect(compare).toBeDisabled();
+});
+
 test('文书库：分类浏览、样稿与生成回写', async ({ page }) => {
   await page.goto('/');
   await openLibrary(page);
@@ -213,7 +252,6 @@ test('周工作动态：先在气泡卡片里上传参考文档与附件，再�
 });
 
 test('文书停止输入后自动保存，刷新后内容保留', async ({ page }) => {
-  await page.goto('/');
   await openLibrary(page);
   await page.getByTestId('document-library').locator('.doc-sample-row').first().click();
   const panel = page.getByTestId('document-workspace');
@@ -222,10 +260,10 @@ test('文书停止输入后自动保存，刷新后内容保留', async ({ page 
   await expect(page.getByTestId('mock-dirty-note')).toBeVisible();
   await expect(panel.getByTestId('document-toolbar')).toContainText('已自动保存', { timeout: 8000 });
   await expect(page.getByTestId('mock-dirty-note')).toHaveCount(0);
-  await expect(panel.getByTestId('doc-version-toggle')).toHaveText('V2');
+  await expect(panel.getByTestId('doc-version-toggle')).toHaveText('V4');
   await title.fill('南堤情况报告（再次自动保存）');
   await expect(panel.getByTestId('document-toolbar')).toContainText('已自动保存', { timeout: 8000 });
-  await expect(panel.getByTestId('doc-version-toggle')).toHaveText('V2');
+  await expect(panel.getByTestId('doc-version-toggle')).toHaveText('V4');
   await page.reload();
   await openLibrary(page);
   await page.getByTestId('document-library').locator('.doc-sample-row').filter({ hasText: '南堤情况报告（再次自动保存）' }).click();

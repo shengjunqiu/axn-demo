@@ -4,10 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { App as AntdApp, Button, Select, Switch, Tabs } from 'antd';
 import { ChevronDown, ChevronUp, FileText, GitCompareArrows, RotateCcw } from 'lucide-react';
 import { sameMockDocument, type MockDocument } from '@/seed/mockDocuments';
-import { baselineVersion, useMockDocumentStore, type SaveMeta, type VersionAuthor } from '@/store/mockDocumentStore';
+import { versionsOf, useMockDocumentStore, type SaveMeta, type VersionAuthor } from '@/store/mockDocumentStore';
 import { useDemoStore } from '@/store/demoStore';
 import { richTextToPlain } from '@/services/richText';
-import { diffDocuments, summarizeDiff } from '@/services/docDiff';
+import { diffDocuments } from '@/services/docDiff';
 import {
   BRIEF_TAIL_FIELDS, DUTY_TAIL_FIELDS, DYNAMICS_TAIL_FIELDS, HIDDEN_SECTION, REDHEAD_ORG_DEFAULT, REPORT_CONTACT_DEFAULT,
   categoryOf, signDefault as signDefaultOf,
@@ -71,8 +71,8 @@ export default function MockDocumentDetail({ scope, document, onClose, onOpenLib
   useEffect(() => () => { onDirtyChange?.(false); }, [onDirtyChange]);
 
   /* ---------- 版本 ---------- */
-  const storedVersions = useMockDocumentStore((s) => s.libraries[scope]?.versions[document.id]);
-  const versions = useMemo(() => (storedVersions?.length ? storedVersions : [baselineVersion(document)]), [storedVersions, document]);
+  const library = useMockDocumentStore((s) => s.libraries[scope]);
+  const versions = useMemo(() => versionsOf(library, document), [library, document]);
   const latest = versions[versions.length - 1];
   const [panelOpen, setPanelOpen] = useState(false);
   /** 对比视图：target = 要看的版本（或未保存的当前编辑），base = 对比基准（null = 无更早版本） */
@@ -80,12 +80,6 @@ export default function MockDocumentDetail({ scope, document, onClose, onOpenLib
   const [onlyChanges, setOnlyChanges] = useState(false);
   const [hunkIndex, setHunkIndex] = useState(0);
   const compareRef = useRef<HTMLDivElement>(null);
-  const bodyRef = useRef<HTMLDivElement>(null);
-  const workingDiff = useMemo(() => {
-    if (!dirty) return null;
-    const diff = diffDocuments(latest.snapshot, working);
-    return { summary: summarizeDiff(diff), added: diff.added, removed: diff.removed };
-  }, [dirty, latest, working]);
   const currentAuthor = (): VersionAuthor => {
     const actor = useDemoStore.getState().getActor();
     return { kind: 'user', name: actor?.userName ?? '值班员', role: actor?.name ?? '' };
@@ -224,10 +218,10 @@ export default function MockDocumentDetail({ scope, document, onClose, onOpenLib
       <RichTextToolbar />
       {dirty && <div className="doc-dirty-note" data-testid="mock-dirty-note">
         {finalNote ?? (validWorking ? '停止输入后自动保存 · 也可点击「保存修改」立即保存' : '请补齐文书标题、章节标题与正文后自动保存')}
-        <button type="button" className="doc-dirty-link" onClick={() => { if ((bodyRef.current?.clientWidth ?? 0) > 820) setPanelOpen(true); openVersion('working'); }}>查看改动</button>
+        <button type="button" className="doc-dirty-link" onClick={() => openVersion('working')}>查看改动</button>
       </div>}
     </>}
-    <div className="doc-detail-body" ref={bodyRef}>
+    <div className="doc-detail-body">
     {reviewOpen ? <div className="doc-detail-scroll"><DocumentReviewDetails scope={scope} document={working} /></div> : view && target ? <div className="doc-detail-scroll" ref={compareRef}>
       <DocVersionCompare base={base} target={target} onlyChanges={onlyChanges} />
     </div> : <div className="doc-detail-scroll">
@@ -296,19 +290,6 @@ export default function MockDocumentDetail({ scope, document, onClose, onOpenLib
     </div>}
     {panelOpen && !reviewOpen && <DocVersionPanel
       versions={versions}
-      working={workingDiff}
-      selected={view?.target ?? null}
-      onSelect={(target) => {
-        openVersion(target);
-        // 窄工作区里版本栏是浮层，会盖住纸面：选中后收起，让修订标记露出来（工具栏「V#」可再打开）
-        if ((bodyRef.current?.clientWidth ?? Infinity) <= 820) setPanelOpen(false);
-      }}
-      onSetNote={(no, note) => useMockDocumentStore.getState().setVersionNote(scope, document.id, no, note)}
-      onToggleFinal={(no) => {
-        const wasFinal = versions.find(v => v.no === no)?.final;
-        useMockDocumentStore.getState().toggleFinal(scope, document.id, no);
-        message.success?.(wasFinal ? `已取消 V${no} 的定稿标记` : `V${no} 已标记为定稿`);
-      }}
       onClose={() => { setPanelOpen(false); setView(null); }}
     />}
     </div>

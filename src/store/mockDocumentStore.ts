@@ -59,20 +59,42 @@ export function baselineVersion(document: MockDocument): DocVersion {
   };
 }
 
+/** 演示用三版历史：较早两版有不同正文，最新版始终与当前文书一致。 */
+export function mockVersionHistory(document: MockDocument): DocVersion[] {
+  const baseline = baselineVersion(document);
+  const stamp = baseline.at ? Date.parse(baseline.at) : Date.parse('2026-11-04T09:30:00+08:00');
+  const snapshots: MockDocument[] = [
+    { ...document, sections: document.sections.map(([heading, body], index) => [heading, index === 0 ? '已接报相关情况，正在组织核实现场信息。' : body] as const) },
+    { ...document, sections: document.sections.map(([heading, body], index) => [heading, index === 0 ? `${body}\n现场情况持续跟踪中，后续信息核实后补报。` : body] as const) },
+    document,
+  ];
+  return snapshots.map((snapshot, index) => {
+    const diff = index ? diffDocuments(snapshots[index - 1], snapshot) : null;
+    return {
+      ...baseline, no: index + 1, snapshot,
+      at: new Date(stamp - (2 - index) * 15 * 60_000).toISOString(),
+      author: index ? { kind: 'user', name: index === 1 ? '张明远' : '李晓峰', role: '值班员' } : baseline.author,
+      source: index ? 'edit' : baseline.source,
+      note: ['初稿生成', '补充现场跟踪情况', '核对信息并完善正文'][index],
+      stats: diff ? { hunks: diff.hunks, added: diff.added, removed: diff.removed, summary: summarizeDiff(diff) } : null,
+    };
+  });
+}
+
 /** 编辑中的工作副本（未保存）按文档 id 存放，离开详情页也不丢；保存或放弃才清除。
- *  versions：按文档 id 的版本历史（升序）；缺省表示只有 V1（= 文书库里的那份）。 */
+ *  versions：按文档 id 的版本历史（升序）；缺省使用三版模拟历史。 */
 type Library = {
   documents: MockDocument[]; selected: MockDocument | null; generatingCode: string | null;
   working: Record<string, MockDocument>; versions: Record<string, DocVersion[]>;
 };
 export const EMPTY_LIBRARY: Library = { documents: MOCK_DOCUMENTS, selected: null, generatingCode: null, working: {}, versions: {} };
 
-/** 某文书的版本历史（至少一条 V1）。 */
+/** 某文书的版本历史；旧的单版初始记录也补为三版演示数据。 */
 export function versionsOf(library: Library | undefined, document: MockDocument): DocVersion[] {
   const stored = library?.versions?.[document.id];
-  if (stored?.length) return stored;
+  if (stored?.length && (stored.length > 1 || stored[0].note || stored[0].final)) return stored;
   const saved = library?.documents.find(item => item.id === document.id) ?? document;
-  return [baselineVersion(saved)];
+  return mockVersionHistory(saved);
 }
 
 function appendVersion(history: DocVersion[], document: MockDocument, meta: SaveMeta): DocVersion[] {
@@ -151,8 +173,9 @@ export const useMockDocumentStore = create<MockDocumentState>((set, get) => ({
   },
   setVersionNote: (scope, documentId, no, note) => set(state => {
     const library = state.libraries[scope];
-    const history = library?.versions[documentId];
-    if (!library || !history) return state;
+    const current = library?.documents.find(item => item.id === documentId);
+    if (!library || !current) return state;
+    const history = versionsOf(library, current);
     return { libraries: { ...state.libraries, [scope]: { ...library, versions: {
       ...library.versions, [documentId]: history.map(v => v.no === no ? { ...v, note: note.trim() || undefined } : v),
     } } } };
@@ -161,7 +184,7 @@ export const useMockDocumentStore = create<MockDocumentState>((set, get) => ({
     const library = state.libraries[scope] ?? EMPTY_LIBRARY;
     const current = library.documents.find(item => item.id === documentId);
     if (!current) return state;
-    // 只有 V1 时也要落一份历史，定稿标记才有地方挂
+    // 尚未保存过的模拟历史也要落盘，定稿标记才有地方挂
     const history = versionsOf(library, current);
     return { libraries: { ...state.libraries, [scope]: { ...library, versions: {
       ...library.versions, [documentId]: history.map(v => v.no === no ? { ...v, final: !v.final } : v),
@@ -231,7 +254,7 @@ export const useMockDocumentStore = create<MockDocumentState>((set, get) => ({
       ...(state.libraries[scope] ?? EMPTY_LIBRARY),
       documents: [document, ...(state.libraries[scope] ?? EMPTY_LIBRARY).documents],
       selected: document, generatingCode: null,
-      versions: { ...(state.libraries[scope] ?? EMPTY_LIBRARY).versions, [document.id]: [baselineVersion(document)] },
+      versions: { ...(state.libraries[scope] ?? EMPTY_LIBRARY).versions, [document.id]: mockVersionHistory(document) },
     } } }));
     useDocumentReviewStore.getState().start(scope, document);
     return document;

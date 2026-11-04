@@ -13,7 +13,7 @@ import { useIsCompact } from '@/hooks/useMediaQuery';
  * 导出与版本记录留在外面而不是收进「更多」菜单：少一次点击，也少一个要记的入口。 */
 export default function DocumentDetailToolbar({ title, subtitle, editing = false, dirty = false, onBack, onEdit, onSave, onDiscard, editDisabled = false, onVersions, previewExports = true, versionLabel, versionsOpen = false, onToggleVersions }: {
   title: string; subtitle?: string; editing?: boolean; dirty?: boolean;
-  /** 红头公文的版本入口：显示当前版本号，点击开关版本记录侧栏 */
+  /** 红头公文的版本入口：显示当前版本号，点击打开版本记录弹窗 */
   versionLabel?: string; versionsOpen?: boolean; onToggleVersions?: () => void;
   onBack: () => void; onOpenLibrary?: () => void; onEdit?: () => void;
   onSave?: () => void; onDiscard?: () => void; editDisabled?: boolean;
@@ -44,8 +44,8 @@ export default function DocumentDetailToolbar({ title, subtitle, editing = false
   const outputActions = <>
     {onToggleVersions && <Button aria-label={`版本记录 ${versionLabel ?? ''}`.trim()} aria-pressed={versionsOpen} className={`doc-toolbar-secondary${versionsOpen ? ' is-active' : ''}`} icon={<History />} onClick={onToggleVersions} data-testid="doc-version-toggle">{versionLabel ?? '版本'}</Button>}
     {onVersions ? <Button className="doc-toolbar-secondary" icon={<FileText />} onClick={onVersions}>版本与导出</Button> : previewExports && <>
-      <Button className="doc-toolbar-secondary" aria-label="导出 Word" icon={<FileText />} onClick={() => setExportFormat('Word')}>Word 下载</Button>
-      <Button className="doc-toolbar-secondary" aria-label="导出 PDF" icon={<FileType />} onClick={() => setExportFormat('PDF')}>PDF 下载</Button>
+      <Button className="doc-toolbar-secondary" aria-label="导出 Word" icon={<FileText />} onClick={() => setExportFormat('Word')}>下载 Word</Button>
+      <Button className="doc-toolbar-secondary" aria-label="导出 PDF" icon={<FileType />} onClick={() => setExportFormat('PDF')}>下载 PDF</Button>
     </>}
   </>;
 
