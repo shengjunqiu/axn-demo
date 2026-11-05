@@ -20,6 +20,13 @@ async function closeWorkspace(page: Page) {
 test('版本弹窗最多选择两个版本，选满两个才可对比', async ({ page }) => {
   await openLibrary(page);
   await page.locator('.doc-sample-row').first().click();
+  await expect(page.getByTestId('document-toolbar').getByRole('button', { name: '一键审查', exact: true })).toBeVisible();
+  await page.screenshot({ path: 'artifacts/ui-polish/document-toolbar-desktop.png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole('button', { name: '保存修改', exact: true })).toBeInViewport();
+  await expect(page.getByRole('button', { name: '导出 PDF', exact: true })).toBeInViewport();
+  await page.screenshot({ path: 'artifacts/ui-polish/document-toolbar-mobile.png' });
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByTestId('doc-version-toggle').click();
   const dialog = page.getByRole('dialog', { name: '版本记录' });
   await expect(dialog).toBeVisible();

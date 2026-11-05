@@ -611,113 +611,29 @@
 
 .doc-detail-toolbar--full .ant-btn { border-radius: var(--radius-sm); box-shadow: none; font-size: var(--fs-body); height: 32px; }
 
-/* 按钮分组容器：桌面上拍平（不出盒子），两组按钮直接进同一条 flex 行，
-   与分组前逐像素一致；窄屏下才变成真正的两行，见下面的 @media。 */
-.doc-toolbar-group { display: contents; }
-
-/* ===== 窄屏：标题一行 + 主操作一行 + 输出工具一行（不隐藏、不收菜单） =====
-   旧版把 6 个按钮和标题挤在同一条 flex 里平铺，390px 上折成 3 行、占 156px
-   （视口 844px 的 18%），关闭出口还被挤到末行末尾，只剩一个 32px 的 ×。
-   上一版改成「5 个按钮拉成两行等宽方块」——高度没降，反而像个设置网格。
-   这一版按角色分组：标题行（关闭在右端）、主操作行（保存吃满剩余宽度）、
-   输出工具行（版本 / 下载，32px 小号置灰、自然宽度不拉伸）。
-   没有任何控件被隐藏：汉堡、关闭、放弃修改、保存、版本、Word、PDF 全部可见。 */
+/* 文书工具栏：标题与保存一层，文书工具与下载一层。 */
+.doc-detail-toolbar--full { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-3); padding: var(--space-3) var(--space-5); }
+.doc-toolbar-header { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-3); min-width: 0; }
+.doc-toolbar-heading { flex: 1 1 180px; min-width: 0; }
+.doc-toolbar-subtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-meta); }
+.doc-toolbar-title h2 { font-size: var(--fs-h4); }
+.doc-toolbar-group { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+.doc-toolbar-save-actions { flex: 0 0 auto; }
+.doc-toolbar-save-actions > .ant-btn-default { border-color: transparent; color: var(--axn-muted); }
+.doc-toolbar-header .doc-toolbar-close { flex: 0 0 auto; width: 32px; padding: 0; color: var(--axn-muted); }
+.doc-toolbar-actions { display: flex; justify-content: space-between; gap: var(--space-2) var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--axn-divider); }
+.doc-toolbar-exports { margin-left: auto; }
+.doc-toolbar-actions .ant-btn { padding-inline: var(--space-2-5); }
+@container (max-width: 540px) {
+  .doc-detail-toolbar--full { padding: var(--space-3); }
+  .doc-toolbar-save-actions { order: 3; flex-basis: 100%; justify-content: flex-end; }
+  .doc-toolbar-header .doc-toolbar-heading { flex-basis: calc(100% - 52px); }
+}
 @media (max-width: 767px) {
-  .doc-detail-toolbar--full.doc-detail-toolbar--compact {
-    flex-direction: column;
-    align-items: stretch;
-    flex-wrap: nowrap;
-    gap: var(--space-1);
-    /* 左边 52px 留给外壳的固定汉堡（与 global.css 同值）：汉堡照常可见可点，
-       不再像旧版那样压在文书头部上。 */
-    padding: var(--space-2) var(--space-3) var(--space-2) 52px;
-  }
-
-  /* 第一行：标题 + 副标题 + 关闭 */
-  .doc-detail-toolbar--compact .doc-toolbar-heading {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    flex: initial;
-    min-width: 0;
-  }
-  .doc-detail-toolbar--compact .doc-toolbar-copy { flex: 1; min-width: 0; }
-  .doc-detail-toolbar--compact .doc-toolbar-copy h2 {
-    margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: var(--fs-h4);
-    line-height: var(--lh-snug);
-    font-weight: 600;
-  }
-  /* 副标题压成单行省略：原文「值班日报 · 2026年9月28日 · V1 · 已保存」
-     在 390px 上会折成两行，把头部再顶高 22px。 */
-  .doc-detail-toolbar--compact .doc-toolbar-subtitle {
-    margin-top: 1px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: var(--fs-meta);
-    line-height: var(--lh-caption);
-  }
-  /* 关闭：44×44 热区贴标题行右端（原来是 32px 小叉排在最后一行末尾）。
-     负边距把这 44px 的空白往外吃掉 6px，视觉上仍与标题右缘对齐。 */
-  .doc-detail-toolbar--compact .doc-toolbar-close {
-    flex: 0 0 auto;
-    width: 44px;
-    height: 44px;
-    margin: -6px -6px -6px 0;
-    padding: 0;
-    border-radius: var(--radius-md);
-    color: var(--axn-muted);
-    font-size: var(--icon-lg);
-  }
-  /* @media (hover: none) 下全局关了 tap-highlight，不补按下态就是零反馈 */
-  .doc-detail-toolbar--compact .doc-toolbar-close:active { background: var(--axn-canvas); }
-
-  /* 操作区：窄屏下从「一行靠右」变成「上下两行、各自左对齐」 */
-  .doc-detail-toolbar--compact .doc-toolbar-actions {
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: var(--space-2);
-  }
-  .doc-detail-toolbar--compact .doc-toolbar-group {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: var(--space-1) var(--space-2);
-  }
-
-  /* 主操作行：40px 触摸高度（原 32px），左右内边距 15 → 10px */
-  .doc-detail-toolbar--full.doc-detail-toolbar--compact .doc-toolbar-group > .ant-btn {
-    flex: 0 0 auto;
-    height: 40px;
-    padding-inline: 10px;
-  }
-  /* 主操作吃满本行剩余宽度：一屏里哪个按钮是主按钮，不用读字也看得出来。
-     basis 必须写 auto —— 写成 flex:1（basis 0）会让假想宽度变成 0，
-     浏览器就把输出按钮塞进同一行，主按钮只剩几十 px（实测 390px 下 31px）。 */
-  .doc-detail-toolbar--full.doc-detail-toolbar--compact .doc-toolbar-group > .ant-btn.doc-toolbar-primary { flex: 1 1 auto; min-width: 0; }
-
-  /* 输出工具行：32px、13px 字、灰字细边 —— 明确降一级，不和主操作抢注意力，
-     也不拉伸（拉满会变成一排等宽大方块，像设置项而不是工具条）。 */
-  .doc-detail-toolbar--full.doc-detail-toolbar--compact .doc-toolbar-group > .ant-btn.doc-toolbar-secondary {
-    flex: 0 0 auto;
-    height: 32px;
-    padding-inline: 10px;
-    color: var(--axn-muted);
-    font-size: var(--fs-meta);
-  }
-  .doc-detail-toolbar--compact .ant-btn.doc-toolbar-secondary.is-active {
-    color: var(--axn-primary);
-    border-color: var(--axn-primary-border, var(--axn-primary));
-    background: var(--axn-primary-soft, var(--axn-canvas));
-  }
-
-  /* 富文本工具条：16 个控件在 390px 上折成两行。这里只把热区从 28 抬到 32，
-     仍然折行显示，不做横向滚动 —— 滚出去看不到的控件等于被藏起来了。 */
+  .axn-shell-main .doc-detail-toolbar.doc-detail-toolbar--full { padding-left: var(--space-3); }
+  .doc-toolbar-header { padding-left: 40px; }
+  .doc-toolbar-save-actions { margin-left: -40px; }
+  .doc-toolbar-header .doc-toolbar-close { width: 36px; height: 36px; }
   .doc-rich-tool { width: 30px; height: 32px; }
 }
 .doc-detail-toolbar--full .ant-btn-default { border-color: var(--axn-border); }
