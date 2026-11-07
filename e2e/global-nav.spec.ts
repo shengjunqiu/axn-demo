@@ -7,6 +7,120 @@
 import { expect, test, type Page } from '@playwright/test';
 import { AGENT_INVITATIONS } from '../src/seed/agentInvitations';
 
+test('设置切换三个账号，专家菜单和对话智能体按账号授权并在刷新后保留', async ({ page }) => {
+  const switchAccount = async (name: string) => {
+    await page.getByTestId('account-settings').click();
+    await page.getByRole('menuitem', { name, exact: true }).click();
+    await expect(page.locator('.axn-gs-account-name')).toHaveText(name);
+  };
+  const agentIds = AGENT_INVITATIONS.map(agent => agent.agentId);
+  const chips = page.locator('.axn-chips [data-agent-id]');
+  await expect(page.locator('.axn-gs-account-name')).toHaveText('张明远');
+  await expect(chips).toHaveCount(5);
+  await page.locator('.axn-chips [data-agent-id="agent-resource"]').click();
+  await expect(page.locator('[data-testid="agent-invite-choices"][data-agent-id="agent-resource"]')).toBeVisible();
+
+  await switchAccount('李雷');
+  await expect(chips).toHaveCount(2);
+  await expect(chips.nth(0)).toHaveAttribute('data-agent-id', 'agent-doc');
+  await expect(chips.nth(1)).toHaveAttribute('data-agent-id', 'agent-situation');
+  await expect(page.locator('[data-testid="agent-invite-choices"][data-agent-id="agent-resource"]')).toHaveCount(0);
+  await page.getByRole('button', { name: '应急专家', exact: true }).click();
+  await expect(page.locator('.axn-agent-card')).toHaveCount(2);
+  await expect(page.locator('.axn-agent-card').nth(0)).toHaveAttribute('data-agent-id', 'agent-doc');
+  await expect(page.locator('.axn-agent-card').nth(1)).toHaveAttribute('data-agent-id', 'agent-situation');
+  await expect(page.getByText('2 个智能体', { exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('anneng-demo:v1:demo') ?? '{}').data?.actorId)).toBe('actor-demo-lilei');
+  await page.reload();
+  await expect(page.locator('.axn-gs-account-name')).toHaveText('李雷');
+  await expect(page.locator('.axn-agent-card')).toHaveCount(2);
+  await page.screenshot({ path: 'artifacts/account-lilei.png' });
+  await page.getByRole('button', { name: '召唤文书生成智能体', exact: true }).click();
+  await expect(page.getByTestId('doc-agent-choices')).toBeVisible();
+  await page.getByRole('button', { name: '应急专家', exact: true }).click();
+
+  await switchAccount('赵强');
+  await expect(page).toHaveURL(/#\/assistant$/);
+  await expect(page.getByRole('button', { name: '应急专家', exact: true })).toHaveCount(0);
+  await expect(chips).toHaveCount(0);
+  await expect(page.locator('.axn-cp-chips-wrap')).toHaveCount(0);
+  await page.goto('/#/agents');
+  await expect(page).toHaveURL(/#\/assistant$/);
+  await expect(page.getByTestId('agents-page')).toHaveCount(0);
+  await page.screenshot({ path: 'artifacts/account-zhaoqiang.png' });
+
+  await switchAccount('张明远');
+  await newConversation(page);
+  await expect(chips).toHaveCount(5);
+  for (const id of agentIds) await expect(page.locator(`.axn-chips [data-agent-id="${id}"]`)).toBeVisible();
+  await page.getByRole('button', { name: '应急专家', exact: true }).click();
+  await expect(page.locator('.axn-agent-card')).toHaveCount(5);
+});
+
+test('改版方案二固定张明远，切换对话和工作模式控制全部专家入口', async ({ page }) => {
+  const switchPlan = async (name: string) => {
+    await expect(page.locator('.ant-dropdown:visible')).toHaveCount(0);
+    await page.getByTestId('account-settings').click();
+    await page.getByRole('menuitem', { name: /^切换方案/ }).hover();
+    await page.getByRole('menuitem', { name, exact: true }).click();
+  };
+  const chips = page.locator('.axn-chips [data-agent-id]');
+  const modes = page.locator('.axn-chat-mode-switch');
+  const switchMode = async (name: string) => {
+    await modes.getByText(name, { exact: true }).click();
+    await expect(modes.getByRole('radio', { name, exact: true })).toBeChecked();
+  };
+  const experts = page.getByRole('button', { name: '应急专家', exact: true });
+  await newConversation(page);
+  await page.getByTestId('account-settings').click();
+  await page.getByRole('menuitem', { name: '李雷', exact: true }).click();
+  await expect(page.locator('.axn-gs-account-name')).toHaveText('李雷');
+  await expect(chips).toHaveCount(2);
+  await switchPlan('方案二');
+  await expect(page.locator('.axn-gs-account-name')).toHaveText('张明远');
+  await expect(modes.getByRole('radio', { name: '对话模式', exact: true })).toBeChecked();
+  await expect(page.locator('.axn-home-copy + .axn-chat-mode-bar .axn-chat-mode-switch')).toBeVisible();
+  await expect(page.locator('.axn-chat-head .axn-chat-mode-switch')).toHaveCount(0);
+  await expect(experts).toHaveCount(0);
+  await expect(chips).toHaveCount(0);
+  await expect(page.locator('.axn-home-copy')).toHaveText('您可以向我提问，我会帮您解答疑问、梳理信息。');
+  await page.getByTestId('account-settings').click();
+  await expect(page.getByRole('menuitem', { name: '张明远', exact: true })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: '李雷', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('menuitem', { name: '赵强', exact: true })).toHaveCount(0);
+  await page.locator('.axn-home-copy').click();
+  await page.goto('/#/agents');
+  await expect(page).toHaveURL(/#\/assistant$/);
+  await switchMode('工作模式');
+  await expect(chips).toHaveCount(5);
+  await expect(experts).toBeVisible();
+  await expect(page.locator('.axn-home-copy')).toContainText('查询救援资源');
+  await newConversation(page);
+  await expect(modes.getByRole('radio', { name: '工作模式', exact: true })).toBeChecked();
+  await expect(chips).toHaveCount(5);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('anneng-demo:v1:demo') ?? '{}').data?.interactionMode)).toBe('work');
+  await page.reload();
+  await expect(modes.getByRole('radio', { name: '工作模式', exact: true })).toBeChecked();
+  await expect(chips).toHaveCount(5);
+  await page.screenshot({ path: 'artifacts/plan-two-work.png' });
+  await experts.click();
+  await expect(page.locator('.axn-agent-card')).toHaveCount(5);
+  await page.getByRole('button', { name: '召唤救援资源管理智能体', exact: true }).click();
+  await expect(chips).toHaveCount(5);
+  await expect(page.getByTestId('agent-invite-choices')).toBeVisible();
+  await switchMode('对话模式');
+  await expect(chips).toHaveCount(0);
+  await expect(experts).toHaveCount(0);
+  await expect(page.getByTestId('agent-invite-choices')).toHaveCount(0);
+  await page.screenshot({ path: 'artifacts/plan-two-chat.png' });
+  await switchPlan('方案一');
+  await expect(page.locator('.axn-gs-account-name')).toHaveText('李雷');
+  await expect(modes).toHaveCount(0);
+  await newConversation(page);
+  await expect(chips).toHaveCount(2);
+  await expect(experts).toBeVisible();
+});
+
 async function openNav(page: Page, label: string) {
   if (label === '文书库') { await page.goto('/#/library'); return; }
   await page.locator('.axn-gs-nav-item', { hasText: label }).first().click();

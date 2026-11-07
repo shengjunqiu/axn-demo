@@ -43,8 +43,16 @@ function nextManualId(): { factId: string; sourceRecordId: string } {
   return { factId: `fact-manual-${id}`, sourceRecordId: `src-manual-${id}` };
 }
 
+export type DesignPlan = 'one' | 'two';
+export type InteractionMode = 'chat' | 'work';
+
 interface DemoState {
   actorId: string;
+  designPlan: DesignPlan;
+  interactionMode: InteractionMode;
+  planOneActorId: string;
+  setDesignPlan: (plan: DesignPlan) => void;
+  setInteractionMode: (mode: InteractionMode) => void;
   currentEventId: string;
   demoClock: string;
   pace: DemoPace;
@@ -89,6 +97,9 @@ const initialGuide: DemoConfig['guideStepIndex'] = 0;
 /** 可持久化切片（函数与临时提示不落盘）。 */
 interface DemoPersist {
   actorId: string;
+  designPlan: DesignPlan;
+  interactionMode: InteractionMode;
+  planOneActorId: string;
   currentEventId: string;
   demoClock: string;
   pace: 'normal' | 'fast';
@@ -122,7 +133,17 @@ if (malformedManualFacts) {
 
   const contextSequenceValue = demoPersisted?.contextSequence ?? (demoPersisted?.waterOverride ? 2 : 1);
 export const useDemoStore = create<DemoState>()((set, get) => ({
-  actorId: demoPersisted?.actorId ?? DEFAULT_ACTOR_ID,
+  actorId: demoPersisted?.designPlan !== 'two' && demoPersisted?.actorId && actorById.has(demoPersisted.actorId) ? demoPersisted.actorId : DEFAULT_ACTOR_ID,
+  designPlan: demoPersisted?.designPlan === 'two' ? 'two' : 'one',
+  interactionMode: demoPersisted?.interactionMode === 'work' ? 'work' : 'chat',
+  planOneActorId: demoPersisted?.planOneActorId && actorById.has(demoPersisted.planOneActorId) ? demoPersisted.planOneActorId : DEFAULT_ACTOR_ID,
+  setDesignPlan: (designPlan) => {
+    if (designPlan === get().designPlan) return;
+    set(designPlan === 'two'
+      ? { designPlan, planOneActorId: get().actorId, actorId: DEFAULT_ACTOR_ID }
+      : { designPlan, actorId: get().planOneActorId });
+  },
+  setInteractionMode: (interactionMode) => set({ interactionMode }),
   currentEventId: demoPersisted?.currentEventId ?? DEFAULT_EVENT_ID,
   demoClock: demoPersisted?.demoClock ?? DEMO_CLOCK,
   pace: demoPersisted?.pace ?? 'normal',
@@ -151,7 +172,9 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
     if (!actor) throw new Error('演员表未找到默认角色');
     return actor;
   },
-  setActor: (actorId) => set({ actorId }),
+  setActor: (actorId) => {
+    if (actorById.has(actorId) && (get().designPlan === 'one' || actorId === DEFAULT_ACTOR_ID)) set({ actorId });
+  },
 
   switchEvent: (eventId) => {
     if (eventId !== get().currentEventId) invalidateAllRuns();
@@ -230,6 +253,9 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
     clearPersist('demo');
     set({
       actorId: DEFAULT_ACTOR_ID,
+      designPlan: 'one',
+      interactionMode: 'chat',
+      planOneActorId: DEFAULT_ACTOR_ID,
       currentEventId: DEFAULT_EVENT_ID,
       demoClock: DEMO_CLOCK,
       pace: 'normal',
@@ -249,6 +275,9 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
 useDemoStore.subscribe((state) => {
   schedulePersist('demo', {
     actorId: state.actorId,
+    designPlan: state.designPlan,
+    interactionMode: state.interactionMode,
+    planOneActorId: state.planOneActorId,
     currentEventId: state.currentEventId,
     demoClock: state.demoClock,
     pace: state.pace,

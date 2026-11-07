@@ -166,6 +166,8 @@ export interface Actor {
   name: string;
   /** 模拟用户姓名，仅用于侧栏展示。 */
   userName: string;
+  /** 账号可见的智能体；与业务角色（签发权限）分别配置。 */
+  allowedAgentIds: 'all' | readonly string[];
   role: 'duty' | 'commander';
   orgId: string;
   isSimulated: boolean;

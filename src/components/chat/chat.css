@@ -9,6 +9,13 @@
   .axn-collapse-btn { display: none; }
 }
 .axn-chat-head-row { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.axn-chat-mode-bar { display: flex; align-items: center; justify-content: center; padding: var(--space-2) var(--space-4); flex-shrink: 0; }
+.axn-home-hero .axn-chat-mode-bar { justify-content: center; padding: var(--space-4) 0 0; }
+.axn-chat-mode-switch.ant-segmented { padding: var(--space-1); border: 1px solid var(--axn-border); border-radius: 999px; background: var(--axn-soft); font-size: var(--fs-body); }
+.axn-chat-mode-switch .ant-segmented-item, .axn-chat-mode-switch .ant-segmented-thumb { border-radius: 999px; }
+.axn-chat-mode-switch .ant-segmented-item-label { display: flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 36px; padding: 0 var(--space-4); }
+.axn-chat-mode-switch .ant-segmented-item-icon { display: inline-flex; align-items: center; }
+.axn-chat-mode-switch .ant-segmented-item-selected { background: var(--axn-surface); color: var(--axn-text); font-weight: 600; box-shadow: var(--shadow-xs); }
 .axn-chat-head .ant-select-selector { border-radius: var(--radius-sm); }
 .axn-chat-avatar { display: grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0; }
 .axn-message-list .ant-bubble-avatar { width: 28px; min-width: 28px; }
@@ -32,7 +39,7 @@
 .axn-home-mark { margin-bottom: var(--space-3); filter: drop-shadow(0 6px 16px color-mix(in srgb, var(--axn-primary) 22%, transparent)); }
 .axn-home-title.ant-typography { font-size: var(--fs-hero); font-weight: 600; color: var(--axn-text); margin: 0 0 var(--space-2); letter-spacing: var(--ls-tight); line-height: var(--lh-tight); }
 .axn-home-title.ant-typography > span { display: inline-block; }
-.axn-home-copy.ant-typography { margin: 0; max-width: 40em; text-wrap: balance; font-size: var(--fs-lead); line-height: var(--lh-normal); color: var(--axn-muted); }
+.axn-home-copy.ant-typography { margin: 0; width: 100%; font-size: var(--fs-lead); line-height: var(--lh-normal); color: var(--axn-muted); }
 .axn-home-block { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-5); animation: axn-rise-in var(--dur-slower) var(--ease-out) 120ms backwards; }
 .axn-home-block-label.ant-typography { font-size: var(--fs-meta); font-weight: 400; }
 

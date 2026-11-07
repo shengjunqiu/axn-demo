@@ -23,6 +23,7 @@ import { Menu } from 'lucide-react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useUrlNavSync } from '@/components/nav/navRoutes';
 import { useDemoStore } from '@/store/demoStore';
+import { useAgentAccess } from '@/hooks/useAgentAccess';
 import { useSessionStore } from '@/store/sessionStore';
 import { useConversationStore } from '@/store/conversationStore';
 import { useActiveScope, useWorkspaceStore } from '@/store/workspaceStore';
@@ -51,6 +52,7 @@ export type WorkspaceTab = 'resource' | 'knowledge';
 
 export default function AppRoot() {
   const storageWarning = useDemoStore((s) => s.storageWarning);
+  const { agents } = useAgentAccess();
   const activeConversationId = useConversationStore((s) => s.activeConversationId);
   const conversations = useConversationStore((s) => s.conversations);
   const scope = useActiveScope();
@@ -213,6 +215,7 @@ export default function AppRoot() {
             </div>
           } />
           <Route path="/agents" element={
+            agents.length === 0 ? <Navigate key={location.key} to="/assistant" replace /> :
             <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
               <Suspense><NavPageContent page="agents" /></Suspense>
             </div>

@@ -5,10 +5,50 @@ import { useConversationStore } from '@/store/conversationStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { resetDemoData } from '@/store/resetDemo';
+import { useDemoStore } from '@/store/demoStore';
+import { visibleAgentsForActor } from '@/seed/agentAccess';
+import { actors } from '@/seed/scenario';
 
 beforeEach(() => resetDemoData());
 
 describe('在同一对话召唤智能体', () => {
+  it.each([
+    ['张明远', AGENT_INVITATIONS.map(agent => agent.agentId)],
+    ['赵强', []],
+    ['李雷', ['agent-doc', 'agent-situation']],
+  ] as const)('%s 只能查看和召唤已授权的智能体', (userName, allowed) => {
+    const actor = actors.find(actor => actor.userName === userName)!;
+    useDemoStore.getState().setActor(actor.actorId);
+    expect(visibleAgentsForActor(actor.actorId).map(agent => agent.agentId)).toEqual(allowed);
+    const sessionId = useSessionStore.getState().currentSessionId;
+    for (const agent of AGENT_INVITATIONS) {
+      const permitted = allowed.some(id => id === agent.agentId);
+      const sessions = useSessionStore.getState();
+      const conversations = useConversationStore.getState();
+      const invitation = summonAgentInConversation(sessionId, agent.agentId);
+      const managed = summonAgentFromManagement(agent.agentId);
+      if (permitted) {
+        expect(invitation?.agentId).toBe(agent.agentId);
+        expect(managed?.agentId).toBe(agent.agentId);
+      } else {
+        expect(invitation).toBeNull();
+        expect(managed).toBeNull();
+        expect(useSessionStore.getState()).toBe(sessions);
+        expect(useConversationStore.getState()).toBe(conversations);
+      }
+    }
+  });
+
+  it('不接受无效账号，切回张明远后恢复全部智能体', () => {
+    const demo = useDemoStore.getState();
+    demo.setActor('actor-demo-lilei');
+    demo.setActor('missing');
+    expect(useDemoStore.getState().getActor().userName).toBe('李雷');
+    expect(visibleAgentsForActor('missing')).toEqual([]);
+    demo.setActor('actor-demo-duty');
+    expect(visibleAgentsForActor(useDemoStore.getState().actorId)).toHaveLength(5);
+  });
+
   it('管理页每次召唤新建独立对话，保留原会话历史且不提前执行任务', () => {
     const conversation = useConversationStore.getState().createConversation({ title: '原对话', type: 'general', eventId: 'evt-demo-001' });
     const sessionId = useSessionStore.getState().sessionByConversation[conversation.id];

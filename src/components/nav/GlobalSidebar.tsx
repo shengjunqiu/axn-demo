@@ -37,7 +37,8 @@ import {
 import { useDemoStore } from '@/store/demoStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { useActiveScope, useWorkspaceStore, type WorkMode } from '@/store/workspaceStore';
-import { actors } from '@/seed/scenario';
+import { actors, DEFAULT_ACTOR_ID } from '@/seed/scenario';
+import { useAgentAccess } from '@/hooks/useAgentAccess';
 import BrandMark from '@/components/brand/BrandMark';
 import './sidebar.css';
 
@@ -65,6 +66,9 @@ export default function GlobalSidebar({ onClose }: { onClose?: () => void } = {}
   const deleteConversation = useConversationStore((s) => s.deleteConversation);
   const toggleConversationPin = useConversationStore((s) => s.toggleConversationPin);
   const actorId = useDemoStore((s) => s.actorId);
+  const designPlan = useDemoStore((s) => s.designPlan);
+  const setDesignPlan = useDemoStore((s) => s.setDesignPlan);
+  const { agents } = useAgentAccess();
   const setActor = useDemoStore((s) => s.setActor);
   const actor = useDemoStore((s) => s.getActor());
   const scope = useActiveScope();
@@ -187,7 +191,7 @@ export default function GlobalSidebar({ onClose }: { onClose?: () => void } = {}
 
       {/* 3. 一级功能导航（文书库入口隐藏，页面与工作区内入口保留） */}
       <nav className="axn-gs-nav" aria-label="全局功能导航">
-        {NAV.map((item) => (
+        {NAV.filter(item => item.key !== 'agents' || agents.length > 0).map((item) => (
           <button
             key={item.key}
             className={`axn-gs-nav-item${activeNav === item.key ? ' is-active' : ''}`}
@@ -270,24 +274,35 @@ export default function GlobalSidebar({ onClose }: { onClose?: () => void } = {}
             placement="topRight"
             menu={{
               selectable: true,
-              selectedKeys: [actorId],
+              selectedKeys: [actorId, designPlan === 'one' ? 'plan-one' : 'plan-two'],
               items: [
                 {
                   type: 'group',
-                  label: '切换用户身份',
-                  children: actors.map((a) => ({ key: a.actorId, label: <span title={a.name}>{a.name}</span> })),
+                  label: designPlan === 'one' ? '切换账号' : '当前账号',
+                  children: actors.filter(a => designPlan === 'one' || a.actorId === DEFAULT_ACTOR_ID).map((a) => ({ key: a.actorId, label: <span title={a.name}>{a.userName}</span> })),
                 },
                 { type: 'divider' },
+                {
+                  key: 'design-plans', label: '切换方案',
+                  children: [{ key: 'plan-one', label: '方案一' }, { key: 'plan-two', label: '方案二' }],
+                },
                 { key: 'chat-controls', icon: <FlaskConical size={14} />, label: '聊天标准控件' },
               ],
               onClick: ({ key }) => {
-                if (key === 'chat-controls') {
+                if (key === 'plan-one' || key === 'plan-two') {
+                  guardDirty('切换改版方案', () => {
+                    setDesignPlan(key === 'plan-one' ? 'one' : 'two');
+                    navigate(NAV_PATH.assistant);
+                    onClose?.();
+                  });
+                }
+                else if (key === 'chat-controls') {
                   guardDirty('查看聊天标准控件', () => {
                     navigate(NAV_PATH.controls);
                     onClose?.();
                   });
                 }
-                else setActor(key);
+                else guardDirty('切换账号', () => setActor(key));
               },
             }}
           >

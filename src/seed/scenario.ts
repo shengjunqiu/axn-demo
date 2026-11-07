@@ -154,6 +154,7 @@ export interface ScenarioFixture {
     name: string;
     /** 模拟用户姓名，仅用于侧栏展示。 */
     userName: string;
+    allowedAgentIds: 'all' | readonly string[];
     role: 'duty' | 'commander';
     orgId: string;
     isSimulated: boolean;

@@ -13,7 +13,7 @@ import SkillsPage from './SkillsPage';
 import MyFilesPage from './MyFilesPage';
 import SchedulesPage from './SchedulesPage';
 import KnowledgeModule from '@/components/knowledge/KnowledgeModule';
-import { AGENT_INVITATIONS } from '@/seed/agentInvitations';
+import { useAgentAccess } from '@/hooks/useAgentAccess';
 import { agentIcon } from '@/components/chat/agentIcons';
 import { summonAgentFromManagement } from '@/services/agentConversation';
 
@@ -130,6 +130,7 @@ const AGENT_DESCRIPTIONS: Record<string, string> = {
 
 export function AgentsPage() {
   const navigate = useNavigate();
+  const { agents } = useAgentAccess();
   const summon = (agentId: string) => {
     if (summonAgentFromManagement(agentId)) navigate(NAV_PATH.assistant);
   };
@@ -139,10 +140,10 @@ export function AgentsPage() {
       <PageHeader
         title="应急专家"
         sub="认识你的应急协作伙伴。召唤后开启新对话，再选择需要的任务。"
-        extra={<Tag>{AGENT_INVITATIONS.length} 个智能体</Tag>}
+        extra={<Tag>{agents.length} 个智能体</Tag>}
       />
       <div className="axn-np-grid axn-agents-grid">
-        {AGENT_INVITATIONS.map((agent) => {
+        {agents.map((agent) => {
           const Icon = agentIcon(agent.agentId);
           return (
             <Card key={agent.agentId} className="axn-agent-card" data-agent-id={agent.agentId}>

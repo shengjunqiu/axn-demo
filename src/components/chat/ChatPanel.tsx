@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSessionTasks } from '@/hooks/useSessionTasks';
 import {
   ArrowUp,
+  BriefcaseBusiness,
   ChevronDown,
   Globe,
   LifeBuoy,
@@ -25,7 +26,7 @@ import {
   Waves,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { Alert, App as AntdApp, Button, Input, Popover, Space, Switch, Tag, Tooltip, Typography, Upload, theme } from 'antd';
+import { Alert, App as AntdApp, Button, Input, Popover, Segmented, Space, Switch, Tag, Tooltip, Typography, Upload, theme } from 'antd';
 import { Bubble, Sender } from '@ant-design/x';
 import type { BubbleItemType } from '@ant-design/x';
 import { useConversationStore } from '@/store/conversationStore';
@@ -35,6 +36,8 @@ import { useSessionStore } from '@/store/sessionStore';
 import { useActiveScope, useWorkspaceStore } from '@/store/workspaceStore';
 import { sendMessage, cancelTask } from '@/services/taskRunner';
 import { AGENT_INVITATIONS } from '@/seed/agentInvitations';
+import { canAccessAgent } from '@/seed/agentAccess';
+import { useAgentAccess } from '@/hooks/useAgentAccess';
 import ResponseFeedback from './ResponseFeedback';
 import EmergencyBriefForm, { type BriefFigure, type BriefFormValues } from './EmergencyBriefForm';
 import { summonAgentInConversation } from '@/services/agentConversation';
@@ -102,6 +105,16 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   const sidebarCollapsed = useDemoStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useDemoStore((s) => s.toggleSidebar);
   const actorUserName = useDemoStore((s) => s.getActor().userName);
+  const actorId = useDemoStore((s) => s.actorId);
+  const designPlan = useDemoStore((s) => s.designPlan);
+  const interactionMode = useDemoStore((s) => s.interactionMode);
+  const setInteractionMode = useDemoStore((s) => s.setInteractionMode);
+  const { agents: visibleAgents, canUseAgent } = useAgentAccess();
+  const homeDescription = visibleAgents.length === 0
+    ? '您可以向我提问，我会帮您解答疑问、梳理信息。'
+    : visibleAgents.length === AGENT_INVITATIONS.length
+      ? '您可以向我提问，也可以让我帮您生成文书、感知灾情态势、查询救援资源、编制救援方案和评估救援效果。'
+      : '您可以向我提问，也可以让我帮您生成文书、汇总灾情信息和研判应急态势。';
   const activeConversation = useConversationStore((s) =>
     s.activeConversationId ? s.conversations[s.activeConversationId] : null,
   );
@@ -117,6 +130,10 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   /** 应急要情的表头表单：点「生成应急要情」先弹出，填完直接出件（不再演逐项收集）。 */
   const [briefFormOpen, setBriefFormOpen] = useState(false);
   useEffect(() => { setIncidentPickerOpen(false); setPendingEventAction(null); }, [activeConversationId]);
+  useEffect(() => {
+    setPendingEventAction(null);
+    setBriefFormOpen(false);
+  }, [actorId, designPlan, interactionMode]);
   const [skillQuery, setSkillQuery] = useState<string | null>(null);
   const skillCommandStart = useRef<number | null>(null);
   const changeSkillPickerOpen = useCallback((open: boolean) => {
@@ -279,6 +296,8 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
 
   const handleQuickTask = async (text: string, agentId?: string, label?: string): Promise<void> => {
     if (!session || busy) return;
+    const demo = useDemoStore.getState();
+    if (agentId && !canAccessAgent(demo.actorId, agentId, demo)) return;
     if (await requestEventBeforeTask(text, () => { void handleQuickTask(text, agentId, label); }, agentId, label)) return;
     if (text === '生成工作总结') {
       if (session && !busy) await generateWorkSummary(session.sessionId, text);
@@ -485,7 +504,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   </>);
 
   const items: BubbleItemType[] = useMemo(() => {
-    const messages = session?.messages ?? [];
+    const messages = (session?.messages ?? []).filter(m => m.kind !== 'agent' || (m.agentId && canUseAgent(m.agentId)));
     const summonedTasks = new Set(messages.filter(message => message.kind === 'agent' && message.taskId && tasks[message.taskId]).map(message => message.taskId));
     const list: BubbleItemType[] = messages.filter(message => !(message.kind === 'task' && summonedTasks.has(message.taskId))).map((m) => {
       if (m.reviewDocumentId) {
@@ -607,9 +626,19 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
       });
     }
     return list;
-  }, [session?.messages, tasks, onOpenDrawer, busy, activeConversationId, attachments, briefFormOpen, submitBriefForm]);
+  }, [session?.messages, tasks, onOpenDrawer, busy, activeConversationId, attachments, briefFormOpen, submitBriefForm, canUseAgent]);
 
   const hasMessages = items.length > 0;
+  const modeSwitch = designPlan === 'two' ? (
+    <div className="axn-chat-mode-bar">
+      <Segmented className="axn-chat-mode-switch" aria-label="切换聊天模式" value={interactionMode}
+        options={[
+          { label: '对话模式', value: 'chat', icon: <MessageSquare size={16} /> },
+          { label: '工作模式', value: 'work', icon: <BriefcaseBusiness size={16} /> },
+        ]}
+        onChange={setInteractionMode} />
+    </div>
+  ) : null;
 
   return (
     <div className="axn-chat-page">
@@ -632,6 +661,8 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
           )}
         </div>
       </div>
+
+      {(hasMessages || compact) && modeSwitch}
 
       {/* 消息流 / 首页 */}
       {hasMessages ? (
@@ -684,8 +715,9 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
               </Typography.Title>
               {/* 标注 vibe_1791788359448 */}
               <Typography.Paragraph className="axn-home-copy">
-                您可以问我问题，也可以让我帮您写公文，或者我也可以帮您执行应急相关的任务。
+                {homeDescription}
               </Typography.Paragraph>
+              {modeSwitch}
             </div>
 
             <div className="axn-home-block" data-testid="home-chat-recommend">
@@ -742,10 +774,10 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         </div>
       )}
 
-      {/* 数字专家管理页创建的专属对话隐藏其他智能体入口。 */}
-      {activeConversation?.source !== 'agent-management' && <div className="axn-cp-chips-wrap">
+      {/* 方案一的专家专属对话隐藏其他入口；方案二工作模式始终展示全部智能体。 */}
+      {(designPlan === 'two' || activeConversation?.source !== 'agent-management') && visibleAgents.length > 0 && <div className="axn-cp-chips-wrap">
         <div className="axn-chips">
-          {AGENT_INVITATIONS.map(agent => {
+          {visibleAgents.map(agent => {
             const Icon = AGENT_ICONS[agent.agentId];
             return <Button key={agent.agentId} size="small" className="axn-chip" title={agent.name}
               data-agent-id={agent.agentId} disabled={!session || busy} onClick={() => handleAgentInvite(agent.agentId)}>

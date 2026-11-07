@@ -23,6 +23,7 @@
       "actorId": "actor-demo-duty",
       "name": "值班员",
       "userName": "张明远",
+      "allowedAgentIds": "all",
       "role": "duty",
       "orgId": "org-demo-001",
       "isSimulated": true
@@ -30,8 +31,18 @@
     {
       "actorId": "actor-demo-commander",
       "name": "指挥员",
-      "userName": "李国强",
+      "userName": "赵强",
+      "allowedAgentIds": [],
       "role": "commander",
+      "orgId": "org-demo-001",
+      "isSimulated": true
+    },
+    {
+      "actorId": "actor-demo-lilei",
+      "name": "值班员",
+      "userName": "李雷",
+      "allowedAgentIds": ["agent-doc", "agent-situation"],
+      "role": "duty",
       "orgId": "org-demo-001",
       "isSimulated": true
     }
