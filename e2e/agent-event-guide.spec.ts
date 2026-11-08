@@ -7,7 +7,7 @@ for (const [agent, label] of [['态势感知智能体', '灾情摘要'], ['救�
     await expect(page.getByRole('button', { name: '选择事件', exact: true })).toHaveCount(0);
     const picker = page.getByTestId('incident-picker');
     await expect(picker).toHaveCount(0);
-    const choices = page.getByTestId('agent-invite-choices');
+    const choices = page.getByTestId('agent-capability-bar');
     await choices.getByRole('button', { name: label, exact: true }).click();
     await expect(picker).toContainText('选择要分析的事件');
     await expect(picker).toContainText(label);
@@ -59,7 +59,7 @@ test('取消选择并切换对话后不再继续待关联任务', async ({ page 
   await page.goto('/#/agents');
   await page.getByRole('button', { name: '召唤态势感知智能体', exact: true }).click();
   const original = await page.locator('.axn-gs-conversation.is-active').getAttribute('data-testid');
-  await page.getByRole('button', { name: '灾情摘要', exact: true }).click();
+  await page.getByTestId('agent-capability-bar').getByRole('button', { name: '灾情摘要', exact: true }).click();
   await expect(page.getByTestId('incident-picker')).toBeVisible();
   await page.getByRole('combobox', { name: '搜索灾情' }).press('Escape');
   await page.getByTestId('new-conversation-btn').click();

@@ -70,9 +70,10 @@ test('改版方案二固定张明远，切换对话和工作模式控制全部�
     await modes.getByText(name, { exact: true }).click();
     await expect(modes.getByRole('radio', { name, exact: true })).toBeChecked();
   };
-  const experts = page.getByRole('button', { name: '应急专家', exact: true });
+  const experts = page.locator('.axn-gs-nav-item', { hasText: '应急专家' });
+  const agentPicker = page.getByTestId('composer-agent-picker');
   await newConversation(page);
-  await expect(page.getByTestId('home-chat-recommend')).toBeVisible();
+  await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
   await page.getByTestId('account-settings').click();
   await page.getByRole('menuitem', { name: '李雷', exact: true }).click();
   await expect(page.locator('.axn-gs-account-name')).toHaveText('李雷');
@@ -94,26 +95,40 @@ test('改版方案二固定张明远，切换对话和工作模式控制全部�
   await page.goto('/#/agents');
   await expect(page).toHaveURL(/#\/assistant$/);
   await switchMode('工作模式');
-  await expect(chips).toHaveCount(5);
+  await expect(chips).toHaveCount(0);
   await expect(experts).toBeVisible();
   await expect(page.locator('.axn-home-copy')).toContainText('查询救援资源');
-  await expect(page.getByTestId('home-chat-recommend')).toBeVisible();
+  await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
+  // 智能体入口收进输入框左侧的「应急专家」弹窗
+  await expect(agentPicker).toBeVisible();
+  await agentPicker.click();
+  await expect(page.getByTestId('agent-picker-menu')).toBeVisible();
+  await expect(page.getByTestId('agent-picker-menu').locator('.axn-composer-menu-option')).toHaveCount(5);
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('agent-picker-menu')).toHaveCount(0);
   await newConversation(page);
   await expect(modes.getByRole('radio', { name: '工作模式', exact: true })).toBeChecked();
-  await expect(chips).toHaveCount(5);
+  await expect(chips).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('anneng-demo:v1:demo') ?? '{}').data?.interactionMode)).toBe('work');
   await page.reload();
   await expect(modes.getByRole('radio', { name: '工作模式', exact: true })).toBeChecked();
-  await expect(chips).toHaveCount(5);
+  await expect(chips).toHaveCount(0);
+  await expect(agentPicker).toBeVisible();
   await page.screenshot({ path: 'artifacts/plan-two-work.png' });
   await experts.click();
   await expect(page.locator('.axn-agent-card')).toHaveCount(5);
   await page.getByRole('button', { name: '召唤救援资源管理智能体', exact: true }).click();
-  await expect(chips).toHaveCount(5);
+  await expect(chips).toHaveCount(0);
+  // 自我介绍保留，但能力按钮不再出现在卡片里，而是横排展示在输入框上方
   await expect(page.getByTestId('agent-invite-choices')).toBeVisible();
+  await expect(page.getByTestId('agent-invite-choices').locator('.axn-doc-choice-row')).toHaveCount(0);
+  await expect(page.getByTestId('agent-capability-bar')).toBeVisible();
+  await expect(page.getByTestId('agent-capability-bar').getByRole('button')).toHaveCount(3);
   await switchMode('对话模式');
   await expect(chips).toHaveCount(0);
   await expect(experts).toHaveCount(0);
+  await expect(agentPicker).toHaveCount(0);
+  await expect(page.getByTestId('agent-capability-bar')).toHaveCount(0);
   await expect(page.getByTestId('agent-invite-choices')).toHaveCount(0);
   await newConversation(page);
   await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
@@ -124,7 +139,8 @@ test('改版方案二固定张明远，切换对话和工作模式控制全部�
   await newConversation(page);
   await expect(chips).toHaveCount(2);
   await expect(experts).toBeVisible();
-  await expect(page.getByTestId('home-chat-recommend')).toBeVisible();
+  await expect(agentPicker).toHaveCount(0);
+  await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
 });
 
 async function openNav(page: Page, label: string) {
@@ -350,11 +366,14 @@ test('应急专家展示已有能力，每次召唤新开对话并能选择任�
     await expect(card.locator('.axn-np-desc')).not.toBeEmpty();
     await card.getByRole('button', { name: `召唤${agent.name}`, exact: true }).click();
     await expect(page.locator('.axn-chat-page')).toBeVisible();
-    await expect(page.locator('.axn-cp-chips-wrap')).toHaveCount(0);
+    await expect(page.locator('.axn-chips .axn-chip[data-agent-id]')).toHaveCount(0);
     const invitation = page.getByTestId('agent-summon-card').filter({ has: page.locator(`[data-agent-id="${agent.agentId}"].axn-doc-choices`) }).last();
     await expect(invitation).toContainText(agent.intro);
+    await expect(invitation.locator('.axn-doc-choice-row')).toHaveCount(0);
+    const capabilityBar = page.getByTestId('agent-capability-bar');
+    await expect(capabilityBar).toHaveAttribute('data-agent-id', agent.agentId);
     for (const option of agent.options) {
-      await expect(invitation.getByRole('button', { name: option.label, exact: true })).toBeEnabled();
+      await expect(capabilityBar.getByRole('button', { name: option.label, exact: true })).toBeEnabled();
     }
     await expect(activeConversation).not.toHaveAttribute('data-testid', conversationId!);
     await expect(activeConversation).toContainText(`与${agent.name}对话`);
@@ -365,13 +384,13 @@ test('应急专家展示已有能力，每次召唤新开对话并能选择任�
   await page.getByTestId(conversationId!).click();
   await expect(page.locator('.axn-chips')).toBeVisible();
   await page.getByTestId(summonedId!).click();
-  await expect(page.locator('.axn-cp-chips-wrap')).toHaveCount(0);
+  await expect(page.locator('.axn-chips .axn-chip[data-agent-id]')).toHaveCount(0);
   await page.reload();
-  await expect(page.locator('.axn-cp-chips-wrap')).toHaveCount(0);
+  await expect(page.locator('.axn-chips .axn-chip[data-agent-id]')).toHaveCount(0);
   await expect(page.getByTestId('agent-summon-card')).toHaveCount(1);
   await page.getByRole('button', { name: '应急专家', exact: true }).click();
   await page.getByRole('button', { name: '召唤救援资源管理智能体', exact: true }).click();
-  await page.locator('.axn-doc-choices[data-agent-id="agent-resource"]').getByRole('button', { name: '周边救援资源', exact: true }).click();
+  await page.getByTestId('agent-capability-bar').getByRole('button', { name: '周边救援资源', exact: true }).click();
   await page.getByTestId('incident-picker').getByRole('option', { name: /清河段堤防险情/ }).click();
   await page.getByTestId('incident-picker').getByRole('button', { name: /^(确认绑定|新开会话并绑定|确认选择)$/ }).click();
   await expect(page.locator('.axn-task-card').first()).toBeVisible();

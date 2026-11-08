@@ -9,23 +9,22 @@ import { formatSize } from '@/shared/format';
  * 本界面为模拟数据演示（规则意图识别，不接真实大模型）。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSessionTasks } from '@/hooks/useSessionTasks';
 import {
   ArrowUp,
+  Bot,
   BriefcaseBusiness,
   ChevronDown,
   Globe,
-  LifeBuoy,
   MapPin,
   Plus,
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
   Paperclip,
-  ShieldAlert,
-  Waves,
+  X,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { Alert, App as AntdApp, Button, Input, Popover, Segmented, Space, Switch, Tag, Tooltip, Typography, Upload, theme } from 'antd';
 import { Bubble, Sender } from '@ant-design/x';
 import type { BubbleItemType } from '@ant-design/x';
@@ -41,8 +40,7 @@ import { useAgentAccess } from '@/hooks/useAgentAccess';
 import ResponseFeedback from './ResponseFeedback';
 import EmergencyBriefForm, { type BriefFigure, type BriefFormValues } from './EmergencyBriefForm';
 import { summonAgentInConversation } from '@/services/agentConversation';
-import { AGENT_ICONS } from './agentIcons';
-import { WELCOME_QUESTIONS } from '@/seed/welcomeQuestions';
+import { AGENT_ICONS, agentIcon } from './agentIcons';
 import { eventRequirement } from '@/services/eventRequirement';
 import { incidentById } from '@/seed/scenario';
 import { eventDisplayName } from '@/services/factLookup';
@@ -68,31 +66,27 @@ const AVATAR = <div className="axn-chat-avatar"><BrandMark size={28} /></div>;
 // 语音输入模拟用的示例话语（标注 vibe_1791960862035）：点麦克风逐字「转写」这句话。
 const SPEECH_SAMPLE = '请汇总南堤堤防管涌险情的最新处置进展，并生成一份情况报告';
 
-// 首页推荐卡：与 WELCOME_QUESTIONS 按下标一一对应的图标与分类（问题本身取自知识库原文）。
-const QUESTION_META: { icon: LucideIcon; tag: string }[] = [
-  { icon: ShieldAlert, tag: '险情识别' },
-  { icon: Waves, tag: '水情研判' },
-  { icon: MapPin, tag: '路线规划' },
-  { icon: LifeBuoy, tag: '现场急救' },
-];
-
 /** 五类智能体共用的功能选择区。文书入口保留已有测试定位。 */
-function AgentInviteChoices({ agentId, options, hint, disabled, onPick }: {
+function AgentInviteChoices({ agentId, options, hint, disabled, onPick, showOptions = true }: {
   agentId?: string;
   options: { label: string; task: string }[];
   hint: string;
   disabled: boolean;
   onPick: (task: string, label: string) => void;
+  /** 方案二工作模式把能力按钮挪到输入框上方，卡片里只留提示语。 */
+  showOptions?: boolean;
 }) {
   return (
     <div className="axn-doc-choices" data-testid={agentId === 'agent-doc' || !agentId ? 'doc-agent-choices' : 'agent-invite-choices'} data-agent-id={agentId}>
-      <div className="axn-doc-choice-row">
-        {options.map(({ label, task }) => (
-          <Button key={task} size="small" className="axn-doc-choice" data-choice-task={task} disabled={disabled} onClick={() => onPick(task, label)}>
-            {label}
-          </Button>
-        ))}
-      </div>
+      {showOptions && (
+        <div className="axn-doc-choice-row">
+          {options.map(({ label, task }) => (
+            <Button key={task} size="small" className="axn-doc-choice" data-choice-task={task} disabled={disabled} onClick={() => onPick(task, label)}>
+              {label}
+            </Button>
+          ))}
+        </div>
+      )}
       <Text type="secondary" className="axn-doc-hint">{hint}</Text>
     </div>
   );
@@ -108,6 +102,9 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   const actorId = useDemoStore((s) => s.actorId);
   const designPlan = useDemoStore((s) => s.designPlan);
   const interactionMode = useDemoStore((s) => s.interactionMode);
+  const planTwoWorkMode = designPlan === 'two' && interactionMode === 'work';
+  /** 方案一和方案二工作模式：智能体能力按钮横排展示在输入框上方；方案二对话模式无智能体入口。 */
+  const showAgentCapabilityBar = designPlan === 'one' || planTwoWorkMode;
   const setInteractionMode = useDemoStore((s) => s.setInteractionMode);
   const { agents: visibleAgents, canUseAgent } = useAgentAccess();
   const homeDescription = visibleAgents.length === 0
@@ -127,18 +124,21 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   const [pendingEventAction, setPendingEventAction] = useState<{ conversationId: string; label: string; run: () => void } | null>(null);
   const [skillPickerOpen, setSkillPickerOpen] = useState(false);
   const [incidentPickerOpen, setIncidentPickerOpen] = useState(false);
+  /** 方案二工作模式：智能体入口收进「应急专家」弹窗，不再在输入框上方平铺 chips。 */
+  const [agentPickerOpen, setAgentPickerOpen] = useState(false);
   /** 应急要情的表头表单：点「生成应急要情」先弹出，填完直接出件（不再演逐项收集）。 */
   const [briefFormOpen, setBriefFormOpen] = useState(false);
-  useEffect(() => { setIncidentPickerOpen(false); setPendingEventAction(null); }, [activeConversationId]);
+  useEffect(() => { setIncidentPickerOpen(false); setAgentPickerOpen(false); setPendingEventAction(null); }, [activeConversationId]);
   useEffect(() => {
     setPendingEventAction(null);
     setBriefFormOpen(false);
+    setAgentPickerOpen(false);
   }, [actorId, designPlan, interactionMode]);
   const [skillQuery, setSkillQuery] = useState<string | null>(null);
   const skillCommandStart = useRef<number | null>(null);
   const changeSkillPickerOpen = useCallback((open: boolean) => {
     setSkillPickerOpen(open);
-    if (open) { setIncidentPickerOpen(false); setPendingEventAction(null); }
+    if (open) { setIncidentPickerOpen(false); setAgentPickerOpen(false); setPendingEventAction(null); }
     if (!open) {
       const start = skillCommandStart.current;
       if (start !== null) setInput(previous => previous.slice(0, start));
@@ -179,6 +179,26 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   // 上传的文件：演示环境没有上传接口，不落盘也不读取内容，只把文件名与大小随消息记下来
   const [attachments, setAttachments] = useState<{ uid: string; name: string; size: number }[]>([]);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+
+  // 应急专家浮层：点击外部或按 Escape 收起（与技能浮层一致）。
+  useEffect(() => {
+    if (!agentPickerOpen) return;
+    const outside = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (composerRef.current?.querySelector('.axn-composer-agent-menu')?.contains(target)) return;
+      if (target instanceof HTMLElement && target.closest('[data-testid="composer-agent-picker"]')) return;
+      setAgentPickerOpen(false);
+    };
+    const keyboard = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setAgentPickerOpen(false);
+    };
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', keyboard);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('keydown', keyboard);
+    };
+  }, [agentPickerOpen]);
 
   const addAttachments = (files: File[]) => {
     setAttachments((prev) => [
@@ -483,25 +503,54 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
                 />
               </Upload>
               </span>
-              <Tooltip classNames={{ root: 'axn-composer-web-search-tooltip' }} title="当前为原型演示，暂未接入真实联网检索">
-                <label className={`axn-composer-web-search${webSearchEnabled ? ' is-on' : ''}`}>
-                  <Globe size={14} aria-hidden />
-                  <span className="axn-composer-web-search-label">联网<span className="axn-composer-web-search-full">搜索</span></span>
-                  <Switch
-                    size="small"
-                    checked={webSearchEnabled}
-                    onChange={(on) => {
-                      setWebSearchEnabled(on);
-                      // 触屏上看不到悬停提示：开 / 关时用一句轻提示交代状态与演示边界
-                      if (window.matchMedia?.('(hover: none)').matches) {
-                        message.open({ key: 'web-search', type: 'info', content: on ? '已开启联网搜索（演示环境暂未接入真实检索）' : '已关闭联网搜索' });
-                      }
-                    }}
-                    aria-label="联网搜索"
-                  />
-                </label>
-              </Tooltip>
+              {planTwoWorkMode ? (
+                <Button
+                  type="text"
+                  className="axn-composer-agent-picker"
+                  icon={<Bot size={16} aria-hidden />}
+                  onClick={() => { changeSkillPickerOpen(false); setAgentPickerOpen(true); }}
+                  disabled={!session || busy}
+                  aria-haspopup="dialog"
+                  aria-expanded={agentPickerOpen}
+                  data-testid="composer-agent-picker"
+                >
+                  应急专家
+                </Button>
+              ) : (
+                <Tooltip classNames={{ root: 'axn-composer-web-search-tooltip' }} title="当前为原型演示，暂未接入真实联网检索">
+                  <label className={`axn-composer-web-search${webSearchEnabled ? ' is-on' : ''}`}>
+                    <Globe size={14} aria-hidden />
+                    <span className="axn-composer-web-search-label">联网<span className="axn-composer-web-search-full">搜索</span></span>
+                    <Switch
+                      size="small"
+                      checked={webSearchEnabled}
+                      onChange={(on) => {
+                        setWebSearchEnabled(on);
+                        // 触屏上看不到悬停提示：开 / 关时用一句轻提示交代状态与演示边界
+                        if (window.matchMedia?.('(hover: none)').matches) {
+                          message.open({ key: 'web-search', type: 'info', content: on ? '已开启联网搜索（演示环境暂未接入真实检索）' : '已关闭联网搜索' });
+                        }
+                      }}
+                      aria-label="联网搜索"
+                    />
+                  </label>
+                </Tooltip>
+              )}
   </>);
+
+  // 方案二工作模式：最近召唤的智能体，其能力按钮以横排展示在输入框上方（卡片内不再重复）。
+  const activeAgentChoices = useMemo(() => {
+    if (!showAgentCapabilityBar) return null;
+    const messages = session?.messages ?? [];
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const item = messages[index];
+      if (item.kind === 'agent' && item.agentId && item.choices && canUseAgent(item.agentId)) {
+        const seed = AGENT_INVITATIONS.find(agent => agent.agentId === item.agentId);
+        return { agentId: item.agentId, options: seed?.options ?? item.choices };
+      }
+    }
+    return null;
+  }, [session?.messages, showAgentCapabilityBar, canUseAgent]);
 
   const items: BubbleItemType[] = useMemo(() => {
     const messages = (session?.messages ?? []).filter(m => m.kind !== 'agent' || (m.agentId && canUseAgent(m.agentId)));
@@ -563,6 +612,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
                   options={AGENT_INVITATIONS.find(agent => agent.agentId === m.agentId)?.options ?? m.choices}
                   hint={m.hint ?? ''}
                   disabled={!session || busy}
+                  showOptions={!showAgentCapabilityBar}
                   onPick={(task, label) => { void handleQuickTask(task, m.agentId, label); }}
                 />
               ) : null}
@@ -720,31 +770,6 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
               {modeSwitch}
             </div>
 
-            {(designPlan !== 'two' || interactionMode === 'work') && <div className="axn-home-block" data-testid="home-chat-recommend">
-              <Text type="secondary" className="axn-home-block-label">为你推荐</Text>
-              <ul className="axn-question-list">
-                {WELCOME_QUESTIONS.map((q, i) => {
-                  const meta = QUESTION_META[i % QUESTION_META.length];
-                  const QIcon = meta.icon;
-                  return (
-                    <li key={q}>
-                      <button
-                        type="button"
-                        className="axn-question-item"
-                        disabled={!session || busy}
-                        onClick={() => { void handleQuickTask(q); }}
-                      >
-                        <span className="axn-question-head" aria-hidden>
-                          <QIcon size={15} />
-                          <span>{meta.tag}</span>
-                        </span>
-                        <span className="axn-question-text">{q}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>}
           </div>
         </div>
       )}
@@ -774,8 +799,9 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         </div>
       )}
 
-      {/* 方案一的专家专属对话隐藏其他入口；方案二工作模式始终展示全部智能体。 */}
-      {(designPlan === 'two' || activeConversation?.source !== 'agent-management') && visibleAgents.length > 0 && <div className="axn-cp-chips-wrap">
+      {/* 方案二工作模式把智能体入口收进输入框左侧的「应急专家」弹窗；召唤出智能体后，
+          智能体入口行让位给该智能体的能力按钮（同一位置、同一套样式）。 */}
+      {!planTwoWorkMode && !activeAgentChoices && (designPlan === 'two' || activeConversation?.source !== 'agent-management') && visibleAgents.length > 0 && <div className="axn-cp-chips-wrap">
         <div className="axn-chips">
           {visibleAgents.map(agent => {
             const Icon = AGENT_ICONS[agent.agentId];
@@ -787,6 +813,20 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
           })}
         </div>
       </div>}
+      {/* 方案一 / 方案二工作模式：当前智能体的能力按钮横排显示在输入框上方。 */}
+      {showAgentCapabilityBar && activeAgentChoices && (
+        <div className="axn-cp-chips-wrap" data-testid="agent-capability-bar" data-agent-id={activeAgentChoices.agentId}>
+          <div className="axn-chips">
+            {activeAgentChoices.options.map(({ label, task }) => (
+              <Button key={task} size="small" className="axn-chip" data-choice-task={task}
+                disabled={!session || busy}
+                onClick={() => { void handleQuickTask(task, activeAgentChoices.agentId, label); }}>
+                {label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
       {/* 关联灾情与发送、语音操作位于输入框右下角。 */}
       <div className="axn-composer">
         <div ref={composerRef} className={`axn-composer-shell${mobileComposer ? ' is-mobile' : ''}`}>
@@ -899,6 +939,37 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
           />
         </div>
       </div>
+
+      {/* 方案二工作模式：输入框左侧「应急专家」按钮弹出，样式与点击「技能」后的浮层一致。 */}
+      {planTwoWorkMode && agentPickerOpen && composerRef.current && createPortal(
+        <div className="axn-composer-menu axn-composer-agent-menu" role="region" aria-label="选择应急专家" data-testid="agent-picker-menu">
+          <div className="axn-composer-menu-heading">
+            <span>应急专家 <span className="axn-composer-menu-count">{visibleAgents.length}</span></span>
+            <button type="button" className="axn-composer-menu-close" aria-label="关闭应急专家选择" onClick={() => setAgentPickerOpen(false)}><X size={14} /></button>
+          </div>
+          <div className="axn-composer-menu-list" role="listbox" aria-label="可选应急专家">
+            {visibleAgents.map(agent => {
+              const Icon = agentIcon(agent.agentId);
+              return (
+                <button
+                  key={agent.agentId}
+                  type="button"
+                  role="option"
+                  aria-selected={false}
+                  className="axn-composer-menu-option"
+                  data-agent-id={agent.agentId}
+                  disabled={!session || busy}
+                  onClick={() => { setAgentPickerOpen(false); handleAgentInvite(agent.agentId); }}
+                >
+                  <span className="axn-composer-menu-icon"><Icon size={18} aria-hidden /></span>
+                  <span className="axn-composer-menu-copy"><strong>{agent.name}</strong></span>
+                </button>
+              );
+            })}
+          </div>
+        </div>,
+        composerRef.current,
+      )}
     </div>
   );
 }

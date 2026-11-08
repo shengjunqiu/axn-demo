@@ -3,10 +3,12 @@ import { expect, test } from '@playwright/test';
 
 test('快捷任务在智能体卡片内展示执行过程和模拟结果', async ({ page }) => {
   await page.goto('/');
-  for (const [label, task, agent, result] of [
+  for (const [index, [label, task, agent, result]] of ([
     ['态势感知', '灾情摘要', '态势感知智能体', '人员伤亡情况'],
     ['救援资源管理', '周边救援资源', '资源管理智能体', '预计到达'],
-  ]) {
+  ] as const).entries()) {
+    // 召唤首个智能体后入口行被能力按钮接替，换智能体先开新对话
+    if (index > 0) await page.getByTestId('new-conversation-btn').click();
     await clickQuickTask(page, label, task);
     const card = page.getByTestId('agent-summon-card').filter({ hasText: agent }).last();
     await expect(card).toBeVisible();
@@ -49,6 +51,8 @@ test('五类智能体均有入口，方案与评估可执行并展示结果', as
   await expect(plan).toContainText('任务已完成，执行过程与结果如下', { timeout: 20000 });
   await expect(plan).toContainText('信息核实');
   await expect(plan).toContainText('专业审核');
+  // 入口行已被能力按钮接替，换智能体先开新对话
+  await page.getByTestId('new-conversation-btn').click();
   await clickQuickTask(page, '救援效果评估', '复盘评估分析');
   const evaluation = page.getByTestId('agent-summon-card').filter({ hasText: '效果评估智能体' }).last();
   await expect(evaluation).toHaveClass(/is-running/);

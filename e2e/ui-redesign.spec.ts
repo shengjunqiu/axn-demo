@@ -34,9 +34,8 @@ for (const { width, height, name } of DESKTOPS) {
     expect(sidebarWidth).toBeGreaterThanOrEqual(240);
     expect(sidebarWidth).toBeLessThanOrEqual(280);
 
-    // 首页：知识库引导问题 + 一体化输入区
-    await expect(page.getByTestId('home-chat-recommend')).toBeVisible();
-    await expect(page.getByTestId('home-chat-recommend').locator('.axn-question-item')).toHaveCount(4);
+    // 首页：不再展示推荐问题，一体化输入区保留
+    await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
     const inner = await page.locator('.axn-home-inner').boundingBox();
     expect(inner?.width ?? 0).toBeGreaterThanOrEqual(780);
     expect(inner?.width ?? 0).toBeLessThanOrEqual(920);
@@ -64,18 +63,13 @@ for (const { width, height, name } of DESKTOPS) {
   });
 }
 
-test('新建对话显示知识库引导问题', async ({ page }) => {
+test('首页与新建对话都不展示推荐问题', async ({ page }) => {
   await page.goto('/');
-  const questions = page.getByTestId('home-chat-recommend').locator('.axn-question-item');
+  await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
   // 新建对话（「新建任务」工作模式入口已下线，原「新建任务」分支随之移除）
   await page.getByTestId('new-conversation-btn').click();
   await expect(page.locator('.axn-gs-conversation.is-active')).toContainText('新的对话');
-  await expect(questions).toHaveCount(4);
-  await expect(questions.first()).toBeVisible();
-  // 问题取自知识库原文，点击后应命中对应答案
-  await questions.first().click();
   await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
-  await expect(page.locator('.axn-task-card').last()).toContainText('建议动作', { timeout: 30000 });
 });
 
 test('文书库打开 → 工作区显示 → 关闭回宽对话 → 同份重开不重新生成', async ({ page }) => {
@@ -238,7 +232,7 @@ test('从聊天预览切换文书：确认后切换，工作副本不丢弃', as
   await page.goto('/');
   for (const [index, name] of ['值班日报', '应急要情'].entries()) {
     if (index === 0) await clickDocTask(page, name);
-    else await page.getByTestId('doc-agent-choices').getByRole('button', { name, exact: true }).click();
+    else await page.getByTestId('agent-capability-bar').getByRole('button', { name, exact: true }).click();
     // 应急要情先填表头（用户 m00001），填完才生成
     if (name === '应急要情') await submitBriefForm(page);
     await expect(page.getByTestId('document-generation-card').last().getByTestId('doc-collect-done')).toBeVisible( { timeout: 20000 });
@@ -266,17 +260,14 @@ test('精简分屏保留未发送输入，关闭后恢复首页', async ({ page 
   const input = page.getByPlaceholder(/向安小能发送指令/);
   await input.fill('尚未发送的补充资料');
   await page.getByTestId('workspace-close-btn').click();
-  await expect(page.getByTestId('home-chat-recommend')).toBeVisible();
+  await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
   await expect(input).toHaveValue('尚未发送的补充资料');
   await expect(page.getByTestId('document-workspace')).toHaveCount(0);
 });
 
-test('五个智能体在同一对话中召唤并展示自我介绍与功能', async ({ page }) => {
+test('五类智能体召唤后自我介绍保留、能力按钮接替智能体入口', async ({ page }) => {
   await page.goto('/');
-  const chips = page.locator('.axn-chips');
-  const countBefore = await page.locator('.axn-gs-conversation').count();
-  const originalId = await page.locator('.axn-gs-conversation.is-active').getAttribute('data-testid');
-  const inviteCount = await page.getByTestId('agent-summon-card').count();
+  const chips = page.locator('.axn-chips').first();
   const historyText = '这段已有对话需要保留';
   await page.getByPlaceholder(/向安小能发送指令/).fill(historyText);
   await page.getByPlaceholder(/向安小能发送指令/).press('Enter');
@@ -289,31 +280,29 @@ test('五个智能体在同一对话中召唤并展示自我介绍与功能', as
     ['救援效果评估智能体', ['复盘评估分析']],
   ] as const;
   await expect(chips.getByRole('button')).toHaveCount(5);
-  await expect(page.locator('.axn-gs-agents')).toHaveCount(0);
   for (const [index, [name, options]] of agents.entries()) {
-    await chips.getByRole('button', { name, exact: true }).click();
-    await expect(page.locator('.axn-gs-conversation')).toHaveCount(countBefore);
-    await expect(page.locator('.axn-gs-conversation.is-active')).toHaveAttribute('data-testid', originalId!);
-    await expect(page.getByTestId('agent-summon-card')).toHaveCount(inviteCount + index + 1);
+    if (index > 0) await page.getByTestId('new-conversation-btn').click();
+    const chip = chips.getByRole('button', { name, exact: true });
+    const agentId = await chip.getAttribute('data-agent-id');
+    await chip.click();
     const invite = page.getByTestId('agent-summon-card').last();
     await expect(invite).toContainText(`您好，我是${name}`);
-    await expect(page.getByText(historyText, { exact: true })).toBeVisible();
     await expect(invite).not.toHaveClass(/is-running/);
-    for (const option of options) await expect(invite.getByRole('button', { name: option, exact: true })).toBeVisible();
-    await expect(invite.locator('.axn-doc-choice-row button')).toHaveCount(options.length);
-    await expect(chips.locator('[data-subtask], .axn-chip-arrow')).toHaveCount(0);
-    await expect(page.getByTestId('chat-link-incident')).toContainText('清河段堤防险情');
+    await expect(invite.locator('.axn-doc-choice-row')).toHaveCount(0);
+    const capabilityBar = page.getByTestId('agent-capability-bar');
+    await expect(capabilityBar).toHaveAttribute('data-agent-id', agentId!);
+    for (const option of options) await expect(capabilityBar.getByRole('button', { name: option, exact: true })).toBeVisible();
+    await expect(capabilityBar.locator('.axn-chip')).toHaveCount(options.length);
+    // 召唤后智能体入口行消失，能力按钮在同一位置接替
+    await expect(page.locator('.axn-chips [data-agent-id]')).toHaveCount(0);
+    if (index === 0) await expect(page.getByText(historyText, { exact: true })).toBeVisible();
   }
   await page.screenshot({ path: 'artifacts/ui-polish/agent-invitations.png' });
+  // 刷新后仍停在最后一个智能体的能力按钮上
   await page.reload();
   await expect(page.getByTestId('agent-summon-card').last()).toContainText('您好，我是救援效果评估智能体');
-  await expect(page.getByText(historyText, { exact: true })).toBeVisible();
-  await expect(page.locator('.axn-gs-conversation.is-active')).toHaveAttribute('data-testid', originalId!);
-  await expect(page.getByTestId('doc-agent-choices')).toBeVisible();
-  await page.getByTestId('doc-agent-choices').getByRole('button', { name: '值班日报', exact: true }).click();
-  await expect(chips.getByRole('button', { name: '文书生成智能体', exact: true })).toBeDisabled();
-  await expect(page.getByTestId('document-generation-card').getByTestId('doc-collect-done')).toBeVisible({ timeout: 20000 });
-  await expect(page.getByTestId('document-toolbar')).toContainText('防汛值守日报（新生成）');
+  await expect(page.getByTestId('agent-capability-bar')).toHaveAttribute('data-agent-id', 'agent-eval');
+  await expect(page.getByTestId('agent-capability-bar').getByRole('button', { name: '复盘评估分析', exact: true })).toBeVisible();
 });
 
 // 语音输入模拟（标注 vibe_1791960862035）：演示环境没有麦克风，点语音按钮改为「逐字实时转写」一段示例话语。
