@@ -720,7 +720,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
               {modeSwitch}
             </div>
 
-            <div className="axn-home-block" data-testid="home-chat-recommend">
+            {(designPlan !== 'two' || interactionMode === 'work') && <div className="axn-home-block" data-testid="home-chat-recommend">
               <Text type="secondary" className="axn-home-block-label">为你推荐</Text>
               <ul className="axn-question-list">
                 {WELCOME_QUESTIONS.map((q, i) => {
@@ -744,7 +744,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
                   );
                 })}
               </ul>
-            </div>
+            </div>}
           </div>
         </div>
       )}

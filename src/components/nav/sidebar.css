@@ -344,8 +344,7 @@
   min-width: 0;
   gap: 1px;
 }
-.axn-gs-account-name,
-.axn-gs-account-identity {
+.axn-gs-account-name {
   overflow: hidden;
   line-height: var(--lh-snug);
   text-overflow: ellipsis;
@@ -355,10 +354,6 @@
   color: var(--axn-text);
   font-size: var(--fs-body);
   font-weight: 600;
-}
-.axn-gs-account-identity {
-  color: var(--axn-muted);
-  font-size: var(--fs-meta);
 }
 .axn-gs-account-settings {
   flex-shrink: 0;

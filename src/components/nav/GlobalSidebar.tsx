@@ -252,7 +252,7 @@ export default function GlobalSidebar({ onClose }: { onClose?: () => void } = {}
       </div>
 
       {/*
-       * 6. 底部账户区：左侧当前用户（头像 + 两行：上行模拟用户名、下行身份），右侧设置按钮。
+       * 6. 底部账户区：左侧当前用户头像与姓名，右侧设置按钮。
        * 设置按钮承载两项：切换用户身份（原底部角色下拉）与聊天标准控件，
        * 避免底部堆叠多个入口。（关联事件改在对话区头部显示，不占侧栏）
        */}
@@ -265,9 +265,6 @@ export default function GlobalSidebar({ onClose }: { onClose?: () => void } = {}
             <span className="axn-gs-account-name">
               {actor.userName}
             </span>
-            <span className="axn-gs-account-identity">
-              {actor.name}
-            </span>
           </span>
           <Dropdown
             trigger={['click']}
@@ -279,7 +276,7 @@ export default function GlobalSidebar({ onClose }: { onClose?: () => void } = {}
                 {
                   type: 'group',
                   label: designPlan === 'one' ? '切换账号' : '当前账号',
-                  children: actors.filter(a => designPlan === 'one' || a.actorId === DEFAULT_ACTOR_ID).map((a) => ({ key: a.actorId, label: <span title={a.name}>{a.userName}</span> })),
+                  children: actors.filter(a => designPlan === 'one' || a.actorId === DEFAULT_ACTOR_ID).map((a) => ({ key: a.actorId, label: a.userName })),
                 },
                 { type: 'divider' },
                 {

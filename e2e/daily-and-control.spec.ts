@@ -52,7 +52,7 @@ test.describe('值班日报', () => {
     await dailyCard.getByRole('button', { name: '提交送审' }).click();
     await expect(page.locator('.doc-card', { hasText: '值班日报' }).filter({ hasText: '待签发' }).first()).toBeVisible({ timeout: 15000 });
     await page.getByTestId('account-settings').click();
-    await page.getByTitle('指挥员').click();
+    await page.getByRole('menuitem', { name: '赵强', exact: true }).click();
     await page.locator('.doc-card', { hasText: '值班日报' }).filter({ hasText: '待签发' }).first().getByRole('button', { name: /签\s*发/ }).click();
     await expect(page.locator('.doc-card', { hasText: '值班日报' }).filter({ hasText: '已签发' }).first()).toBeVisible({ timeout: 15000 });
     // 文书库中同样可见该已签发草稿（独立库入口不丢失业务状态）

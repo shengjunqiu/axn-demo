@@ -72,6 +72,7 @@ test('改版方案二固定张明远，切换对话和工作模式控制全部�
   };
   const experts = page.getByRole('button', { name: '应急专家', exact: true });
   await newConversation(page);
+  await expect(page.getByTestId('home-chat-recommend')).toBeVisible();
   await page.getByTestId('account-settings').click();
   await page.getByRole('menuitem', { name: '李雷', exact: true }).click();
   await expect(page.locator('.axn-gs-account-name')).toHaveText('李雷');
@@ -84,6 +85,7 @@ test('改版方案二固定张明远，切换对话和工作模式控制全部�
   await expect(experts).toHaveCount(0);
   await expect(chips).toHaveCount(0);
   await expect(page.locator('.axn-home-copy')).toHaveText('您可以向我提问，我会帮您解答疑问、梳理信息。');
+  await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
   await page.getByTestId('account-settings').click();
   await expect(page.getByRole('menuitem', { name: '张明远', exact: true })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: '李雷', exact: true })).toHaveCount(0);
@@ -95,6 +97,7 @@ test('改版方案二固定张明远，切换对话和工作模式控制全部�
   await expect(chips).toHaveCount(5);
   await expect(experts).toBeVisible();
   await expect(page.locator('.axn-home-copy')).toContainText('查询救援资源');
+  await expect(page.getByTestId('home-chat-recommend')).toBeVisible();
   await newConversation(page);
   await expect(modes.getByRole('radio', { name: '工作模式', exact: true })).toBeChecked();
   await expect(chips).toHaveCount(5);
@@ -112,6 +115,8 @@ test('改版方案二固定张明远，切换对话和工作模式控制全部�
   await expect(chips).toHaveCount(0);
   await expect(experts).toHaveCount(0);
   await expect(page.getByTestId('agent-invite-choices')).toHaveCount(0);
+  await newConversation(page);
+  await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
   await page.screenshot({ path: 'artifacts/plan-two-chat.png' });
   await switchPlan('方案一');
   await expect(page.locator('.axn-gs-account-name')).toHaveText('李雷');
@@ -119,6 +124,7 @@ test('改版方案二固定张明远，切换对话和工作模式控制全部�
   await newConversation(page);
   await expect(chips).toHaveCount(2);
   await expect(experts).toBeVisible();
+  await expect(page.getByTestId('home-chat-recommend')).toBeVisible();
 });
 
 async function openNav(page: Page, label: string) {

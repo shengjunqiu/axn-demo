@@ -156,7 +156,7 @@ test.describe('安小能主线（要情全链路）', () => {
     await docCard.getByRole('button', { name: '提交送审' }).click();
     await expect(docCard.getByText('待签发')).toBeVisible({ timeout: 15000 });
     await page.getByTestId('account-settings').click();
-    await page.getByTitle('指挥员').click();
+    await page.getByRole('menuitem', { name: '赵强', exact: true }).click();
     await docCard.getByRole('button', { name: /签\s*发/ }).click();
     await expect(docCard.getByText('已签发')).toBeVisible({ timeout: 15000 });
     await expect(docCard.getByText('签发人 指挥员', { exact: false })).toBeVisible();
