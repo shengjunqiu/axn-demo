@@ -293,7 +293,9 @@
 .axn-thinking-title { font-weight: 600; }
 .axn-thinking-meta { color: var(--axn-faint); font-variant-numeric: tabular-nums; }
 .axn-thinking.is-thinking .axn-thinking-meta { animation: axn-breathe 2.4s var(--ease-in-out) infinite; }
-.axn-thinking-body { margin: 0 0 var(--space-2) var(--space-2); padding-left: var(--space-3); border-left: 2px solid var(--axn-border); color: var(--axn-muted); font-size: var(--fs-caption); line-height: var(--lh-caption); }
+/* 思考正文固定高度（用户 94637a71）：推理再长也不撑高消息区，超出部分在块内滚动；
+   运行中由 ThinkingPanel 自动跟随到底部，结束后用户可自行回看。 */
+.axn-thinking-body { height: 108px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--axn-border) transparent; margin: 0 0 var(--space-2) var(--space-2); padding-left: var(--space-3); border-left: 2px solid var(--axn-border); color: var(--axn-muted); font-size: var(--fs-caption); line-height: var(--lh-caption); }
 .axn-thinking-body p { margin: 0 0 var(--space-1-5); }
 .axn-thinking-body p:last-child { margin-bottom: 0; }
 /* 展开的步骤：条内时间线，顶部细分隔线 */

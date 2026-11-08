@@ -83,6 +83,28 @@ for (const width of [320, 390]) {
   });
 }
 
+// 普通回复的「深度思考」正文固定高度，内容超出时在块内滚动，不撑高消息区。
+test('深度思考正文高度固定且超长时块内滚动', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByPlaceholder(/向安小能发送指令/).fill('你好');
+  await page.keyboard.press('Enter');
+  const body = page.getByTestId('thinking-body').last();
+  await expect(body).toBeVisible();
+  const box = await body.evaluate(el => ({ clientHeight: el.clientHeight, overflowY: getComputedStyle(el).overflowY }));
+  expect(box).toEqual({ clientHeight: 108, overflowY: 'auto' });
+  // 思考结束后收起成一行耗时，再展开回看全文
+  await expect(page.getByTestId('thinking-toggle').last()).toContainText('3s', { timeout: 8000 });
+  await page.getByTestId('thinking-toggle').last().click();
+  const scroll = await page.getByTestId('thinking-body').last().evaluate(el => {
+    el.scrollTop = el.scrollHeight;
+    return { clientHeight: el.clientHeight, scrollHeight: el.scrollHeight, scrollTop: el.scrollTop };
+  });
+  expect(scroll.clientHeight).toBe(108);
+  expect(scroll.scrollHeight).toBeGreaterThan(scroll.clientHeight);
+  expect(scroll.scrollTop).toBeGreaterThan(0);
+});
+
 for (const width of [1440, 390]) {
   test(`输入框选择技能支持搜索、切换对话和清除 ${width}px`, async ({ page }) => {
     const errors: string[] = [];

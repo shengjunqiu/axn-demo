@@ -88,7 +88,7 @@ function PlainReply({ text, createdAt, sessionId, messageId }: { text: string; c
   }, [animate]);
   return (
     <>
-      <ThinkingPanel text={PLAIN_REPLY_THINKING} running={thinking} seconds={PLAIN_THINKING_MS / 1000} animate={animate} typeDuration={PLAIN_THINKING_MS - 200} />
+      <ThinkingPanel text={PLAIN_REPLY_THINKING} running={thinking} seconds={PLAIN_THINKING_MS / 1000} animate={animate && thinking} typeDuration={PLAIN_THINKING_MS - 200} />
       {!thinking && (
         <>
           <Typewriter text={text} animate={animate} />
