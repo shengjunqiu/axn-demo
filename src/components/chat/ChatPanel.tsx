@@ -506,7 +506,6 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   // 关联灾情：从输入框入口打开居中弹窗，支持事件名称搜索。
   // 未关联时显示 placeholder「选择关联灾情事件」（标注 vibe_1791787570681）。
   const incidentSelect = (
-    <>
       <button
         type="button"
         className={`axn-cp-select${linkValue === BLANK ? ' is-empty' : ''}`}
@@ -521,6 +520,11 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         <span className="axn-cp-select-text">{mobileComposer ? '灾情' : linkValue === BLANK ? '选择关联灾情事件' : eventDisplayName(linkValue)}</span>
         <ChevronDown size={12} aria-hidden className="axn-cp-select-caret" />
       </button>
+  );
+
+  /* 选择器独立于触发按钮渲染：方案二对话模式或文书智能体激活时按钮会隐藏，
+     但点输入框里的 #灾情事件 仍必须能弹出事件选择器（用户 d134fc88）。 */
+  const incidentPicker = (
       <IncidentPicker
         open={incidentPickerOpen}
         containerRef={composerRef}
@@ -547,7 +551,6 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
           });
         }}
       />
-    </>
   );
 
   /* 上传文件（输入框左下角，标注见本行）：演示环境不落盘也不上传，只把文件名/大小附在消息上。
@@ -1084,6 +1087,8 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
           />
         </div>
       </div>
+
+      {incidentPicker}
 
       {/* 方案二工作模式：输入框左侧「应急专家」按钮弹出，样式与点击「技能」后的浮层一致。 */}
       {planTwoWorkMode && agentPickerOpen && composerRef.current && createPortal(

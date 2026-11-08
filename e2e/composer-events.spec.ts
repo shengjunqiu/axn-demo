@@ -1,5 +1,24 @@
 import { expect, test } from '@playwright/test';
 
+for (const width of [1440, 390]) {
+  test(`文书模板里点 #灾情事件 可弹出事件选择并替换 ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/');
+    await page.getByPlaceholder(/向安小能发送指令/).waitFor();
+    // 召唤文书生成智能体后输入框的灾情按钮隐藏，模板占位符仍要能打开事件选择器
+    await page.locator('.axn-chips [data-agent-id="agent-doc"]').click();
+    const input = page.locator('.ant-sender-input');
+    await expect(input).toHaveValue(/帮我写一份/);
+    await expect(page.getByTestId('chat-link-incident')).toHaveCount(0);
+    await page.locator('.axn-token[data-token="灾情事件"]').click();
+    const picker = page.getByTestId('incident-picker');
+    await expect(picker).toBeVisible();
+    await picker.getByRole('option', { name: /清河段堤防险情/ }).click();
+    await expect(picker).toBeHidden();
+    await expect(input).toHaveValue(/针对的事件是清河段堤防险情/);
+  });
+}
+
 for (const { width, workspace } of [{ width: 1440, workspace: false }, { width: 390, workspace: false }, { width: 1366, workspace: true }]) {
   test(`居中事件弹窗支持搜索、键盘选择和确认绑定 ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 928 });
