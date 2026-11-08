@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { NAV_PATH } from './navRoutes';
 import type { NavPage } from '@/domain/types';
 import { useConversationStore } from '@/store/conversationStore';
+import { useDemoStore } from '@/store/demoStore';
 import PageHeader from '@/components/common/PageHeader';
 import SkillsPage from './SkillsPage';
 import MyFilesPage from './MyFilesPage';
@@ -130,8 +131,14 @@ const AGENT_DESCRIPTIONS: Record<string, string> = {
 
 export function AgentsPage() {
   const navigate = useNavigate();
-  const { agents } = useAgentAccess();
+  const { directoryAgents } = useAgentAccess();
+  const designPlan = useDemoStore(s => s.designPlan);
+  const interactionMode = useDemoStore(s => s.interactionMode);
   const summon = (agentId: string) => {
+    // 方案二对话模式也能从左侧菜单浏览专家；点「召唤」时切到工作模式，智能体入口才会生效。
+    if (designPlan === 'two' && interactionMode !== 'work') {
+      useDemoStore.getState().setInteractionMode('work');
+    }
     if (summonAgentFromManagement(agentId)) navigate(NAV_PATH.assistant);
   };
 
@@ -140,10 +147,10 @@ export function AgentsPage() {
       <PageHeader
         title="应急专家"
         sub="认识你的应急协作伙伴。召唤后开启新对话，再选择需要的任务。"
-        extra={<Tag>{agents.length} 个智能体</Tag>}
+        extra={<Tag>{directoryAgents.length} 个智能体</Tag>}
       />
       <div className="axn-np-grid axn-agents-grid">
-        {agents.map((agent) => {
+        {directoryAgents.map((agent) => {
           const Icon = agentIcon(agent.agentId);
           return (
             <Card key={agent.agentId} className="axn-agent-card" data-agent-id={agent.agentId}>

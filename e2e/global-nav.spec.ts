@@ -83,8 +83,9 @@ test('改版方案二固定张明远，切换对话和工作模式控制全部�
   await expect(modes.getByRole('radio', { name: '对话模式', exact: true })).toBeChecked();
   await expect(page.locator('.axn-home-copy + .axn-chat-mode-bar .axn-chat-mode-switch')).toBeVisible();
   await expect(page.locator('.axn-chat-head .axn-chat-mode-switch')).toHaveCount(0);
-  await expect(experts).toHaveCount(0);
+  await expect(experts).toBeVisible();
   await expect(chips).toHaveCount(0);
+  await expect(page.getByTestId('chat-link-incident')).toHaveCount(0);
   await expect(page.locator('.axn-home-copy')).toHaveText('您可以向我提问，我会帮您解答疑问、梳理信息。');
   await expect(page.getByTestId('home-chat-recommend')).toHaveCount(0);
   await page.getByTestId('account-settings').click();
@@ -92,7 +93,11 @@ test('改版方案二固定张明远，切换对话和工作模式控制全部�
   await expect(page.getByRole('menuitem', { name: '李雷', exact: true })).toHaveCount(0);
   await expect(page.getByRole('menuitem', { name: '赵强', exact: true })).toHaveCount(0);
   await page.locator('.axn-home-copy').click();
-  await page.goto('/#/agents');
+  // 对话模式下左侧「应急专家」也可进入浏览；召唤时切到工作模式
+  await experts.click();
+  await expect(page).toHaveURL(/#\/agents$/);
+  await expect(page.locator('.axn-agent-card')).toHaveCount(5);
+  await openNav(page, '安小能');
   await expect(page).toHaveURL(/#\/assistant$/);
   await switchMode('工作模式');
   await expect(chips).toHaveCount(0);
@@ -126,7 +131,8 @@ test('改版方案二固定张明远，切换对话和工作模式控制全部�
   await expect(page.getByTestId('agent-capability-bar').getByRole('button')).toHaveCount(3);
   await switchMode('对话模式');
   await expect(chips).toHaveCount(0);
-  await expect(experts).toHaveCount(0);
+  await expect(experts).toBeVisible();
+  await expect(page.getByTestId('chat-link-incident')).toHaveCount(0);
   await expect(agentPicker).toHaveCount(0);
   await expect(page.getByTestId('agent-capability-bar')).toHaveCount(0);
   await expect(page.getByTestId('agent-invite-choices')).toHaveCount(0);
@@ -281,6 +287,26 @@ test('4b. 删除对话（Popconfirm 确认 → 条目移除 → active 切换）
   // 刷新后删除仍生效（持久化）
   await page.reload();
   await expect(page.locator('.axn-gs-conversation')).toHaveCount(after);
+});
+
+test('4c. 历史会话删空后首页输入区可用（自动补建新的对话）', async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem('anneng-demo:v1:conversation', JSON.stringify({
+      __schema: 2,
+      data: { conversations: {}, activeConversationId: null, settings: {} },
+    }));
+  });
+  await page.reload();
+  // 没有可用会话时自动补建一个，输入框/智能体/技能不再停在「会话初始化中」
+  await expect(page.locator('.axn-gs-conversation')).toHaveCount(1);
+  await expect(page.locator('.axn-gs-conversation').first()).toContainText('新的对话');
+  await expect(page.locator('.ant-sender-input')).toHaveAttribute('placeholder', /向安小能发送指令/);
+  const chips = page.locator('.axn-chips [data-agent-id]');
+  await expect(chips).toHaveCount(5);
+  await expect(chips.first()).toBeEnabled();
+  await expect(page.getByTestId('composer-skill-picker')).toBeEnabled();
+  await chips.first().click();
+  await expect(page.getByTestId('agent-capability-bar')).toBeVisible();
 });
 
 test('5. 菜单切换不丢 active 会话', async ({ page }) => {

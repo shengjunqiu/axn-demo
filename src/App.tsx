@@ -52,7 +52,7 @@ export type WorkspaceTab = 'resource' | 'knowledge';
 
 export default function AppRoot() {
   const storageWarning = useDemoStore((s) => s.storageWarning);
-  const { agents } = useAgentAccess();
+  const { directoryAgents } = useAgentAccess();
   const activeConversationId = useConversationStore((s) => s.activeConversationId);
   const conversations = useConversationStore((s) => s.conversations);
   const scope = useActiveScope();
@@ -215,7 +215,7 @@ export default function AppRoot() {
             </div>
           } />
           <Route path="/agents" element={
-            agents.length === 0 ? <Navigate key={location.key} to="/assistant" replace /> :
+            directoryAgents.length === 0 ? <Navigate key={location.key} to="/assistant" replace /> :
             <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
               <Suspense><NavPageContent page="agents" /></Suspense>
             </div>

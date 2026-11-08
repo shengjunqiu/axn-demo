@@ -76,6 +76,8 @@ test('文书生成不需要事件，可直接选择文书类型', async ({ page 
   await page.goto('/#/agents');
   await page.getByRole('button', { name: '召唤文书生成智能体', exact: true }).click();
   await expect(page.getByRole('button', { name: '选择事件', exact: true })).toHaveCount(0);
+  // 文书智能体展开能力按钮时，模板里已有 #灾情事件，输入框不再重复显示灾情按钮
+  await expect(page.getByTestId('chat-link-incident')).toHaveCount(0);
   await page.getByRole('button', { name: '值班日报', exact: true }).click();
   await expect(page.getByTestId('document-workspace')).toBeVisible({ timeout: 20000 });
   await expect(page.getByTestId('incident-picker')).toHaveCount(0);

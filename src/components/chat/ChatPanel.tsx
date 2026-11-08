@@ -148,6 +148,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   const activeConversation = useConversationStore((s) =>
     s.activeConversationId ? s.conversations[s.activeConversationId] : null,
   );
+  const conversations = useConversationStore((s) => s.conversations);
   const activeConversationId = activeConversation?.id ?? null;
   const session = useSessionStore((s) => s.sessions[s.sessionByConversation[activeConversationId ?? ''] ?? '']);
   const tasks = useSessionTasks(session);
@@ -282,6 +283,16 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         .ensureSessionForConversation(activeConversation.id, activeConversation.eventId ?? currentEventId);
     }
   }, [activeConversation, currentEventId]);
+
+  // 历史会话被删空（或持久化的 activeConversationId 失效）时，输入区会一直停在「会话初始化中」，
+  // 智能体 / 技能按钮全部禁用（用户 9569dad7）。没有可用会话就补建一个「新的对话」，让首页可以直接输入。
+  useEffect(() => {
+    const store = useConversationStore.getState();
+    if (store.activeConversationId && store.conversations[store.activeConversationId]) return;
+    const latest = Object.values(store.conversations).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0];
+    if (latest) store.selectConversation(latest.id);
+    else store.createConversation({ title: '新的对话', type: 'general', status: 'active' });
+  }, [activeConversation, conversations]);
 
   const runningTask = useMemo(
     () =>
@@ -602,6 +613,10 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   // 能力按钮是否还在：执行完一次任务（或生成完一份文书）后收起；方案一随之恢复智能体入口。
   const showCapabilityBar = Boolean(activeAgentChoices && dismissedBarMessageId !== activeAgentChoices.messageId);
   activeBarMessageRef.current = activeAgentChoices?.messageId ?? null;
+  // 方案二对话模式不展示输入框里的关联灾情入口；当前召唤的是文书智能体时，模板里已有
+  // 可点的 #灾情事件，也不再重复显示灾情按钮（用户 673cf1ee）。
+  const showIncidentSelect = !(designPlan === 'two' && interactionMode === 'chat')
+    && activeAgentChoices?.agentId !== 'agent-doc';
   useEffect(() => {
     const run = barRunRef.current;
     if (!run || !activeAgentChoices || activeAgentChoices.messageId !== run.messageId) return;
@@ -1022,12 +1037,12 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
               <ComposerSkillPicker conversationId={activeConversationId ?? ''} disabled={!session || busy} compact={mobileComposer}
                 open={skillPickerOpen} slashQuery={skillQuery} containerRef={composerRef} onOpenChange={changeSkillPickerOpen}
                 onAfterClose={() => composerRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus()} />
-              {mobileComposer && incidentSelect}
+              {mobileComposer && showIncidentSelect && incidentSelect}
               </div>
             )}
             suffix={(_, { components: { LoadingButton, SendButton, SpeechButton } }) => (
               <div className="axn-composer-actions">
-                {!mobileComposer && incidentSelect}
+                {!mobileComposer && showIncidentSelect && incidentSelect}
                 {/* 空输入→语音，有文字→发送，运行中→停止（可取消当前任务）；模拟转写中保持语音按钮，
                     再点一下可中途停下（此时输入框已有字，否则会被换成发送按钮）
                     同一位置同一动作槽：语音按钮与发送按钮同形（实心圆形主色容器）。

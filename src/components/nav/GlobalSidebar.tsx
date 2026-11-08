@@ -68,7 +68,7 @@ export default function GlobalSidebar({ onClose }: { onClose?: () => void } = {}
   const actorId = useDemoStore((s) => s.actorId);
   const designPlan = useDemoStore((s) => s.designPlan);
   const setDesignPlan = useDemoStore((s) => s.setDesignPlan);
-  const { agents } = useAgentAccess();
+  const { directoryAgents } = useAgentAccess();
   const setActor = useDemoStore((s) => s.setActor);
   const actor = useDemoStore((s) => s.getActor());
   const scope = useActiveScope();
@@ -191,7 +191,7 @@ export default function GlobalSidebar({ onClose }: { onClose?: () => void } = {}
 
       {/* 3. 一级功能导航（文书库入口隐藏，页面与工作区内入口保留） */}
       <nav className="axn-gs-nav" aria-label="全局功能导航">
-        {NAV.filter(item => item.key !== 'agents' || agents.length > 0).map((item) => (
+        {NAV.filter(item => item.key !== 'agents' || directoryAgents.length > 0).map((item) => (
           <button
             key={item.key}
             className={`axn-gs-nav-item${activeNav === item.key ? ' is-active' : ''}`}

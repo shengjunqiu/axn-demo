@@ -127,6 +127,15 @@ function buildSeedMap(): Record<string, Conversation> {
   return map;
 }
 
+// 持久化的 activeConversationId 可能指向已删除的会话（例如删光最后一个对话后刷新）。
+// 指向有效会话才沿用；否则选最近更新的一个；确实没有会话就留空，由对话页补建「新的对话」。
+const initialConversations = persisted?.conversations ?? buildSeedMap();
+const initialActiveConversationId = persisted === null
+  ? 'conv-seed-nandi'
+  : persisted.activeConversationId && initialConversations[persisted.activeConversationId]
+    ? persisted.activeConversationId
+    : Object.values(initialConversations).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0]?.id ?? null;
+
 export interface CreateConversationInput {
   source?: Conversation['source'];
   title: string;
@@ -156,8 +165,8 @@ interface ConversationState {
 }
 
 export const useConversationStore = create<ConversationState>()((set, get) => ({
-  conversations: persisted?.conversations ?? buildSeedMap(),
-  activeConversationId: persisted?.activeConversationId ?? 'conv-seed-nandi',
+  conversations: initialConversations,
+  activeConversationId: initialActiveConversationId,
   activeNav: 'assistant',
   settings: { ...DEFAULT_SETTINGS, ...(persisted?.settings ?? {}) },
 
