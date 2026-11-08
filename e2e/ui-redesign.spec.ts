@@ -232,7 +232,10 @@ test('从聊天预览切换文书：确认后切换，工作副本不丢弃', as
   await page.goto('/');
   for (const [index, name] of ['值班日报', '应急要情'].entries()) {
     if (index === 0) await clickDocTask(page, name);
-    else await page.getByTestId('agent-capability-bar').getByRole('button', { name, exact: true }).click();
+    else {
+      await page.getByTestId('agent-capability-bar').getByRole('button', { name, exact: true }).click();
+      await page.locator('.ant-sender-input').press('Enter');
+    }
     // 应急要情先填表头（用户 m00001），填完才生成
     if (name === '应急要情') await submitBriefForm(page);
     await expect(page.getByTestId('document-generation-card').last().getByTestId('doc-collect-done')).toBeVisible( { timeout: 20000 });

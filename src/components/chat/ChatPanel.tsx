@@ -8,8 +8,9 @@ import { formatSize } from '@/shared/format';
  * 会话跟随演示事件切换（ensureSessionForConversation）；消息与任务状态全部订阅 sessionStore，不本地复制。
  * 本界面为模拟数据演示（规则意图识别，不接真实大模型）。
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import type { TextAreaRef } from 'antd/es/input/TextArea';
 import { useSessionTasks } from '@/hooks/useSessionTasks';
 import {
   ArrowUp,
@@ -52,6 +53,7 @@ import IncidentPicker from './IncidentPicker';
 import ComposerSkillPicker from './ComposerSkillPicker';
 import BrandMark from '@/components/brand/BrandMark';
 import { COMPOSE_EVENT } from '@/components/doc/SelectionAssist';
+import TokenTextArea, { type TokenTextAreaProps } from './TokenTextArea';
 import './chat.css';
 
 const { Text } = Typography;
@@ -65,6 +67,10 @@ const AVATAR = <div className="axn-chat-avatar"><BrandMark size={28} /></div>;
 
 // 语音输入模拟用的示例话语（标注 vibe_1791960862035）：点麦克风逐字「转写」这句话。
 const SPEECH_SAMPLE = '请汇总南堤堤防管涌险情的最新处置进展，并生成一份情况报告';
+
+/** 文书生成智能体的输入模板：# 后是斜体占位符，点上方文书类型或占位符后替换。 */
+const DOC_TEMPLATE = '帮我写一份#文书类型，针对的事件是#灾情事件';
+const DOC_TYPE_PATTERN = /^帮我写一份\s*(值班日报|应急要情|周工作动态|工作总结)/;
 
 /** 五类智能体共用的功能选择区。文书入口保留已有测试定位。 */
 function AgentInviteChoices({ agentId, options, hint, disabled, onPick, showOptions = true }: {
@@ -124,11 +130,13 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   const [pendingEventAction, setPendingEventAction] = useState<{ conversationId: string; label: string; run: () => void } | null>(null);
   const [skillPickerOpen, setSkillPickerOpen] = useState(false);
   const [incidentPickerOpen, setIncidentPickerOpen] = useState(false);
+  /** 从输入框里的 #灾情事件 占位符打开选择器：选中后只替换文本，不改会话关联。 */
+  const [pendingEventToken, setPendingEventToken] = useState(false);
   /** 方案二工作模式：智能体入口收进「应急专家」弹窗，不再在输入框上方平铺 chips。 */
   const [agentPickerOpen, setAgentPickerOpen] = useState(false);
   /** 应急要情的表头表单：点「生成应急要情」先弹出，填完直接出件（不再演逐项收集）。 */
   const [briefFormOpen, setBriefFormOpen] = useState(false);
-  useEffect(() => { setIncidentPickerOpen(false); setAgentPickerOpen(false); setPendingEventAction(null); }, [activeConversationId]);
+  useEffect(() => { setIncidentPickerOpen(false); setPendingEventToken(false); setAgentPickerOpen(false); setPendingEventAction(null); }, [activeConversationId]);
   useEffect(() => {
     setPendingEventAction(null);
     setBriefFormOpen(false);
@@ -284,6 +292,19 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
     const pendingAttachments = attachments;
     // 上传门开着时，把文件直接发过来 = 上传并开始生成，所以允许只传文件不写字。
     if (!text && !(waitingUpload && pendingAttachments.length)) return;
+    // 文书模板句：走对应文书的既有生成入口（值班日报/应急要情/周工作动态/工作总结）。
+    const docTemplate = text.match(DOC_TYPE_PATTERN);
+    if (docTemplate) {
+      const label = docTemplate[1];
+      const task = label === '值班日报' ? '生成值班日报'
+        : label === '应急要情' ? '生成应急要情'
+          : label === '周工作动态' ? '生成应急救援周工作动态'
+            : '生成工作总结';
+      setInput('');
+      setAttachments([]);
+      await handleQuickTask(task, 'agent-doc', label, text);
+      return;
+    }
     const waitingSummary = session.messages.find(message => message.documentWorkflow?.stage === 'waiting_input');
     const documentInput = (waitingUpload && pendingAttachments.length) || waitingSummary || /生成.*工作总结|工作总结.*生成/.test(text);
     const agentContext = activeConversation?.source === 'agent-management' ? session.messages.find(item => item.kind === 'agent' && item.choices)?.agentId : undefined;
@@ -314,11 +335,11 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
     void submitDynamicsSources(session.sessionId, waitingUpload.messageId, files);
   };
 
-  const handleQuickTask = async (text: string, agentId?: string, label?: string): Promise<void> => {
+  const handleQuickTask = async (text: string, agentId?: string, label?: string, displayText?: string): Promise<void> => {
     if (!session || busy) return;
     const demo = useDemoStore.getState();
     if (agentId && !canAccessAgent(demo.actorId, agentId, demo)) return;
-    if (await requestEventBeforeTask(text, () => { void handleQuickTask(text, agentId, label); }, agentId, label)) return;
+    if (await requestEventBeforeTask(text, () => { void handleQuickTask(text, agentId, label, displayText); }, agentId, label)) return;
     if (text === '生成工作总结') {
       if (session && !busy) await generateWorkSummary(session.sessionId, text);
       return;
@@ -341,7 +362,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
       { label: '交接要求', value: '持续跟踪重点风险、核实待报信息并做好交接' },
       { label: '文书格式', value: '红头格式，包含标题、正文与落款' },
     ];
-    useSessionStore.getState().appendMessage(session.sessionId, { sessionId: session.sessionId, role: 'user', kind: 'text', text, taskId: null });
+    useSessionStore.getState().appendMessage(session.sessionId, { sessionId: session.sessionId, role: 'user', kind: 'text', text: displayText ?? text, taskId: null });
     await runDocumentGeneration({ sessionId: session.sessionId, code, elements, role: text });
   };
 
@@ -460,11 +481,19 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
       <IncidentPicker
         open={incidentPickerOpen}
         containerRef={composerRef}
-        value={linkValue === BLANK ? 'none' : linkValue}
+        value={pendingEventToken ? 'none' : linkValue === BLANK ? 'none' : linkValue}
         taskLabel={pendingEventAction?.label}
-        hasUnsavedChanges={useWorkspaceStore.getState().isDirty(scope)}
-        onClose={() => { setIncidentPickerOpen(false); setPendingEventAction(null); }}
+        hasUnsavedChanges={pendingEventToken ? false : useWorkspaceStore.getState().isDirty(scope)}
+        confirmOnPick={pendingEventToken}
+        onClose={() => { setIncidentPickerOpen(false); setPendingEventToken(false); setPendingEventAction(null); }}
         onSelect={(id) => {
+          if (pendingEventToken) {
+            setPendingEventToken(false);
+            setIncidentPickerOpen(false);
+            setInput(previous => previous.replace('#灾情事件', eventDisplayName(id)));
+            requestAnimationFrame(() => composerRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus());
+            return;
+          }
           const pendingAction = pendingEventAction;
           handleLinkChange(id, () => {
             if (!pendingAction) return;
@@ -546,14 +575,60 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
       const item = messages[index];
       if (item.kind === 'agent' && item.agentId && item.choices && canUseAgent(item.agentId)) {
         const seed = AGENT_INVITATIONS.find(agent => agent.agentId === item.agentId);
-        return { agentId: item.agentId, options: seed?.options ?? item.choices };
+        return { agentId: item.agentId, options: seed?.options ?? item.choices, messageId: item.messageId };
       }
     }
     return null;
   }, [session?.messages, showAgentCapabilityBar, canUseAgent]);
 
+  // 文书生成智能体被召唤后，输入框预填模板（每个召唤消息只填一次，不覆盖用户已输入的内容）。
+  const seededDocSummon = useRef<string | null>(null);
+  useEffect(() => {
+    if (!showAgentCapabilityBar || activeAgentChoices?.agentId !== 'agent-doc') return;
+    const messageId = activeAgentChoices.messageId;
+    if (seededDocSummon.current === messageId) return;
+    seededDocSummon.current = messageId;
+    setInput(previous => (previous.trim() ? previous : DOC_TEMPLATE));
+  }, [activeAgentChoices, showAgentCapabilityBar]);
+
+  /** 输入框里的斜体占位符：点 #文书类型 聚焦输入框（由上方的类型按钮替换），点 #灾情事件 打开事件选择器。 */
+  const handleTokenClick = (token: string) => {
+    if (token === '文书类型') {
+      composerRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus();
+      return;
+    }
+    if (token === '灾情事件') {
+      changeSkillPickerOpen(false);
+      setAgentPickerOpen(false);
+      setPendingEventAction(null);
+      setPendingEventToken(true);
+      setIncidentPickerOpen(true);
+    }
+  };
+  const tokenClickRef = useRef(handleTokenClick);
+  tokenClickRef.current = handleTokenClick;
+  const ComposerInput = useMemo(() => {
+    const Wrapped = forwardRef<TextAreaRef, TokenTextAreaProps>((props, ref) => (
+      <TokenTextArea {...props} ref={ref} onTokenClick={token => tokenClickRef.current(token)} />
+    ));
+    Wrapped.displayName = 'ComposerInput';
+    return Wrapped;
+  }, []);
+
+  /** 点上方文书类型：模板已铺开时只替换 #文书类型（或已选类型），不直接生成。 */
+  const applyDocType = (label: string) => {
+    setInput(previous => {
+      if (previous.includes('#文书类型')) return previous.replace('#文书类型', label);
+      const matched = previous.match(DOC_TYPE_PATTERN);
+      if (matched) return previous.replace(matched[1], label);
+      return previous;
+    });
+  };
+
   const items: BubbleItemType[] = useMemo(() => {
-    const messages = (session?.messages ?? []).filter(m => m.kind !== 'agent' || (m.agentId && canUseAgent(m.agentId)));
+    // 文书工作流的智能体消息可能没有 agentId（周工作动态/工作总结），按文档工作流放行。
+    const messages = (session?.messages ?? []).filter(m => m.kind !== 'agent'
+      || (m.agentId ? canUseAgent(m.agentId) : Boolean(m.documentWorkflow) && showAgentCapabilityBar));
     const summonedTasks = new Set(messages.filter(message => message.kind === 'agent' && message.taskId && tasks[message.taskId]).map(message => message.taskId));
     const list: BubbleItemType[] = messages.filter(message => !(message.kind === 'task' && summonedTasks.has(message.taskId))).map((m) => {
       if (m.reviewDocumentId) {
@@ -676,7 +751,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
       });
     }
     return list;
-  }, [session?.messages, tasks, onOpenDrawer, busy, activeConversationId, attachments, briefFormOpen, submitBriefForm, canUseAgent]);
+  }, [session?.messages, tasks, onOpenDrawer, busy, activeConversationId, attachments, briefFormOpen, submitBriefForm, canUseAgent, showAgentCapabilityBar]);
 
   const hasMessages = items.length > 0;
   const modeSwitch = designPlan === 'two' ? (
@@ -820,7 +895,20 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             {activeAgentChoices.options.map(({ label, task }) => (
               <Button key={task} size="small" className="axn-chip" data-choice-task={task}
                 disabled={!session || busy}
-                onClick={() => { void handleQuickTask(task, activeAgentChoices.agentId, label); }}>
+                onClick={() => {
+                  // 文书智能体：输入框空时铺模板，模板已铺开时只替换类型，发送时才生成。
+                  if (activeAgentChoices.agentId === 'agent-doc') {
+                    if (!input.trim()) {
+                      setInput(`帮我写一份${label}，针对的事件是#灾情事件`);
+                      return;
+                    }
+                    if (input.trimStart().startsWith('帮我写一份')) {
+                      applyDocType(label);
+                      return;
+                    }
+                  }
+                  void handleQuickTask(task, activeAgentChoices.agentId, label);
+                }}>
                 {label}
               </Button>
             ))}
@@ -852,6 +940,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             </ul>
           )}
           <Sender
+            components={{ input: ComposerInput }}
             value={input}
             onChange={(value) => {
               setInput(value);

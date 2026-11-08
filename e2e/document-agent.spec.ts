@@ -136,7 +136,10 @@ test('聊天文书快捷操作无需补录即可生成右侧模拟红头文书',
   for (const [index, [name, title]] of [['值班日报', '防汛值守日报'], ['应急要情', '重点河段险情处置要情']].entries()) {
     // 第一次从智能体入口召唤；之后入口行已被能力按钮接替，直接在横排里选类型
     if (index === 0) await clickDocTask(page, name);
-    else await page.getByTestId('agent-capability-bar').getByRole('button', { name, exact: true }).click();
+    else {
+      await page.getByTestId('agent-capability-bar').getByRole('button', { name, exact: true }).click();
+      await page.locator('.ant-sender-input').press('Enter');
+    }
     // 应急要情先铺表头表单（用户 m00167）：填完直接出件，不再演一遍要素收集。附图选择器也要验一下（用户 m00215）。
     if (name === '应急要情') {
       await submitBriefForm(page, { 'brief-form-issue': '应急报〔2026〕099号', 'brief-form-reporting-unit': '漳河镇防汛值班室' }, [

@@ -15,7 +15,12 @@ export async function clickQuickTask(page: Page, label: string, task?: string) {
 }
 
 export async function clickDocTask(page: Page, name: string) {
-  await clickQuickTask(page, '文书生成智能体', name);
+  // 文书类型按钮只填模板句，回车发送后才开始生成
+  await openQuickTaskMenu(page, '文书生成智能体');
+  await expect(page.locator('.ant-sender-input')).toHaveValue(/帮我写一份/);
+  await page.getByTestId('agent-capability-bar').getByRole('button', { name, exact: true }).click();
+  await expect(page.locator('.ant-sender-input')).toHaveValue(new RegExp(name));
+  await page.locator('.ant-sender-input').press('Enter');
 }
 
 /** 应急要情生成前先在会话流里铺一张表头表单（用户 m00167）：期号/审阅人/报送/承办/值班员/值班电话。

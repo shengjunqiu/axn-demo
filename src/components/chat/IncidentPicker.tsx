@@ -10,13 +10,15 @@ interface IncidentPickerProps {
   value: string;
   taskLabel?: string;
   hasUnsavedChanges?: boolean;
+  /** 点选项即确认（输入框模板占位符替换用，不需要再点一次确认按钮）。 */
+  confirmOnPick?: boolean;
   containerRef: { readonly current: HTMLDivElement | null };
   onClose: () => void;
   onSelect: (id: string) => void;
 }
 
 /** 居中的事件选择弹窗，保留搜索、任务续做及键盘选择。 */
-export default function IncidentPicker({ open, value, taskLabel, hasUnsavedChanges = false, containerRef, onClose, onSelect }: IncidentPickerProps) {
+export default function IncidentPicker({ open, value, taskLabel, hasUnsavedChanges = false, confirmOnPick = false, containerRef, onClose, onSelect }: IncidentPickerProps) {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -66,7 +68,7 @@ export default function IncidentPicker({ open, value, taskLabel, hasUnsavedChang
       <label className="axn-incident-search"><Search size={14} aria-hidden /><input ref={inputRef} value={query} onChange={event => { setQuery(event.target.value); setActive(0); }} placeholder="搜索事件名称" aria-label="搜索灾情" role="combobox" aria-expanded aria-controls="axn-incident-list" aria-activedescendant={options[active] ? `axn-incident-opt-${options[active].id}` : undefined} />{query && <button type="button" aria-label="清空搜索" onClick={() => { setQuery(''); setActive(0); inputRef.current?.focus(); }}><X size={14} /></button>}</label>
       <div className="axn-incident-list-heading"><span>{keyword ? `搜索结果 · ${matches.length}` : `全部事件 · ${rows.length}`}</span></div>
       <div className="axn-composer-menu-list" id="axn-incident-list" role="listbox" aria-label="灾情列表">
-        {options.map((row, index) => <button type="button" key={row.id} id={`axn-incident-opt-${row.id}`} role="option" aria-selected={row.id === selectedId} data-active={index === active} className={`axn-composer-menu-option${index === active ? ' is-active' : ''}`} onFocus={() => setActive(index)} onPointerMove={() => setActive(index)} onClick={() => pick(row.id)}>
+        {options.map((row, index) => <button type="button" key={row.id} id={`axn-incident-opt-${row.id}`} role="option" aria-selected={row.id === selectedId} data-active={index === active} className={`axn-composer-menu-option${index === active ? ' is-active' : ''}`} onFocus={() => setActive(index)} onPointerMove={() => setActive(index)} onClick={() => { pick(row.id); if (confirmOnPick) { onSelect(row.id); close(); } }}>
           <span className="axn-composer-menu-icon"><MapPin size={16} aria-hidden /></span><span className="axn-composer-menu-copy"><strong>{row.title}</strong></span>{row.id === selectedId && <Check size={16} className="axn-composer-menu-check" aria-hidden />}
         </button>)}
         {!options.length && <div className="axn-composer-menu-empty">没有找到「{query.trim()}」相关的灾情</div>}
