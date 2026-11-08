@@ -32,9 +32,8 @@ for (const width of [320, 375, 390, 430]) {
     await more.click();
     await expect(page.getByTestId('composer-upload')).toBeVisible();
     await expect(page.getByTestId('composer-speech')).toBeVisible();
-    const web = page.getByRole('switch', { name: '联网搜索', exact: true });
-    await web.click();
-    await expect(web).toBeChecked();
+    // 联网搜索按钮已下线（方案一/方案二统一移除）
+    await expect(page.getByRole('switch', { name: '联网搜索', exact: true })).toHaveCount(0);
     await more.click();
     await page.getByTestId('composer-speech').click();
     await expect(page.getByRole('button', { name: '停止语音输入', exact: true })).toBeVisible();

@@ -161,12 +161,7 @@
 /* 📎 外面包一层 span 给 Upload 收 ref（antd Upload 不转 ref） */
 .axn-composer-upload-wrap { display: inline-flex; }
 .axn-composer-tools { display: flex; align-items: center; gap: 12px; }
-.axn-composer-web-search { display: inline-flex; align-items: center; gap: var(--space-2); height: 32px; box-sizing: border-box; padding: 0 var(--space-2); border: 1px solid var(--axn-border); border-radius: var(--radius-md); color: var(--axn-muted); background: var(--axn-surface); font-size: var(--fs-body); white-space: nowrap; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast); }
-.axn-composer-web-search > svg { flex-shrink: 0; }
-.axn-composer-web-search:hover { border-color: var(--axn-primary); }
-.axn-composer-web-search.is-on { color: var(--axn-primary-text); border-color: var(--axn-primary); background: var(--axn-primary-bg); }
-.axn-composer-web-search:focus-within { outline: 2px solid var(--axn-primary); outline-offset: 2px; }
-/* 方案二工作模式：联网搜索换成「应急专家」，点击弹出全部智能体。 */
+/* 方案二工作模式：输入框左侧的「应急专家」，点击弹出全部智能体。 */
 .axn-composer-agent-picker.ant-btn { display: inline-flex; align-items: center; gap: var(--space-2); height: 32px; padding: 0 var(--space-2); border: 1px solid var(--axn-border); border-radius: var(--radius-md); color: var(--axn-muted); background: var(--axn-surface); font-size: var(--fs-body); white-space: nowrap; box-shadow: none; }
 .axn-composer-agent-picker.ant-btn > svg { flex-shrink: 0; }
 .axn-composer-agent-picker.ant-btn:hover:not(:disabled) { border-color: var(--axn-primary); color: var(--axn-primary-text); background: var(--axn-primary-bg); }
@@ -207,7 +202,6 @@
 .axn-composer-tool-menu .axn-composer-upload-wrap { display: block; }
 .axn-composer-tool-menu .ant-upload-wrapper, .axn-composer-tool-menu .ant-upload { display: block; }
 .axn-composer-tool-menu .axn-composer-upload::after { content: "上传文件"; font-size: var(--fs-body); }
-.axn-composer-tool-menu .axn-composer-web-search { justify-content: space-between; border-color: transparent; }
 .axn-composer-tool-menu > .ant-btn { justify-content: flex-start; }
 @media (max-width: 767px) {
   .axn-attach-list { min-width: 0; }
@@ -278,6 +272,19 @@
 .axn-task-head-side { flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-inline-start: 0; max-width: 100%; }
 .axn-task-run.is-running .axn-task-title { background: linear-gradient(90deg, var(--axn-text) 0%, var(--axn-faint) 50%, var(--axn-text) 100%) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: axn-shimmer-text 2s linear infinite; }
 @keyframes axn-shimmer-text { to { background-position: -200% 0; } }
+/* 深度思考：运行中展开并显示「思考中…」，结束后收起成一行耗时（参考 WorkBuddy 的思考区）。 */
+.axn-thinking { margin-top: var(--space-1); }
+.axn-thinking-toggle { display: inline-flex; align-items: center; gap: var(--space-1-5); max-width: 100%; padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--axn-muted); font: inherit; font-size: var(--fs-meta); cursor: pointer; }
+.axn-thinking-toggle:hover { color: var(--axn-text); }
+.axn-thinking-toggle:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.axn-thinking-caret { flex-shrink: 0; color: var(--axn-faint); transition: transform var(--transition-fast); }
+.axn-thinking.is-open .axn-thinking-caret { transform: rotate(90deg); }
+.axn-thinking-title { font-weight: 600; }
+.axn-thinking-meta { color: var(--axn-faint); font-variant-numeric: tabular-nums; }
+.axn-thinking.is-thinking .axn-thinking-meta { animation: axn-breathe 2.4s var(--ease-in-out) infinite; }
+.axn-thinking-body { margin: 0 0 var(--space-2) var(--space-2); padding-left: var(--space-3); border-left: 2px solid var(--axn-border); color: var(--axn-muted); font-size: var(--fs-caption); line-height: var(--lh-caption); }
+.axn-thinking-body p { margin: 0 0 var(--space-1-5); }
+.axn-thinking-body p:last-child { margin-bottom: 0; }
 /* 展开的步骤：条内时间线，顶部细分隔线 */
 .axn-task-run .axn-task-steps { padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3); border-top: 1px solid var(--axn-border); border-radius: 0; background: transparent; }
 .axn-task-steps { list-style: none; margin: 0; padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); background: var(--axn-soft); border-radius: var(--radius-md); }
@@ -467,7 +474,7 @@
   /* 动效 token 只归零 transition；animation 必须逐个关掉（见 global.css 的说明） */
   .axn-agent-execution, .axn-task-step, .axn-task-card > .axn-artifact, .axn-qa > *, .axn-qa .axn-qa-source,
   .axn-task-step .axn-step-output, .axn-task-answer, .axn-agent-execution:not(.is-running) .axn-agent-summon-action,
-  .axn-step-running::before, .axn-step-running .axn-step-output { animation: none; }
+  .axn-step-running::before, .axn-step-running .axn-step-output, .axn-thinking.is-thinking .axn-thinking-meta { animation: none; }
   .axn-task-step > svg.lucide, .axn-task-head .ant-tag { transition: none; }
   .axn-summary-round, .axn-collect-progress::after, .axn-summary-round.is-collecting::after { animation: none; }
 }
@@ -558,7 +565,6 @@
 
 /* 触屏不会自然离开 hover 状态，避免工具提示停留并盖住输入文字。 */
 @media (hover: none) {
-  .axn-composer-web-search-tooltip { display: none; }
 }
 
 .axn-incident-menu-title { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

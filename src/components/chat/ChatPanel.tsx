@@ -17,7 +17,6 @@ import {
   Bot,
   BriefcaseBusiness,
   ChevronDown,
-  Globe,
   MapPin,
   Plus,
   MessageSquare,
@@ -26,7 +25,7 @@ import {
   Paperclip,
   X,
 } from 'lucide-react';
-import { Alert, App as AntdApp, Button, Input, Popover, Segmented, Space, Switch, Tag, Tooltip, Typography, Upload, theme } from 'antd';
+import { Alert, App as AntdApp, Button, Input, Popover, Segmented, Space, Tag, Typography, Upload, theme } from 'antd';
 import { Bubble, Sender } from '@ant-design/x';
 import type { BubbleItemType } from '@ant-design/x';
 import { useConversationStore } from '@/store/conversationStore';
@@ -186,8 +185,6 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   }, []);
   // 上传的文件：演示环境没有上传接口，不落盘也不读取内容，只把文件名与大小随消息记下来
   const [attachments, setAttachments] = useState<{ uid: string; name: string; size: number }[]>([]);
-  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
-
   // 应急专家浮层：点击外部或按 Escape 收起（与技能浮层一致）。
   useEffect(() => {
     if (!agentPickerOpen) return;
@@ -532,7 +529,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
                 />
               </Upload>
               </span>
-              {planTwoWorkMode ? (
+              {planTwoWorkMode && (
                 <Button
                   type="text"
                   className="axn-composer-agent-picker"
@@ -545,29 +542,10 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
                 >
                   应急专家
                 </Button>
-              ) : (
-                <Tooltip classNames={{ root: 'axn-composer-web-search-tooltip' }} title="当前为原型演示，暂未接入真实联网检索">
-                  <label className={`axn-composer-web-search${webSearchEnabled ? ' is-on' : ''}`}>
-                    <Globe size={14} aria-hidden />
-                    <span className="axn-composer-web-search-label">联网<span className="axn-composer-web-search-full">搜索</span></span>
-                    <Switch
-                      size="small"
-                      checked={webSearchEnabled}
-                      onChange={(on) => {
-                        setWebSearchEnabled(on);
-                        // 触屏上看不到悬停提示：开 / 关时用一句轻提示交代状态与演示边界
-                        if (window.matchMedia?.('(hover: none)').matches) {
-                          message.open({ key: 'web-search', type: 'info', content: on ? '已开启联网搜索（演示环境暂未接入真实检索）' : '已关闭联网搜索' });
-                        }
-                      }}
-                      aria-label="联网搜索"
-                    />
-                  </label>
-                </Tooltip>
               )}
   </>);
 
-  // 方案二工作模式：最近召唤的智能体，其能力按钮以横排展示在输入框上方（卡片内不再重复）。
+  // 方案一 / 方案二工作模式：最近召唤的智能体，其能力按钮以横排展示在输入框上方（卡片内不再重复）。
   const activeAgentChoices = useMemo(() => {
     if (!showAgentCapabilityBar) return null;
     const messages = session?.messages ?? [];
