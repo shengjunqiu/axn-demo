@@ -51,6 +51,38 @@ for (const width of [320, 375, 390, 430]) {
   });
 }
 
+// 移动端方案二工作模式：智能体入口必须直接露在工具栏上，不能跟上传一起收进「输入工具」加号浮层。
+for (const width of [320, 390]) {
+  test(`移动端应急专家按钮不藏进输入工具 ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/');
+    await page.evaluate(() => {
+      localStorage.setItem('anneng-demo:v1:demo', JSON.stringify({ __schema: 2, data: { designPlan: 'two', interactionMode: 'work' } }));
+    });
+    await page.reload();
+    const picker = page.getByTestId('composer-agent-picker');
+    await expect(picker).toBeVisible();
+    await expect(picker).toHaveAttribute('aria-label', '应急专家');
+    // 没打开「输入工具」时它就在工具栏上
+    await expect(page.locator('.axn-composer-tool-menu')).toHaveCount(0);
+    const more = page.getByRole('button', { name: '输入工具', exact: true });
+    await more.click();
+    const menu = page.locator('.axn-composer-tool-menu');
+    await expect(menu.getByTestId('composer-upload')).toBeVisible();
+    await expect(menu.getByTestId('composer-agent-picker')).toHaveCount(0);
+    await expect(picker).toBeVisible();
+    // 工具栏不横向溢出，按钮完整落在输入框内
+    const overflow = await page.locator('.axn-composer-tools').evaluate(el => el.scrollWidth - el.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+    const shell = (await page.locator('.axn-composer-shell').boundingBox())!;
+    const button = (await picker.boundingBox())!;
+    expect(button.x + button.width).toBeLessThanOrEqual(shell.x + shell.width + 0.5);
+    await page.screenshot({ path: `/tmp/axn-mobile-agent-picker-${width}.png` });
+    await picker.click();
+    await expect(page.getByTestId('agent-picker-menu')).toBeVisible();
+  });
+}
+
 for (const width of [1440, 390]) {
   test(`输入框选择技能支持搜索、切换对话和清除 ${width}px`, async ({ page }) => {
     const errors: string[] = [];

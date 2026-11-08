@@ -184,6 +184,17 @@
 .axn-composer-shell.is-mobile .ant-sender-actions-list { grid-area: send; margin: 0; }
 .axn-composer-shell.is-mobile .axn-composer-actions { padding: 0; gap: var(--space-1); }
 .axn-composer-shell.is-mobile .axn-composer-tools { gap: var(--space-1-5); min-width: 0; }
+/* 移动端方案二工作模式：「应急专家」直接留在工具栏，不随上传收进「输入工具」加号浮层；
+   输入栏容器过窄时只留机器人图标（无障碍名称仍是「应急专家」），避免挤压技能/灾情按钮。 */
+.axn-composer-shell.is-mobile .axn-composer-agent-picker.ant-btn {
+  flex: 0 0 auto; height: 32px; padding: 0 var(--space-1-5);
+  gap: var(--space-1); font-size: var(--fs-caption); font-weight: var(--fw-regular);
+}
+@container (max-width: 348px) {
+  .axn-composer-shell.is-mobile .axn-composer-tools { gap: var(--space-1); }
+  .axn-composer-shell.is-mobile .axn-composer-agent-picker.ant-btn { justify-content: center; width: 32px; min-width: 32px; padding: 0; }
+  .axn-composer-shell.is-mobile .axn-composer-agent-picker-text { display: none; }
+}
 .axn-composer-shell.is-mobile .axn-composer-actions > .ant-btn { width: 40px; min-width: 40px; height: 40px; }
 .axn-composer-more.ant-btn { width: 36px; min-width: 36px; height: 36px; padding: 0; color: var(--axn-muted); border-radius: 50%; background: var(--axn-soft); }
 .axn-composer-shell.is-mobile .axn-composer-speech.ant-btn { flex-basis: 32px; width: 32px; min-width: 32px; height: 40px; }

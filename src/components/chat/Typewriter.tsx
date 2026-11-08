@@ -10,10 +10,12 @@ const prefersReducedMotion = () =>
  * - 总时长封顶 1.2s，长文本不拖沓；尊重「减少动态效果」。
  * DOM 里始终保留完整文本（visually-hidden），读屏与 e2e 读到的都是全文。
  */
-export default function Typewriter({ text, animate, render = (t) => <span>{t}</span> }: {
+export default function Typewriter({ text, animate, render = (t) => <span>{t}</span>, maxDuration = 1200 }: {
   text: string; animate: boolean;
   /** 把（部分）文本排成结构化版式；逐字展开时也按同一版式长出来，结束时不跳版 */
   render?: (visible: string) => ReactNode;
+  /** 逐字展开的最长时长（毫秒），默认 1200；模拟思考时可放慢 */
+  maxDuration?: number;
 }) {
   const enabled = useRef(animate && !prefersReducedMotion());
   const [shown, setShown] = useState(enabled.current ? 0 : text.length);
@@ -24,7 +26,7 @@ export default function Typewriter({ text, animate, render = (t) => <span>{t}</s
     const start = performance.now();
     const from = Math.min(shown, text.length);
     const remaining = text.length - from;
-    const duration = Math.min(1200, Math.max(240, remaining * 22));
+    const duration = Math.min(maxDuration, Math.max(240, remaining * 22));
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / duration);
       setShown(from + Math.round(remaining * t));

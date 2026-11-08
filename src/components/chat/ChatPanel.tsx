@@ -38,6 +38,8 @@ import { AGENT_INVITATIONS } from '@/seed/agentInvitations';
 import { canAccessAgent } from '@/seed/agentAccess';
 import { useAgentAccess } from '@/hooks/useAgentAccess';
 import ResponseFeedback from './ResponseFeedback';
+import ThinkingPanel from './ThinkingPanel';
+import Typewriter from './Typewriter';
 import EmergencyBriefForm, { type BriefFigure, type BriefFormValues } from './EmergencyBriefForm';
 import { summonAgentInConversation } from '@/services/agentConversation';
 import { AGENT_ICONS, agentIcon } from './agentIcons';
@@ -70,6 +72,32 @@ const SPEECH_SAMPLE = '请汇总南堤堤防管涌险情的最新处置进展，
 /** 文书生成智能体的输入模板：# 后是斜体占位符，点上方文书类型或占位符后替换。 */
 const DOC_TEMPLATE = '帮我写一份#文书类型，针对的事件是#灾情事件';
 const DOC_TYPE_PATTERN = /^帮我写一份\s*(值班日报|应急要情|周工作动态|工作总结)/;
+
+/** 普通文本回复（问候、兜底等）的模拟思考：先展示思考块，再露出回答。 */
+const PLAIN_REPLY_THINKING = '先判断这句话是业务请求还是普通交流。\n「你好」属于日常问候，不需要检索灾情、资源或知识库，也不会触发工具调用。\n保持简短自然，先回应问候，再说明我可以帮用户做什么：生成文书、研判态势、查询救援资源、编制方案或评估效果。\n如果用户接着提出具体任务，再进入对应的业务流程。';
+const PLAIN_THINKING_MS = 3000;
+
+function PlainReply({ text, createdAt, sessionId, messageId }: { text: string; createdAt: string; sessionId: string; messageId: string }) {
+  // 只对刚到达的消息做「思考 → 回答」；刷新后的历史消息直接展示结果。
+  const animate = useRef(Date.now() - new Date(createdAt).getTime() < 5000).current;
+  const [thinking, setThinking] = useState(animate);
+  useEffect(() => {
+    if (!animate) return;
+    const timer = window.setTimeout(() => setThinking(false), PLAIN_THINKING_MS);
+    return () => window.clearTimeout(timer);
+  }, [animate]);
+  return (
+    <>
+      <ThinkingPanel text={PLAIN_REPLY_THINKING} running={thinking} seconds={PLAIN_THINKING_MS / 1000} animate={animate} typeDuration={PLAIN_THINKING_MS - 200} />
+      {!thinking && (
+        <>
+          <Typewriter text={text} animate={animate} />
+          <ResponseFeedback sessionId={sessionId} targetId={messageId} />
+        </>
+      )}
+    </>
+  );
+}
 
 /** 五类智能体共用的功能选择区。文书入口保留已有测试定位。 */
 function AgentInviteChoices({ agentId, options, hint, disabled, onPick, showOptions = true }: {
@@ -133,6 +161,10 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   const [pendingEventToken, setPendingEventToken] = useState(false);
   /** 方案二工作模式：智能体入口收进「应急专家」弹窗，不再在输入框上方平铺 chips。 */
   const [agentPickerOpen, setAgentPickerOpen] = useState(false);
+  /** 能力按钮执行完一次任务后收起；记住是哪条召唤消息，换智能体/新召唤时重新出现。 */
+  const [dismissedBarMessageId, setDismissedBarMessageId] = useState<string | null>(null);
+  const barRunRef = useRef<{ messageId: string; startedAt: number } | null>(null);
+  const activeBarMessageRef = useRef<string | null>(null);
   /** 应急要情的表头表单：点「生成应急要情」先弹出，填完直接出件（不再演逐项收集）。 */
   const [briefFormOpen, setBriefFormOpen] = useState(false);
   useEffect(() => { setIncidentPickerOpen(false); setPendingEventToken(false); setAgentPickerOpen(false); setPendingEventAction(null); }, [activeConversationId]);
@@ -292,6 +324,9 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
     // 文书模板句：走对应文书的既有生成入口（值班日报/应急要情/周工作动态/工作总结）。
     const docTemplate = text.match(DOC_TYPE_PATTERN);
     if (docTemplate) {
+      // 从能力按钮铺开的模板句：生成完成后让上方能力按钮收起。
+      const barMessageId = activeBarMessageRef.current;
+      if (barMessageId) barRunRef.current = { messageId: barMessageId, startedAt: Date.now() };
       const label = docTemplate[1];
       const task = label === '值班日报' ? '生成值班日报'
         : label === '应急要情' ? '生成应急要情'
@@ -504,11 +539,11 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
     </>
   );
 
-  const composerTools = (<>
-              {/* 上传文件（输入框左下角，标注见本行）：演示环境不落盘也不上传，只把文件名/大小附在消息上。
-                 周工作动态的上传入口在对话气泡的卡里（用户 m00994），所以这里不再挂箭头提示、也不再挂弹出层；
-                 但文件依旧可以在这里交给智能体（上传门开着时＝交材料）。
-                 外面这层 span 只给 Upload 收 ref（antd Upload 不转 ref，直接当 child 会告警）。 */}
+  /* 上传文件（输入框左下角，标注见本行）：演示环境不落盘也不上传，只把文件名/大小附在消息上。
+     周工作动态的上传入口在对话气泡的卡里（用户 m00994），所以这里不再挂箭头提示、也不再挂弹出层；
+     但文件依旧可以在这里交给智能体（上传门开着时＝交材料）。
+     外面这层 span 只给 Upload 收 ref（antd Upload 不转 ref，直接当 child 会告警）。 */
+  const uploadTool = (
               <span className="axn-composer-upload-wrap">
               <Upload
                 multiple
@@ -529,21 +564,26 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
                 />
               </Upload>
               </span>
-              {planTwoWorkMode && (
+  );
+
+  /* 方案二工作模式的「应急专家」入口：桌面和移动端都必须直接露在工具栏上，
+     移动端不能跟上传一起收进「输入工具」加号浮层（用户 f7220af8）；容器过窄时只留图标。 */
+  const agentPickerTool = planTwoWorkMode ? (
                 <Button
                   type="text"
                   className="axn-composer-agent-picker"
                   icon={<Bot size={16} aria-hidden />}
-                  onClick={() => { changeSkillPickerOpen(false); setAgentPickerOpen(true); }}
+                  onClick={() => { setToolsOpen(false); changeSkillPickerOpen(false); setAgentPickerOpen(true); }}
                   disabled={!session || busy}
+                  aria-label="应急专家"
+                  title="应急专家"
                   aria-haspopup="dialog"
                   aria-expanded={agentPickerOpen}
                   data-testid="composer-agent-picker"
                 >
-                  应急专家
+                  <span className="axn-composer-agent-picker-text">应急专家</span>
                 </Button>
-              )}
-  </>);
+  ) : null;
 
   // 方案一 / 方案二工作模式：最近召唤的智能体，其能力按钮以横排展示在输入框上方（卡片内不再重复）。
   const activeAgentChoices = useMemo(() => {
@@ -558,6 +598,23 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
     }
     return null;
   }, [session?.messages, showAgentCapabilityBar, canUseAgent]);
+
+  // 能力按钮是否还在：执行完一次任务（或生成完一份文书）后收起；方案一随之恢复智能体入口。
+  const showCapabilityBar = Boolean(activeAgentChoices && dismissedBarMessageId !== activeAgentChoices.messageId);
+  activeBarMessageRef.current = activeAgentChoices?.messageId ?? null;
+  useEffect(() => {
+    const run = barRunRef.current;
+    if (!run || !activeAgentChoices || activeAgentChoices.messageId !== run.messageId) return;
+    const since = run.startedAt - 500;
+    const taskDone = Object.values(tasks).some(task =>
+      new Date(task.startedAt).getTime() >= since && ['succeeded', 'partial', 'failed', 'cancelled'].includes(task.status));
+    const workflowDone = (session?.messages ?? []).some(message =>
+      message.documentWorkflow?.stage === 'completed' && new Date(message.createdAt).getTime() >= since);
+    if (taskDone || workflowDone) {
+      setDismissedBarMessageId(run.messageId);
+      barRunRef.current = null;
+    }
+  }, [tasks, session?.messages, activeAgentChoices]);
 
   // 文书生成智能体被召唤后，输入框预填模板（每个召唤消息只填一次，不覆盖用户已输入的内容）。
   const seededDocSummon = useRef<string | null>(null);
@@ -707,7 +764,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         };
       }
       return { key: m.messageId, role: 'ai', content: m.text ?? '', avatar: AVATAR,
-        contentRender: () => <><div>{m.text}</div>{m.text && <ResponseFeedback sessionId={m.sessionId} targetId={m.messageId} />}</>,
+        contentRender: () => <PlainReply text={m.text ?? ''} createdAt={m.createdAt} sessionId={m.sessionId} messageId={m.messageId} />,
       };
     });
     // 应急要情的表头表单就是会话流里的一个气泡（用户 m00167）：填完整条流往下接生成气泡。
@@ -854,7 +911,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
 
       {/* 方案二工作模式把智能体入口收进输入框左侧的「应急专家」弹窗；召唤出智能体后，
           智能体入口行让位给该智能体的能力按钮（同一位置、同一套样式）。 */}
-      {!planTwoWorkMode && !activeAgentChoices && (designPlan === 'two' || activeConversation?.source !== 'agent-management') && visibleAgents.length > 0 && <div className="axn-cp-chips-wrap">
+      {!planTwoWorkMode && !showCapabilityBar && (designPlan === 'two' || activeConversation?.source !== 'agent-management') && visibleAgents.length > 0 && <div className="axn-cp-chips-wrap">
         <div className="axn-chips">
           {visibleAgents.map(agent => {
             const Icon = AGENT_ICONS[agent.agentId];
@@ -867,7 +924,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         </div>
       </div>}
       {/* 方案一 / 方案二工作模式：当前智能体的能力按钮横排显示在输入框上方。 */}
-      {showAgentCapabilityBar && activeAgentChoices && (
+      {showAgentCapabilityBar && showCapabilityBar && activeAgentChoices && (
         <div className="axn-cp-chips-wrap" data-testid="agent-capability-bar" data-agent-id={activeAgentChoices.agentId}>
           <div className="axn-chips">
             {activeAgentChoices.options.map(({ label, task }) => (
@@ -885,6 +942,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
                       return;
                     }
                   }
+                  barRunRef.current = { messageId: activeAgentChoices.messageId, startedAt: Date.now() };
                   void handleQuickTask(task, activeAgentChoices.agentId, label);
                 }}>
                 {label}
@@ -948,14 +1006,19 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
             }}
             prefix={(
               <div className="axn-composer-tools">
-              {mobileComposer ? <Popover trigger="click" placement="topLeft" open={toolsOpen}
-                onOpenChange={setToolsOpen} content={<div className="axn-composer-tool-menu">
-                  <div className="axn-composer-tool-menu-heading">输入工具</div>
-                  {composerTools}
-                </div>}>
-                <Button type="text" className="axn-composer-more" icon={<Plus size={20} />}
-                  aria-label="输入工具" aria-expanded={toolsOpen} />
-              </Popover> : composerTools}
+              {mobileComposer ? (
+                <>
+                  <Popover trigger="click" placement="topLeft" open={toolsOpen}
+                    onOpenChange={setToolsOpen} content={<div className="axn-composer-tool-menu">
+                      <div className="axn-composer-tool-menu-heading">输入工具</div>
+                      {uploadTool}
+                    </div>}>
+                    <Button type="text" className="axn-composer-more" icon={<Plus size={20} />}
+                      aria-label="输入工具" aria-expanded={toolsOpen} />
+                  </Popover>
+                  {agentPickerTool}
+                </>
+              ) : <>{uploadTool}{agentPickerTool}</>}
               <ComposerSkillPicker conversationId={activeConversationId ?? ''} disabled={!session || busy} compact={mobileComposer}
                 open={skillPickerOpen} slashQuery={skillQuery} containerRef={composerRef} onOpenChange={changeSkillPickerOpen}
                 onAfterClose={() => composerRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus()} />

@@ -116,64 +116,6 @@ function FormattedAnswer({ text }: { text: string }) {
   return <div className="axn-answer">{nodes}</div>;
 }
 
-/** 模拟「深度思考」内容：按意图给一段可解释的推理过程，不引用未确认的数据。 */
-const THINKING_TEXT: Record<string, string> = {
-  summary: '先对齐灾情事件和观测时间，再把监测记录、现场反馈里的关键事实按时间顺序排好。\n水位、伤亡等数据只引用带来源的字段；建议响应等级标明是系统建议，尚未经人工确认。',
-  resource_query: '先按事发地点筛出周边的队伍和仓库，再核对到达时间、距离与可用状态。\n库存和在途信息分开处理，未核实的资源不写进结论。',
-  resource_sort_eta: '先按预计到达时间给可用队伍排序，再核对每支队伍的装备和当前状态。\n只保留有明确来源的到达时间，缺失的数据不补造。',
-  resource_sort_distance: '先按事发地点计算周边队伍的距离，再结合道路与天气情况做校验。\n距离相近时优先选择状态可用、装备齐全的队伍。',
-  proposal: '先把现场风险和处置目标拆开，再按到场时间安排可调动的力量。\n立即执行项与待确认项分开列出，避免把未核实资源写成既定安排。',
-  evaluation: '先还原救援过程的时间线，再逐项对照处置目标判断完成度。\n结论只引用有来源的事实，剩余风险单独列出。',
-  qa_knowledge: '先判断问题对应的险情场景，再在知识库里检索处置要点和禁忌。\n回答只引用命中的条目，并在句末标出来源编号。',
-  doc_brief: '先核对文书类型和必填字段，缺失项单独列出，不臆造内容。\n正文按模板骨架组织，数据只取已确认的来源。',
-  doc_daily: '先核对值班时段和交接事项，再汇总当班期间的关键事件。\n统计口径以派生事实为准，未确认的补录项要显式标注。',
-};
-
-function thinkingText(task: AgentTask): string {
-  return THINKING_TEXT[task.intent]
-    ?? '先理解问题和当前对话上下文，再决定直接回答还是调用工具。\n需要事实支撑的部分先查数据，没有来源的内容会明确标注。';
-}
-
-/** 深度思考块：运行中展开并显示「思考中…」，结束后收起成一行耗时（参考 WorkBuddy 的思考区）。 */
-function ThinkingBlock({ task, running }: { task: AgentTask; running: boolean }) {
-  const [open, setOpen] = useState(running);
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => { setOpen(running); }, [running]);
-  useEffect(() => {
-    if (!running) return;
-    const timer = window.setInterval(() => setNow(Date.now()), 500);
-    return () => window.clearInterval(timer);
-  }, [running]);
-  const started = new Date(task.startedAt).getTime();
-  const ended = task.finishedAt ? new Date(task.finishedAt).getTime() : now;
-  const seconds = Math.max(0, ended - started) / 1000;
-  return (
-    <div className={`axn-thinking${open ? ' is-open' : ''}${running ? ' is-thinking' : ''}`}>
-      <button
-        type="button"
-        className="axn-thinking-toggle"
-        aria-expanded={open}
-        aria-label={`${open ? '收起' : '展开'}深度思考`}
-        data-testid="thinking-toggle"
-        onClick={() => setOpen(value => !value)}
-      >
-        <ChevronRight size={14} aria-hidden className="axn-thinking-caret" />
-        <span className="axn-thinking-title">深度思考</span>
-        <span className="axn-thinking-meta">{running ? '思考中…' : `${seconds < 1 ? seconds.toFixed(1) : Math.round(seconds)}s`}</span>
-      </button>
-      {open && (
-        <div className="axn-thinking-body" data-testid="thinking-body">
-          <Typewriter
-            text={thinkingText(task)}
-            animate={running}
-            render={text => <>{text.split('\n').map((line, index) => <p key={index}>{line}</p>)}</>}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
 function factValueText(factId: string, override?: string): string {
   if (override) return readableTime(override);
   const text = readableTime(factText(factId));
@@ -510,8 +452,6 @@ export default function TaskCard({ task, onOpenDrawer }: TaskCardProps) {
         </ul>
         )}
       </div>
-
-      <ThinkingBlock task={task} running={isRunning} />
 
       {task.textAnswer && (
         <div className="axn-task-answer">
