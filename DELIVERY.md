@@ -19,6 +19,7 @@ pnpm build && pnpm preview   # 生产构建 → http://127.0.0.1:4173
 - 本机访问：`http://localhost:5173`；局域网访问：`http://192.168.77.1:5173`（vite host=true 监听全部网卡，strictPort 固定 5173）
 - 生产预览：`http://127.0.0.1:4173`
 - 演示建议使用生产预览（加载快、无 HMR 干扰）
+- 单文件分发：`pnpm build:single` → `dist-single/安小能-demo.html`（约 6MB，JS/CSS/字体/图片全部内联，**双击即可打开**，不需要 dev server、不需要联网；路由走 HashRouter，file:// 下正常工作）
 
 ## 3. 任务完成状态与 AC 验收（AC-001～AC-030）
 

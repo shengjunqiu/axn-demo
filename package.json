@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:dev": "E2E_DEV=1 playwright test"
+    "test:e2e:dev": "E2E_DEV=1 playwright test",
+    "build:single": "tsc -b && vite build --config vite.config.single.ts && node scripts/build-single.mjs"
   },
   "dependencies": {
     "@ant-design/x": "2.9.0",
