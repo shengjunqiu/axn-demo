@@ -271,7 +271,14 @@ export type StepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cance
 
 export interface TaskStep {
   stepId: string;
+  /** 任务卡显示的中文步骤名。 */
   name: string;
+  /** 执行日志页签用：工具名（英文调用名）；没有时按 name 查展示映射。 */
+  tool?: string;
+  /** 执行日志页签用：执行记录一行（英文）；没有时按状态退。 */
+  returns?: string | null;
+  /** 执行日志页签用：结构化入参（JSON 字符串）；没有时填空对象。 */
+  args?: string;
   inputSummary: string | null;
   status: StepStatus;
   outputSummary: string | null;

@@ -52,6 +52,7 @@ import { DocumentReviewCard } from '@/components/doc/DocumentReview';
 import AgentSummonCard from './AgentSummonCard';
 import IncidentPicker from './IncidentPicker';
 import ComposerSkillPicker from './ComposerSkillPicker';
+import TrajectoryPanel from './TrajectoryPanel';
 import BrandMark from '@/components/brand/BrandMark';
 import { COMPOSE_EVENT } from '@/components/doc/SelectionAssist';
 import TokenTextArea, { type TokenTextAreaProps } from './TokenTextArea';
@@ -65,6 +66,12 @@ export interface ChatPanelProps {
 }
 
 const AVATAR = <div className="axn-chat-avatar"><BrandMark size={28} /></div>;
+
+/** 会话头下方的页签（参考 dsh 会话页）：对话看结果，执行日志看过程。 */
+const CHAT_TABS: { value: 'chat' | 'trajectory'; label: string }[] = [
+  { value: 'chat', label: '对话' },
+  { value: 'trajectory', label: '执行日志' },
+];
 
 // 语音输入模拟用的示例话语（标注 vibe_1791960862035）：点麦克风逐字「转写」这句话。
 const SPEECH_SAMPLE = '请汇总南堤堤防管涌险情的最新处置进展，并生成一份情况报告';
@@ -152,6 +159,8 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   const activeConversationId = activeConversation?.id ?? null;
   const session = useSessionStore((s) => s.sessions[s.sessionByConversation[activeConversationId ?? ''] ?? '']);
   const tasks = useSessionTasks(session);
+  /** 标题下方的页签：对话（消息流）/ 执行日志（编排过程）。 */
+  const [chatTab, setChatTab] = useState<'chat' | 'trajectory'>('chat');
   const scope = useActiveScope();
 
   const [input, setInput] = useState('');
@@ -168,7 +177,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   const activeBarMessageRef = useRef<string | null>(null);
   /** 应急要情的表头表单：点「生成应急要情」先弹出，填完直接出件（不再演逐项收集）。 */
   const [briefFormOpen, setBriefFormOpen] = useState(false);
-  useEffect(() => { setIncidentPickerOpen(false); setPendingEventToken(false); setAgentPickerOpen(false); setPendingEventAction(null); }, [activeConversationId]);
+  useEffect(() => { setIncidentPickerOpen(false); setPendingEventToken(false); setAgentPickerOpen(false); setPendingEventAction(null); setChatTab('chat'); }, [activeConversationId]);
   useEffect(() => {
     setPendingEventAction(null);
     setBriefFormOpen(false);
@@ -821,7 +830,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
   return (
     <div className="axn-chat-page">
           {/* 会话头：左侧收起侧边栏 + 标题 */}
-      <div className="axn-chat-head">
+      <div className={hasMessages ? 'axn-chat-head has-tabs' : 'axn-chat-head'}>
         <div className="axn-chat-head-row">
           <Button
             type="text"
@@ -840,10 +849,31 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
         </div>
       </div>
 
-      {(hasMessages || compact) && modeSwitch}
+      {hasMessages && (
+        <div className="axn-chat-tabs" role="tablist" aria-label="会话视图">
+          {CHAT_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              role="tab"
+              className="axn-chat-tab"
+              aria-selected={chatTab === tab.value}
+              data-testid={`chat-tab-${tab.value}`}
+              onClick={() => setChatTab(tab.value)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {chatTab === 'chat' && (hasMessages || compact) && modeSwitch}
+
+      {/* 执行日志页签：与对话共用底部输入区，只把消息流换成一行一条的编排日志 */}
+      {hasMessages && chatTab === 'trajectory' && <TrajectoryPanel session={session} tasks={tasks} />}
 
       {/* 消息流 / 首页 */}
-      {hasMessages ? (
+      {chatTab === 'chat' && (hasMessages ? (
         <Bubble.List
           className="axn-message-list"
           autoScroll
@@ -900,7 +930,7 @@ export default function ChatPanel({ onOpenDrawer, compact = false }: ChatPanelPr
 
           </div>
         </div>
-      )}
+      ))}
 
       {/* 补录表单（pendingClarification 存在时内联展示） */}
       {pending && (

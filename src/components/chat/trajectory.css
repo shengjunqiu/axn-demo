@@ -1,0 +1,76 @@
+/* 执行日志页签：一行一条的编排记录。密度优先，和对话气泡刻意不一样。 */
+.axn-traj { display: flex; flex-direction: column; flex: 1; min-height: 0; background: var(--axn-surface); }
+
+.axn-traj-bar { display: flex; align-items: center; gap: var(--space-3); flex-shrink: 0; padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--axn-divider); }
+.axn-traj-search.ant-input-affix-wrapper { width: 100%; flex: 1 1 auto; border-radius: var(--radius-sm); }
+
+/* 列表 + 右侧详情：点一行，右边拉出这条记录的全部内容。 */
+.axn-traj-body { display: flex; flex: 1; min-height: 0; }
+.axn-traj-list { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; padding: var(--space-1) var(--space-4) var(--space-4); scrollbar-width: thin; scrollbar-color: var(--axn-border) transparent; }
+.axn-traj-empty { margin: var(--space-6) 0; text-align: center; font-size: var(--fs-meta); color: var(--axn-muted); }
+
+/* 三列定宽：kind 标签 / 单行内容 / 右侧状态。内容单行截断，点开看详情。 */
+.axn-traj-row { display: grid; grid-template-columns: 116px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); width: 100%; padding: 2px var(--space-2); border: 0; border-radius: var(--radius-sm); background: transparent; font: inherit; font-size: var(--fs-meta); line-height: 22px; text-align: left; cursor: pointer; }
+.axn-traj-row + .axn-traj-row { border-top: 1px solid color-mix(in srgb, var(--axn-divider) 55%, transparent); border-top-left-radius: 0; border-top-right-radius: 0; }
+.axn-traj-row:hover { background: var(--axn-soft); }
+.axn-traj-row:focus-visible { outline: 2px solid var(--axn-primary); outline-offset: -2px; }
+.axn-traj-row[data-selected='true'] { background: var(--axn-primary-bg); }
+
+/* kind 标签：图标 + 大写英文，10 号字 + 字距，做成日志标签而不是业务标签。 */
+.axn-traj-tag { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 6px; border-radius: var(--radius-sm); font-size: var(--fs-meta); line-height: 18px; font-weight: var(--fw-strong); white-space: nowrap; }
+.axn-traj-tag-label { font-size: var(--fs-meta); letter-spacing: 0.3px; }
+
+.axn-traj-text { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--axn-text); }
+.axn-traj-only { color: var(--axn-faint); font-style: italic; }
+
+/* 工具行：等宽字体，工具名正文色、入参灰、箭头浅灰、返回记录灰 —— 「调用」与「结果」一眼可分。 */
+.axn-traj-call { display: flex; align-items: baseline; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--fs-caption); }
+.axn-traj-tool, .axn-traj-payload, .axn-traj-result { font: inherit; }
+.axn-traj-tool { color: var(--axn-text); font-weight: var(--fw-strong); flex: 0 0 auto; }
+.axn-traj-payload { color: var(--axn-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.axn-traj-arrow { color: var(--axn-faint); flex: 0 0 auto; }
+.axn-traj-result { color: var(--axn-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.axn-traj-side { display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.axn-traj-dur { font-size: var(--fs-meta); color: var(--axn-faint); }
+.axn-traj-meta { font-size: var(--fs-meta); color: var(--axn-muted); }
+
+/* 三类行配色：用户中性、助手主色、工具调用琥珀；状态只改右侧文案的色，不整行染色。 */
+.axn-traj-row--user .axn-traj-tag { background: var(--axn-soft); color: var(--axn-muted); }
+.axn-traj-row--assistant .axn-traj-tag { background: var(--axn-primary-bg); color: var(--axn-primary-600); }
+.axn-traj-row--tool .axn-traj-tag { background: color-mix(in srgb, var(--axn-warning) 16%, transparent); color: var(--axn-warning-text); }
+.axn-traj-row[data-tone='run'] .axn-traj-meta { color: var(--axn-warning-text); }
+.axn-traj-row[data-tone='ok'] .axn-traj-meta { color: var(--axn-success-text); }
+.axn-traj-row[data-tone='err'] .axn-traj-meta, .axn-traj-row[data-tone='err'] .axn-traj-tool, .axn-traj-row[data-tone='err'] .axn-traj-result { color: var(--axn-error-text); }
+
+/* 详情面板：一行看不全的（入参、执行记录、耗时）全在这里，等宽块可滚动不撑破布局。 */
+.axn-traj-detail { display: flex; flex: 0 0 400px; flex-direction: column; min-height: 0; border-left: 1px solid var(--axn-divider); background: var(--axn-surface); }
+.axn-traj-detail-head { display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--axn-divider); }
+.axn-traj-detail-title { font-size: var(--fs-meta); color: var(--axn-muted); }
+.axn-traj-detail-close { display: inline-flex; margin-left: auto; padding: 3px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--axn-muted); cursor: pointer; }
+.axn-traj-detail-close:hover { background: var(--axn-soft); color: var(--axn-text); }
+.axn-traj-detail-body { flex: 1; min-height: 0; overflow: auto; padding: var(--space-3); font-size: var(--fs-meta); scrollbar-width: thin; scrollbar-color: var(--axn-border) transparent; }
+
+.axn-traj-fact { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: var(--space-3); }
+.axn-traj-fact + .axn-traj-fact { margin-top: 6px; }
+.axn-traj-fact-label { color: var(--axn-muted); white-space: nowrap; }
+.axn-traj-fact-value { color: var(--axn-text); overflow-wrap: anywhere; }
+.axn-traj-fact-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--fs-caption); }
+
+.axn-traj-block + .axn-traj-block, .axn-traj-fact + .axn-traj-block { margin-top: var(--space-3); }
+.axn-traj-block + .axn-traj-fact { margin-top: var(--space-3); }
+.axn-traj-block h4 { margin: 0 0 4px; font-size: var(--fs-meta); font-weight: var(--fw-strong); color: var(--axn-muted); }
+.axn-traj-prose { margin: 0; font-family: inherit; font-size: var(--fs-meta); line-height: 1.7; color: var(--axn-text); white-space: pre-wrap; overflow-wrap: anywhere; }
+.axn-traj-code { margin: 0; padding: var(--space-2); border-radius: var(--radius-sm); background: var(--axn-soft); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--fs-caption); line-height: 1.6; color: var(--axn-text); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+@media (max-width: 1023px) {
+  .axn-traj-detail { flex-basis: 320px; }
+}
+
+@media (max-width: 767px) {
+  .axn-traj-bar { flex-wrap: wrap; gap: var(--space-2); }
+  .axn-traj-search.ant-input-affix-wrapper { flex: 1 1 100%; }
+  .axn-traj-row { grid-template-columns: 92px minmax(0, 1fr); }
+  .axn-traj-side { grid-column: 2; }
+  .axn-traj-body { position: relative; }
+  .axn-traj-detail { position: absolute; inset: 0; flex-basis: auto; border-left: 0; }
+}

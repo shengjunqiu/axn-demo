@@ -9,6 +9,14 @@
   .axn-collapse-btn { display: none; }
 }
 .axn-chat-head-row { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+/* 有页签时下边线交给页签栏画，避免标题行和页签行叠出两条横线。 */
+.axn-chat-head.has-tabs { border-bottom: 0; }
+/* 标题下方页签：对话 / 执行日志。文字页签 + 选中态下划线，与消息区保持同一左边界。 */
+.axn-chat-tabs { display: flex; align-items: center; gap: var(--space-4); flex-shrink: 0; padding: 0 var(--space-4); border-bottom: 1px solid var(--axn-border); background: var(--axn-surface); }
+.axn-chat-tab { appearance: none; margin: 0; padding: 9px 0 8px; border: 0; border-bottom: 2px solid transparent; background: none; font: inherit; font-size: var(--fs-body); line-height: var(--lh-body); color: var(--axn-muted); cursor: pointer; transition: color var(--transition-fast), border-color var(--transition-fast); }
+.axn-chat-tab:hover { color: var(--axn-text); }
+.axn-chat-tab[aria-selected='true'] { color: var(--axn-primary); border-bottom-color: var(--axn-primary); font-weight: var(--fw-strong); }
+.axn-chat-tab:focus-visible { outline: 2px solid var(--axn-primary); outline-offset: 2px; border-radius: var(--radius-nest-sm); }
 .axn-chat-mode-bar { display: flex; align-items: center; justify-content: center; padding: var(--space-2) var(--space-4); flex-shrink: 0; }
 .axn-home-hero .axn-chat-mode-bar { justify-content: center; padding: var(--space-4) 0 0; }
 .axn-chat-mode-switch.ant-segmented { padding: var(--space-1); border: 1px solid var(--axn-border); border-radius: 999px; background: var(--axn-soft); font-size: var(--fs-body); }

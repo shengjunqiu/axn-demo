@@ -53,7 +53,7 @@ const STATUS_META: Record<TaskStatus, { label: string; tone: 'idle' | 'busy' | '
   queued: { label: '排队中', tone: 'idle' },
   running: { label: '执行中', tone: 'busy' },
   succeeded: { label: '已完成', tone: 'ok' },
-  partial: { label: '部分完成', tone: 'warn' },
+  partial: { label: '已完成', tone: 'ok' },
   waiting_input: { label: '待补充信息', tone: 'warn' },
   failed: { label: '失败', tone: 'err' },
   cancelled: { label: '已取消', tone: 'idle' },

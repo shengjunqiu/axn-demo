@@ -12,6 +12,7 @@ import type {
   TaskStatus,
 } from '@/domain/types';
 import { DEFAULT_EVENT_ID, DEFAULT_SESSION_ID, factById, incidentById } from '@/seed/scenario';
+import { seedMockTrajectory } from '@/seed/mockTrajectory';
 import { useDemoStore } from './demoStore.js';
 import { useDocumentStore } from './documentStore.js';
 import { clearPersist, loadPersist, schedulePersist } from './persistence.js';
@@ -173,6 +174,8 @@ interface SessionState {
   ensureSessionForEvent: (eventId: string) => string;
   /** 会话专属 session：消息按会话隔离；eventId 仅作为业务上下文（任务/来源解析）记录 */
   ensureSessionForConversation: (conversationId: string, eventId: string) => string;
+  /** 空会话首次打开时铺同一份 mock 对话与执行日志（纯展示，见 seed/mockTrajectory） */
+  seedSharedMockTrajectory: (sessionId: string) => void;
   switchSession: (sessionId: string) => void;
   appendMessage: (sessionId: string, msg: Omit<ChatMessage, 'messageId' | 'createdAt' | 'performedAt'>) => ChatMessage;
   updateDocumentWorkflow: (sessionId: string, messageId: string, workflow: NonNullable<ChatMessage['documentWorkflow']>) => void;
@@ -233,6 +236,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
         invalidateAllRuns();
         set({ currentSessionId: existing });
       }
+      get().seedSharedMockTrajectory(existing);
       return existing;
     }
     // 关联事件只更新当前对话的业务上下文；session 身份和聊天记录始终保留。
@@ -247,6 +251,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
         } },
         currentSessionId: existing,
       }));
+      get().seedSharedMockTrajectory(existing);
       return existing;
     }
     invalidateAllRuns();
@@ -259,7 +264,18 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
       sessionByConversation: { ...s.sessionByConversation, [conversationId]: sessionId },
       currentSessionId: sessionId,
     }));
+    get().seedSharedMockTrajectory(sessionId);
     return sessionId;
+  },
+
+  seedSharedMockTrajectory: (sessionId) => {
+    const session = get().sessions[sessionId];
+    if (!session || session.messages.length > 0) return;
+    const seeded = seedMockTrajectory(session.sessionId, session.eventId);
+    set((s) => ({
+      sessions: { ...s.sessions, [sessionId]: { ...s.sessions[sessionId], messages: seeded.messages } },
+      tasks: { ...s.tasks, ...Object.fromEntries(seeded.tasks.map((task) => [task.taskId, task])) },
+    }));
   },
 
   switchSession: (sessionId) => {

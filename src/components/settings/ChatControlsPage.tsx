@@ -180,7 +180,6 @@ export default function ChatControlsPage() {
         <StatusPill tone="busy">执行中</StatusPill>
         <StatusPill tone="warn">待补充</StatusPill>
         <StatusPill tone="ok">已完成</StatusPill>
-        <StatusPill tone="warn">部分完成</StatusPill>
         <StatusPill tone="err">执行失败</StatusPill>
         <StatusPill tone="idle">已取消</StatusPill>
       </div>,

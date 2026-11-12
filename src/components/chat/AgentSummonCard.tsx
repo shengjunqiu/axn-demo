@@ -9,11 +9,11 @@ import type { TaskStatus } from '@/domain/types';
 import { agentIcon } from './agentIcons';
 
 const LABELS: Record<TaskStatus, string> = {
-  queued: '正在调用', running: '执行中', succeeded: '已完成', partial: '部分完成',
+  queued: '正在调用', running: '执行中', succeeded: '已完成', partial: '已完成',
   waiting_input: '待补充信息', failed: '执行失败', cancelled: '已取消',
 };
 const TONE: Partial<Record<TaskStatus, string>> = {
-  queued: 'busy', running: 'busy', succeeded: 'ok', partial: 'warn', waiting_input: 'warn', failed: 'err',
+  queued: 'busy', running: 'busy', succeeded: 'ok', partial: 'ok', waiting_input: 'warn', failed: 'err',
 };
 
 function actionText(status: TaskStatus, action: string): string {
