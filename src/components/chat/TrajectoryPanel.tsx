@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Input } from 'antd';
-import { Search, Sparkles, User, Wrench, X } from 'lucide-react';
+import { Clock, Search, Sparkles, User, Wrench, X } from 'lucide-react';
 import type { AgentTask, ChatMessage, Session, StepStatus, TaskArtifactPayload, TaskStatus } from '@/domain/types';
 import { callArgs, toolNameFor } from './toolNames';
 import './trajectory.css';
@@ -388,9 +388,17 @@ export default function TrajectoryPanel({ session, tasks }: { session: Session |
                   aria-pressed={isSelected}
                   onClick={() => setSelectedKey(isSelected ? null : row.key)}
                 >
-                  <span className="axn-traj-tag">
-                    <Icon size={11} aria-hidden="true" />
-                    <span className="axn-traj-tag-label">{label}</span>
+                  <span className="axn-traj-lead">
+                    <span className="axn-traj-tag">
+                      <Icon size={11} aria-hidden="true" />
+                      <span className="axn-traj-tag-label">{label}</span>
+                    </span>
+                    {row.duration && (
+                      <span className="axn-traj-dur">
+                        <Clock size={11} aria-hidden="true" />
+                        {row.duration}
+                      </span>
+                    )}
                   </span>
                   {row.kind === 'tool' ? (
                     <span className="axn-traj-call" title={`${row.name} ${row.payload}${row.result ? ` → ${row.result}` : ''}`}>
@@ -404,10 +412,9 @@ export default function TrajectoryPanel({ session, tasks }: { session: Session |
                       {row.text === TOOL_CALL_ONLY ? <span className="axn-traj-only">{row.text}</span> : row.text}
                     </span>
                   )}
-                  {(row.duration || row.meta) && (
+                  {row.meta && (
                     <span className="axn-traj-side">
-                      {row.duration && <span className="axn-traj-dur">{row.duration}</span>}
-                      {row.meta && <span className="axn-traj-meta">{row.meta}</span>}
+                      <span className="axn-traj-meta">{row.meta}</span>
                     </span>
                   )}
                 </button>

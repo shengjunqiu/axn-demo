@@ -10,7 +10,7 @@
 .axn-traj-empty { margin: var(--space-6) 0; text-align: center; font-size: var(--fs-meta); color: var(--axn-muted); }
 
 /* 三列定宽：kind 标签 / 单行内容 / 右侧状态。内容单行截断，点开看详情。 */
-.axn-traj-row { display: grid; grid-template-columns: 116px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); width: 100%; padding: 2px var(--space-2); border: 0; border-radius: var(--radius-sm); background: transparent; font: inherit; font-size: var(--fs-meta); line-height: 22px; text-align: left; cursor: pointer; }
+.axn-traj-row { display: grid; grid-template-columns: 158px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); width: 100%; padding: 2px var(--space-2); border: 0; border-radius: var(--radius-sm); background: transparent; font: inherit; font-size: var(--fs-meta); line-height: 22px; text-align: left; cursor: pointer; }
 .axn-traj-row + .axn-traj-row { border-top: 1px solid color-mix(in srgb, var(--axn-divider) 55%, transparent); border-top-left-radius: 0; border-top-right-radius: 0; }
 .axn-traj-row:hover { background: var(--axn-soft); }
 .axn-traj-row:focus-visible { outline: 2px solid var(--axn-primary); outline-offset: -2px; }
@@ -30,8 +30,10 @@
 .axn-traj-payload { color: var(--axn-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .axn-traj-arrow { color: var(--axn-faint); flex: 0 0 auto; }
 .axn-traj-result { color: var(--axn-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* 角色标签后面紧跟耗时：一眼看到「这一步干了多久」，不用扫到行尾。 */
+.axn-traj-lead { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .axn-traj-side { display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.axn-traj-dur { font-size: var(--fs-meta); color: var(--axn-faint); }
+.axn-traj-dur { display: inline-flex; align-items: center; gap: 3px; font-size: var(--fs-meta); color: var(--axn-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .axn-traj-meta { font-size: var(--fs-meta); color: var(--axn-muted); }
 
 /* 三类行配色：用户中性、助手主色、工具调用琥珀；状态只改右侧文案的色，不整行染色。 */
@@ -69,7 +71,7 @@
 @media (max-width: 767px) {
   .axn-traj-bar { flex-wrap: wrap; gap: var(--space-2); }
   .axn-traj-search.ant-input-affix-wrapper { flex: 1 1 100%; }
-  .axn-traj-row { grid-template-columns: 92px minmax(0, 1fr); }
+  .axn-traj-row { grid-template-columns: 132px minmax(0, 1fr); }
   .axn-traj-side { grid-column: 2; }
   .axn-traj-body { position: relative; }
   .axn-traj-detail { position: absolute; inset: 0; flex-basis: auto; border-left: 0; }
